@@ -1,0 +1,1 @@
+CUDA 12.4 optimizations deployed – targeting 100 QPS by EOW 

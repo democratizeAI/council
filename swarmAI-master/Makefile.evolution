@@ -1,0 +1,360 @@
+# 🐳🎭🪴 Evolution-Main Branch Makefile
+# Production Docker Containerization Workflow
+
+.PHONY: help build up down restart status health logs clean gpu-test evolution-status push-evolution crawler-status crawler-run crawler-stats feeder-status
+
+# Default target
+help:
+	@echo "🐳🎭🪴 Emotional Tamagotchi Evolution Docker Commands"
+	@echo ""
+	@echo "🚀 DEPLOYMENT:"
+	@echo "  build              Build all Docker images for evolution"
+	@echo "  up                 Start the evolution stack"
+	@echo "  down               Stop the evolution stack"
+	@echo "  restart            Restart the evolution stack"
+	@echo ""
+	@echo "📊 MONITORING:"
+	@echo "  status             Show container status"
+	@echo "  health             Check all health endpoints"
+	@echo "  logs               Show logs from all services"
+	@echo "  evolution-status   Show evolution system status"
+	@echo ""
+	@echo "🕷️ CRAWLER & FEEDING:"
+	@echo "  crawler-status     Check crawler system status"
+	@echo "  crawler-run        Run crawler immediately"
+	@echo "  crawler-stats      View crawler statistics"
+	@echo "  feeder-status      Check auto-feeder status"
+	@echo "  feeder-run         Force immediate feeding"
+	@echo "  challenge-queue    Show challenge queue status"
+	@echo ""
+	@echo "🔧 MAINTENANCE:"
+	@echo "  clean              Clean up Docker resources"
+	@echo "  gpu-test           Test GPU access in containers"
+	@echo "  push-evolution     Push to evolution-main branch"
+	@echo ""
+	@echo "🎯 QUICK START:"
+	@echo "  make build && make up && make health"
+
+# Build all Docker images
+build:
+	@echo "🔨 Building Evolution Docker Images..."
+	docker-compose -f docker-compose.evolution.yml build --parallel
+	@echo "✅ Build complete!"
+
+# Start the evolution stack
+up:
+	@echo "🚀 Starting Emotional Tamagotchi Evolution Stack..."
+	docker-compose -f docker-compose.evolution.yml up -d
+	@echo "🎭 Evolution stack started!"
+	@echo "🌐 Web UI: http://localhost:5000"
+	@echo "📊 Grafana: http://localhost:3000"
+	@echo "📈 Prometheus: http://localhost:9091"
+
+# Stop the evolution stack
+down:
+	@echo "🛑 Stopping Evolution Stack..."
+	docker-compose -f docker-compose.evolution.yml down
+	@echo "✅ Evolution stack stopped!"
+
+# Restart the evolution stack
+restart: down up
+
+# Show container status
+status:
+	@echo "📊 Evolution Container Status:"
+	docker-compose -f docker-compose.evolution.yml ps
+	@echo ""
+	@echo "🐳 Docker System Info:"
+	docker system df
+
+# Check all health endpoints
+health:
+	@echo "🏥 Checking Evolution Health Endpoints..."
+	@echo ""
+	@echo "🧠 Swarm API Health:"
+	@curl -f http://localhost:8000/health || echo "❌ Swarm API unhealthy"
+	@curl -f http://localhost:8000/health/logic_god || echo "❌ Logic God unhealthy"
+	@echo ""
+	@echo "🔥 Trainer Health:"
+	@docker-compose -f docker-compose.evolution.yml exec -T trainer python3 -c "import psutil; print('✅ Trainer healthy' if any('trainer_worker' in p.name() for p in psutil.process_iter()) else '❌ Trainer unhealthy')" || echo "❌ Trainer container unreachable"
+	@echo ""
+	@echo "🎭 Scheduler Health:"
+	@curl -f http://localhost:8081/health || echo "❌ Scheduler unhealthy"
+	@echo ""
+	@echo "📊 Prometheus Health:"
+	@curl -f http://localhost:9091/-/healthy || echo "❌ Prometheus unhealthy"
+	@echo ""
+	@echo "📈 Grafana Health:"
+	@curl -f http://localhost:3000/api/health || echo "❌ Grafana unhealthy"
+	@echo ""
+	@echo "🌐 Web UI Health:"
+	@curl -f http://localhost:5000/api/status || echo "❌ Web UI unhealthy"
+
+# Show logs from all services
+logs:
+	@echo "📋 Evolution Stack Logs:"
+	docker-compose -f docker-compose.evolution.yml logs --tail=50
+
+# Show logs for specific service
+logs-api:
+	docker-compose -f docker-compose.evolution.yml logs -f swarm-api
+
+logs-trainer:
+	docker-compose -f docker-compose.evolution.yml logs -f trainer
+
+logs-scheduler:
+	docker-compose -f docker-compose.evolution.yml logs -f roundtable-scheduler
+
+logs-web:
+	docker-compose -f docker-compose.evolution.yml logs -f web-ui
+
+# Test GPU access
+gpu-test:
+	@echo "🎮 Testing GPU Access..."
+	@echo "Host GPU Status:"
+	nvidia-smi || echo "❌ No GPU on host"
+	@echo ""
+	@echo "Container GPU Access:"
+	docker run --rm --gpus all nvidia/cuda:12.2-runtime nvidia-smi || echo "❌ No GPU access in containers"
+
+# Show evolution system status
+evolution-status:
+	@echo "🪴 Tamagotchi Evolution Status:"
+	@echo ""
+	@echo "📁 Jobs Queue:"
+	@ls -la jobs/queue/ 2>/dev/null | wc -l || echo "0"
+	@echo ""
+	@echo "🧬 LoRA Adapters:"
+	@ls -la lora_adapters/ 2>/dev/null | wc -l || echo "0"
+	@echo ""
+	@echo "📊 Performance History:"
+	@wc -l performance_history.jsonl 2>/dev/null || echo "0 entries"
+	@echo ""
+	@echo "🔐 Evolution Checksums:"
+	@wc -l evolution_checksums.txt 2>/dev/null || echo "0 entries"
+
+# Crawler and Feeder Management Commands
+
+# Check crawler system status
+crawler-status:
+	@echo "🕷️ Crawler System Status:"
+	@echo ""
+	@echo "🔍 Crawler Service:"
+	@docker-compose -f docker-compose.evolution.yml exec -T roundtable-scheduler \
+		python3 -c "import os; print('✅ Crawler enabled' if os.getenv('CRAWLER_ENABLED', 'true') == 'true' else '❌ Crawler disabled')" 2>/dev/null || echo "❌ Crawler service unreachable"
+	@echo ""
+	@echo "📊 Last Crawler Run:"
+	@docker-compose -f docker-compose.evolution.yml exec -T roundtable-scheduler \
+		ls -la logs/crawler_last_run.log 2>/dev/null | tail -1 || echo "No crawler logs found"
+	@echo ""
+	@echo "🎯 Challenge Discovery Rate:"
+	@docker-compose -f docker-compose.evolution.yml exec -T roundtable-scheduler \
+		python3 -c "import json; f=open('logs/feeding_history.jsonl', 'r'); lines=f.readlines()[-10:]; print(f'Last 10 discoveries: {len(lines)} challenges')" 2>/dev/null || echo "No feeding history"
+
+# Run crawler immediately
+crawler-run:
+	@echo "🚀 Running Crawler Immediately..."
+	docker-compose -f docker-compose.evolution.yml exec roundtable-scheduler \
+		python3 scripts/auto_crawler.py
+	@echo "✅ Crawler run completed!"
+
+# View crawler statistics
+crawler-stats:
+	@echo "📈 Crawler Statistics:"
+	@echo ""
+	@echo "🔢 Total Challenges Discovered:"
+	@docker-compose -f docker-compose.evolution.yml exec -T roundtable-scheduler \
+		wc -l logs/feeding_history.jsonl 2>/dev/null || echo "0"
+	@echo ""
+	@echo "📊 Discovery Rate (Last 24h):"
+	@docker-compose -f docker-compose.evolution.yml exec -T roundtable-scheduler \
+		python3 -c "
+import json, datetime
+try:
+    with open('logs/feeding_history.jsonl', 'r') as f:
+        lines = f.readlines()[-100:]  # Last 100 entries
+    recent = [l for l in lines if 'timestamp' in l]
+    print(f'Recent discoveries: {len(recent)} challenges')
+except: print('No crawler statistics available')
+" 2>/dev/null || echo "Statistics unavailable"
+	@echo ""
+	@echo "🎯 Domain Distribution:"
+	@curl -s http://localhost:8000/api/challenge-queue/stats 2>/dev/null | python3 -m json.tool || echo "API unreachable"
+
+# Check auto-feeder status
+feeder-status:
+	@echo "🍽️ Auto-Feeder Status:"
+	@echo ""
+	@echo "⚡ Feeder Service:"
+	@docker-compose -f docker-compose.evolution.yml exec -T roundtable-scheduler \
+		python3 scripts/auto_feeder_daemon.py --status 2>/dev/null || echo "❌ Feeder service unreachable"
+	@echo ""
+	@echo "📊 Queue Size:"
+	@curl -s http://localhost:8000/api/challenge-queue/status 2>/dev/null || echo "Queue status unavailable"
+
+# Force immediate feeding
+feeder-run:
+	@echo "🚀 Running Auto-Feeder Immediately..."
+	docker-compose -f docker-compose.evolution.yml exec roundtable-scheduler \
+		python3 scripts/auto_feeder_daemon.py --feed-now
+	@echo "✅ Feeding completed!"
+
+# Show challenge queue status
+challenge-queue:
+	@echo "📋 Challenge Queue Status:"
+	@echo ""
+	@echo "🔢 Queue Size:"
+	@ls -la jobs/queue/ 2>/dev/null | wc -l || echo "0"
+	@echo ""
+	@echo "🎯 Recent Jobs:"
+	@ls -t jobs/queue/ 2>/dev/null | head -5 || echo "No jobs in queue"
+	@echo ""
+	@echo "📊 Queue Metrics:"
+	@curl -s http://localhost:8000/api/challenge-queue/metrics 2>/dev/null || echo "Queue metrics unavailable"
+
+# Clean up Docker resources
+clean:
+	@echo "🧹 Cleaning Docker Resources..."
+	docker-compose -f docker-compose.evolution.yml down -v --remove-orphans
+	docker system prune -f
+	docker volume prune -f
+	@echo "✅ Cleanup complete!"
+
+# Validate Docker Compose configuration
+validate:
+	@echo "✅ Validating Docker Compose Configuration..."
+	docker-compose -f docker-compose.evolution.yml config
+
+# Create production volumes
+create-volumes:
+	@echo "📁 Creating Production Volumes..."
+	sudo mkdir -p /var/lib/tamagotchi/prometheus
+	sudo mkdir -p /var/lib/tamagotchi/grafana
+	sudo chown -R 65534:65534 /var/lib/tamagotchi/prometheus
+	sudo chown -R 472:472 /var/lib/tamagotchi/grafana
+	@echo "✅ Volumes created!"
+
+# Push to evolution-main branch (clean)
+push-evolution:
+	@echo "🚀 Preparing Clean Push to Evolution-Main..."
+	@echo ""
+	@echo "📋 Files to be committed:"
+	@git status --porcelain | grep -E "(docker/|docker-compose|Makefile|requirements.txt|\.gitignore|README.md|DOCKER_|EVOLUTION_)" || echo "No evolution files to commit"
+	@echo ""
+	@read -p "Continue with push? (y/N): " confirm && [ "$$confirm" = "y" ] || exit 1
+	@echo ""
+	@echo "🧹 Copying evolution .gitignore..."
+	cp .gitignore.evolution .gitignore
+	@echo "📦 Adding essential files only..."
+	git add docker/
+	git add docker-compose.evolution.yml
+	git add Makefile.evolution
+	git add requirements.txt
+	git add .gitignore
+	git add README.md
+	git add DOCKER_DEPLOYMENT_CHECKLIST.md
+	git add EVOLUTION_CHECKLIST.md
+	git add web_ui.py
+	git add web_ui_security_patch.py
+	git add emotional_roundtable_protocol.py
+	git add real_emotional_a2a_server.py
+	git add real_emotional_a2a_orchestrator.py
+	git add v11_emotional_swarm.py
+	git add logic_god_v11_production_server.py
+	git add evolve_with_emotions.py
+	git add scripts/monitor_evolution.py
+	git add scripts/auto_crawler.py
+	git add scripts/auto_feeder_daemon.py
+	git add scripts/evolution_telegram_notifier.py
+	git add trainer/trainer_worker.py
+	@echo "💾 Committing evolution containerization..."
+	git commit -m "🐳🎭🪴 Production Docker Containerization for Evolution-Main
+
+- Enhanced Docker Compose with production security
+- INT4 LLama.cpp optimization in swarm-api
+- Horizontal scaling ready trainer worker
+- CPU-only emotional round-table scheduler
+- External TSDB volumes for Prometheus/Grafana
+- Lightweight Alpine telegram notifier
+- Production Web UI with security patches
+- Health checks and metrics endpoints
+- Read-only containers with non-root users
+- Clean .gitignore for production focus
+
+Ready for: make build && make up && make health"
+	@echo "🚀 Pushing to evolution-main..."
+	git push origin evolution-main1:evolution-main --force-with-lease
+	@echo "✅ Evolution containerization deployed!"
+
+# Development helpers
+dev-up:
+	docker-compose -f docker-compose.yml up -d
+
+dev-down:
+	docker-compose -f docker-compose.yml down
+
+# Production deployment
+prod-deploy: validate create-volumes build up health
+	@echo "🎉 Production Evolution Stack Deployed!"
+	@echo "🌐 Access points:"
+	@echo "  - Web UI: http://localhost:5000"
+	@echo "  - Grafana: http://localhost:3000"
+	@echo "  - Prometheus: http://localhost:9091"
+	@echo "  - API: http://localhost:8000"
+
+# Emergency procedures
+emergency-stop:
+	@echo "🚨 Emergency Stop - Killing All Containers..."
+	docker kill $$(docker ps -q) 2>/dev/null || true
+	docker-compose -f docker-compose.evolution.yml down --remove-orphans
+
+emergency-rollback:
+	@echo "🔄 Emergency Rollback..."
+	git checkout evolution-main^
+	make build
+	make up
+	@echo "✅ Rollback complete!"
+
+# Monitoring shortcuts
+watch-logs:
+	watch -n 2 'docker-compose -f docker-compose.evolution.yml logs --tail=20'
+
+watch-status:
+	watch -n 5 'make status'
+
+# Crawler monitoring shortcuts
+watch-crawler:
+	watch -n 10 'make crawler-stats'
+
+watch-queue:
+	watch -n 5 'make challenge-queue'
+
+# Performance testing
+perf-test:
+	@echo "⚡ Running Performance Tests..."
+	@echo "🧠 Testing Swarm API Response Time:"
+	@time curl -s http://localhost:8000/health > /dev/null
+	@echo "🎭 Testing Emotional Consensus:"
+	@time curl -s -X POST http://localhost:8000/emotional-consensus -H "Content-Type: application/json" -d '{"task": "Performance test"}' > /dev/null
+
+# Crawler performance testing
+crawler-perf-test:
+	@echo "🕷️ Testing Crawler Performance..."
+	@echo "📊 Running discovery test..."
+	@time docker-compose -f docker-compose.evolution.yml exec roundtable-scheduler \
+		python3 scripts/auto_crawler.py --domain=math --count=5
+	@echo "🍽️ Testing feeder performance..."
+	@time docker-compose -f docker-compose.evolution.yml exec roundtable-scheduler \
+		python3 scripts/auto_feeder_daemon.py --feed-now
+
+# Security audit
+security-audit:
+	@echo "🔒 Security Audit:"
+	@echo "📊 Container Security:"
+	docker-compose -f docker-compose.evolution.yml exec swarm-api whoami
+	docker-compose -f docker-compose.evolution.yml exec trainer whoami
+	docker-compose -f docker-compose.evolution.yml exec roundtable-scheduler whoami
+	@echo "🔐 File Permissions:"
+	docker-compose -f docker-compose.evolution.yml exec swarm-api ls -la /app
+	@echo "🛡️ Security Options:"
+	docker inspect $$(docker-compose -f docker-compose.evolution.yml ps -q) | grep -A 5 "SecurityOpt" 
