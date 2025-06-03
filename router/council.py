@@ -24,14 +24,13 @@ import os
 import time
 import asyncio
 from typing import Dict, Any, List, Optional, Tuple
-from dataclasses import dataclass
 from enum import Enum
+from dataclasses import dataclass
 
 from router.voting import vote
 from router.cost_tracking import debit, get_budget_status
 from router.privacy_filter import apply_privacy_policy
 from router.cloud_providers import ask_cloud_council
-from v11_emotional_swarm import V11EmotionalSwarm
 from loader.deterministic_loader import get_loaded_models, generate_response
 
 # Prometheus metrics
@@ -113,9 +112,6 @@ class CouncilRouter:
         
         # Enable/disable flag
         self.council_enabled = os.getenv("SWARM_COUNCIL_ENABLED", "false").lower() == "true"
-        
-        # Emotional swarm for enhanced decision-making
-        self.emotional_swarm = V11EmotionalSwarm()
         
         print(f"[COUNCIL] Initialized with {len(self.voice_models)} voices")
         print(f"[COUNCIL] Enabled: {self.council_enabled}")

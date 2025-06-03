@@ -85,3 +85,32 @@ cpu_heads:
   vram_mb: 0
   dtype: "openvino_fp32"
   backend: "openvino"
+
+# Cloud models for benchmarking (VRAM = 0, no local spill)
+cloud_models:
+- name: gpt4o_mini
+  path: api:gpt-4o-mini
+  backend: cloud
+  vram_mb: 0
+  price_per_1k_input: 0.40
+  price_per_1k_output: 1.60
+  quality: 82
+  provider: openai
+
+- name: claude_3_haiku
+  path: api:claude-3-haiku-20240307
+  backend: cloud
+  vram_mb: 0
+  price_per_1k_input: 0.25
+  price_per_1k_output: 1.25
+  quality: 78
+  provider: anthropic
+
+- name: mistral_large
+  path: api:mistral-large-latest
+  backend: cloud
+  vram_mb: 0
+  price_per_1k_input: 8.0
+  price_per_1k_output: 24.0
+  quality: 88
+  provider: mistral

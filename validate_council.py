@@ -19,7 +19,7 @@ sys.path.insert(0, os.getcwd())
 
 # Council configuration
 os.environ["SWARM_COUNCIL_ENABLED"] = "true"
-os.environ["MISTRAL_API_KEY"] = "ezybn1D39HWYE6MMLe8JcwQPhSPSOjH2"
+os.environ["MISTRAL_API_KEY"] = os.getenv("MISTRAL_API_KEY")
 os.environ["COUNCIL_MAX_COST"] = "0.30"
 os.environ["COUNCIL_DAILY_BUDGET"] = "1.00"
 

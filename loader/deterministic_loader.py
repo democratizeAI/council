@@ -48,8 +48,11 @@ if PROMETHEUS_AVAILABLE:
     model_loaded_metric = Gauge('swarm_model_loaded', 'Model loading status', ['model', 'profile'])
     vram_used_metric = Gauge('swarm_vram_used_bytes', 'VRAM usage in bytes', ['model'])
 
-def echo(msg: str): 
-    print(time.strftime('%H:%M:%S'), msg, flush=True)
+def echo(msg: str):
+    """Safe logging function with ASCII-only output"""
+    # Replace problematic emojis with ASCII equivalents
+    safe_msg = msg.replace('🚀', '[LOAD]').replace('🔧', '[SETUP]').replace('✅', '[OK]').replace('❌', '[ERROR]')
+    print(time.strftime('%H:%M:%S'), safe_msg, flush=True)
 
 def get_backend_for_model(model_name: str, vram_mb: int) -> str:
     """Determine which backend to use for a model based on size and availability"""

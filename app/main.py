@@ -9,6 +9,7 @@ from typing import List, Dict, Any, Optional
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from prometheus_client import Histogram, Counter, generate_latest, CONTENT_TYPE_LATEST
 from starlette.responses import Response
@@ -129,6 +130,15 @@ app = FastAPI(
     description="Intelligent AI model routing, orchestration, and confidence-weighted voting with cost tracking",
     version="1.0.0",
     lifespan=lifespan
+)
+
+# Add CORS middleware to handle browser preflight requests
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins for development
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all HTTP methods including OPTIONS
+    allow_headers=["*"],  # Allow all headers
 )
 
 def echo(msg: str):
