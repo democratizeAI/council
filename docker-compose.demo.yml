@@ -1,0 +1,17 @@
+
+version: '3.9'
+services:
+  council:
+    build: .
+    ports: ["9000:9000"]
+    cap_add: [ "CAP_SYS_ADMIN" ]
+    security_opt: [ "seccomp:unconfined" ]
+    environment:
+      - AZ_SHELL_TRUSTED=yes
+    volumes:
+      - ./memory:/app/memory
+  grafana:
+    image: grafana/grafana:10.4.1
+    ports: ["3000:3000"]
+    volumes:
+      - ./monitoring/grafana:/etc/grafana/provisioning/dashboards

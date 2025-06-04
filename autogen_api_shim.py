@@ -14,6 +14,7 @@ import logging
 from typing import Dict, Any, Optional, List
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import uvicorn
 import sys
@@ -56,8 +57,17 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="AutoGen API Shim",
     description="AutoGen skill system exposed as web API",
-    version="2.4.0"
+    version="2.6.0"
 )
+
+# Mount static files for web interface
+if os.path.exists("webchat"):
+    app.mount("/chat", StaticFiles(directory="webchat", html=True), name="webchat")
+    logger.info("📱 Web chat interface available at /chat")
+
+if os.path.exists("admin.html"):
+    app.mount("/admin", StaticFiles(directory=".", html=True), name="admin")
+    logger.info("⚙️ Admin panel available at /admin")
 
 class QueryRequest(BaseModel):
     prompt: str
@@ -160,6 +170,16 @@ async def startup_event():
     logger.info("  GET  /health - Health check")
     logger.info("  GET  /stats  - Service statistics")
     logger.info("  GET  /metrics - Prometheus metrics")
+    
+    # Mount static files for web interface
+    if os.path.exists("webchat"):
+        app.mount("/chat", StaticFiles(directory="webchat", html=True), name="webchat")
+        logger.info("📱 Web chat interface available at /chat")
+    
+    if os.path.exists("admin.html"):
+        app.mount("/admin", StaticFiles(directory=".", html=True), name="admin")
+        logger.info("⚙️ Admin panel available at /admin")
+    
     logger.info("=" * 50)
     logger.info("🌐 Server starting on http://localhost:8000")
     
@@ -350,7 +370,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "autogen-api-shim",
-        "version": "2.4.0",
+        "version": "2.6.0",
         "timestamp": time.time()
     }
 
@@ -465,6 +485,39 @@ async def budget_endpoint():
         "avg_cost_per_request": 0.001,
         "status": "within_budget"
     }
+
+@app.post("/admin/cloud/{enabled}")
+async def admin_cloud_toggle(enabled: bool):
+    """Toggle cloud fallback functionality"""
+    global router
+    if router:
+        router.cloud_enabled = enabled
+        logger.info(f"☁️ Cloud fallback {'enabled' if enabled else 'disabled'}")
+        return {"cloud_enabled": enabled, "status": "updated"}
+    raise HTTPException(status_code=500, detail="Router not initialized")
+
+@app.post("/admin/cap/{budget_usd}")
+async def admin_budget_cap(budget_usd: float):
+    """Update budget cap for cloud usage"""
+    global router
+    if router:
+        router.budget_usd = budget_usd
+        logger.info(f"💰 Budget cap updated to ${budget_usd}")
+        return {"budget_usd": budget_usd, "status": "updated"}
+    raise HTTPException(status_code=500, detail="Router not initialized")
+
+@app.get("/admin/status")
+async def admin_status():
+    """Get current admin configuration"""
+    global router
+    if router:
+        return {
+            "cloud_enabled": getattr(router, 'cloud_enabled', False),
+            "budget_usd": getattr(router, 'budget_usd', 10.0),
+            "sandbox_enabled": getattr(router, 'sandbox_enabled', False),
+            "status": "operational"
+        }
+    raise HTTPException(status_code=500, detail="Router not initialized")
 
 if __name__ == "__main__":
     uvicorn.run(
