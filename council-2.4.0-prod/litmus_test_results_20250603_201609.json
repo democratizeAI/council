@@ -1,0 +1,142 @@
+[
+  {
+    "endpoint": "hybrid",
+    "prompt": "What is 8!?",
+    "response": "The game is now available on the Steam Workshop for $8.99.\nSource: Steam Workshop",
+    "confidence": 0.8,
+    "model_used": "tinyllama_1b",
+    "latency_ms": 175.99797248840332,
+    "correct": false,
+    "has_expected": false,
+    "is_garbage": false,
+    "grade": "FAIL",
+    "expected_answer": "40320",
+    "type": "math"
+  },
+  {
+    "endpoint": "local_smart",
+    "prompt": "What is 8!?",
+    "error": "HTTP 404",
+    "response": "",
+    "expected_answer": "40320",
+    "type": "math"
+  },
+  {
+    "endpoint": "local_voting",
+    "prompt": "What is 8!?",
+    "error": "HTTP 404",
+    "response": "",
+    "expected_answer": "40320",
+    "type": "math"
+  },
+  {
+    "endpoint": "hybrid",
+    "prompt": "What is 25% of 240?",
+    "response": "I understand your question about What is 25% of 240?...",
+    "confidence": 0.8,
+    "model_used": "tinyllama_1b",
+    "latency_ms": 1202.0950317382812,
+    "correct": false,
+    "has_expected": false,
+    "is_garbage": false,
+    "grade": "FAIL",
+    "expected_answer": "60",
+    "type": "math"
+  },
+  {
+    "endpoint": "local_smart",
+    "prompt": "What is 25% of 240?",
+    "error": "HTTP 404",
+    "response": "",
+    "expected_answer": "60",
+    "type": "math"
+  },
+  {
+    "endpoint": "local_voting",
+    "prompt": "What is 25% of 240?",
+    "error": "HTTP 404",
+    "response": "",
+    "expected_answer": "60",
+    "type": "math"
+  },
+  {
+    "endpoint": "hybrid",
+    "prompt": "Write a Python function to calculate GCD of two numbers",
+    "response": ", and return a GCD of one number with a number of digits. You can write a real-time C++ program to make this possible.",
+    "confidence": 0.8,
+    "model_used": "tinyllama_1b",
+    "latency_ms": 1169.1324710845947,
+    "correct": false,
+    "keyword_count": 2,
+    "total_keywords": 5,
+    "is_garbage": false,
+    "grade": "FAIL",
+    "expected_keywords": [
+      "def",
+      "gcd",
+      "return",
+      "%",
+      "while"
+    ],
+    "type": "code"
+  },
+  {
+    "endpoint": "local_smart",
+    "prompt": "Write a Python function to calculate GCD of two numbers",
+    "error": "HTTP 404",
+    "response": "",
+    "expected_keywords": [
+      "def",
+      "gcd",
+      "return",
+      "%",
+      "while"
+    ],
+    "type": "code"
+  },
+  {
+    "endpoint": "local_voting",
+    "prompt": "Write a Python function to calculate GCD of two numbers",
+    "error": "HTTP 404",
+    "response": "",
+    "expected_keywords": [
+      "def",
+      "gcd",
+      "return",
+      "%",
+      "while"
+    ],
+    "type": "code"
+  },
+  {
+    "endpoint": "hybrid",
+    "prompt": "Logic puzzle: All bloops are razzles. All razzles are lazzles. Are all bloops lazzles?",
+    "response": "I understand your question about Logic puzzle: All bloops are r...",
+    "confidence": 0.8,
+    "model_used": "tinyllama_1b",
+    "latency_ms": 1266.1495208740234,
+    "correct": false,
+    "has_answer": false,
+    "has_reasoning": true,
+    "is_garbage": false,
+    "grade": "FAIL",
+    "expected_answer": "yes",
+    "type": "reasoning"
+  },
+  {
+    "endpoint": "local_smart",
+    "prompt": "Logic puzzle: All bloops are razzles. All razzles are lazzles. Are all bloops lazzles?",
+    "error": "HTTP 404",
+    "response": "",
+    "expected_answer": "yes",
+    "type": "reasoning"
+  },
+  {
+    "endpoint": "local_voting",
+    "prompt": "Logic puzzle: All bloops are razzles. All razzles are lazzles. Are all bloops lazzles?",
+    "error": "HTTP 404",
+    "response": "",
+    "expected_answer": "yes",
+    "type": "reasoning"
+  }
+]

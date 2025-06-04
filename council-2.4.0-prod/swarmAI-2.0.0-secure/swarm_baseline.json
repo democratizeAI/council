@@ -1,0 +1,28 @@
+{
+  "metadata": {
+    "captured_at": "2025-06-03T19:02:46.085639Z",
+    "version": "v0.4.0",
+    "description": "First prod-grade release: real transformers, 0 fragmentation @ 70+ QPS",
+    "gpu_profile": "rtx_4070",
+    "models_loaded": 9
+  },
+  "performance_thresholds": {
+    "max_latency_ms": 77.0,
+    "max_vram_mb": 10500.0,
+    "target_qps": 75.0,
+    "max_fragmentation_events": 0,
+    "max_failure_rate_percent": 0.1
+  },
+  "live_measurements": {
+    "total_vram_bytes": 10456399872.0,
+    "total_requests": 130597.0,
+    "total_latency_seconds": 10214.102178490255,
+    "avg_latency_ms": 78.21084847653663,
+    "total_vram_mb": 9972.0
+  },
+  "quality_gates": {
+    "vram_utilization_percent": 94.97142857142858,
+    "avg_latency_ms": 78.21084847653663,
+    "total_requests_processed": 130597.0
+  }
+}

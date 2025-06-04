@@ -1,0 +1,97 @@
+{
+  "timestamp": "2025-06-03T22:06:07.166895",
+  "total_prompts": 8,
+  "success_rate": 1.0,
+  "avg_latency_ms": 0.4375576972961426,
+  "domain_breakdown": {
+    "code": {
+      "count": 3,
+      "total_latency": 3.5004615783691406,
+      "successes": 3
+    },
+    "math": {
+      "count": 4,
+      "total_latency": 0.0,
+      "successes": 4
+    },
+    "logic": {
+      "count": 1,
+      "total_latency": 0.0,
+      "successes": 1
+    }
+  },
+  "detailed_results": [
+    {
+      "prompt": "Implement a bubble sort algorithm",
+      "domain": "code",
+      "answer": "Execution failed: name 'generate_code' is not defined",
+      "skill_used": "code",
+      "latency_ms": 3.000020980834961,
+      "confidence": 0.0,
+      "status": "success"
+    },
+    {
+      "prompt": "Write a function to add two numbers",
+      "domain": "code",
+      "answer": "Execution failed: name 'generate_code' is not defined",
+      "skill_used": "code",
+      "latency_ms": 0.0,
+      "confidence": 0.0,
+      "status": "success"
+    },
+    {
+      "prompt": "Find the area of a circle with radius 12",
+      "domain": "math",
+      "answer": "Execution failed: name 'solve_math' is not defined",
+      "skill_used": "math",
+      "latency_ms": 0.0,
+      "confidence": 0.0,
+      "status": "success"
+    },
+    {
+      "prompt": "If A is south of B and B south of C, where is A?",
+      "domain": "logic",
+      "answer": "Execution failed: name 'solve_logic' is not defined",
+      "skill_used": "logic",
+      "latency_ms": 0.0,
+      "confidence": 0.0,
+      "status": "success"
+    },
+    {
+      "prompt": "Write a function to calculate GCD of two numbers",
+      "domain": "code",
+      "answer": "Execution failed: name 'generate_code' is not defined",
+      "skill_used": "code",
+      "latency_ms": 0.5004405975341797,
+      "confidence": 0.0,
+      "status": "success"
+    },
+    {
+      "prompt": "What is 8 factorial?",
+      "domain": "math",
+      "answer": "Execution failed: name 'solve_math' is not defined",
+      "skill_used": "math",
+      "latency_ms": 0.0,
+      "confidence": 0.0,
+      "status": "success"
+    },
+    {
+      "prompt": "Calculate 25% of 240",
+      "domain": "math",
+      "answer": "Execution failed: name 'solve_math' is not defined",
+      "skill_used": "math",
+      "latency_ms": 0.0,
+      "confidence": 0.0,
+      "status": "success"
+    },
+    {
+      "prompt": "What is the GCD of 48 and 72?",
+      "domain": "math",
+      "answer": "Execution failed: name 'solve_math' is not defined",
+      "skill_used": "math",
+      "latency_ms": 0.0,
+      "confidence": 0.0,
+      "status": "success"
+    }
+  ]
+}

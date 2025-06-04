@@ -1,0 +1,208 @@
+{
+  "math": {
+    "passed": 4,
+    "total": 4,
+    "responses": [
+      {
+        "question": "Calculate: 247 * 38. Show your work step by step.",
+        "response": "Response from tinyllama_1b: I can help with mathematical calculations. What specific problem would you like me to solve?",
+        "quality": {
+          "status": "GOOD",
+          "reason": "Contains mathematical content"
+        },
+        "latency_ms": 2024.2869853973389,
+        "cost": 0.0108
+      },
+      {
+        "question": "If a triangle has sides of length 3, 4, and 5, what is its area?",
+        "response": "Response from tinyllama_1b: I understand your question about 'If a triangle has sides of len...' Let me provide a thoughtful response based on the information available.",
+        "quality": {
+          "status": "GOOD",
+          "reason": "Contains mathematical content"
+        },
+        "latency_ms": 13.99993896484375,
+        "cost": 0.015600000000000001
+      },
+      {
+        "question": "Solve for x: 2x + 7 = 19",
+        "response": "Response from tinyllama_1b: I can help with mathematical calculations. What specific problem would you like me to solve?",
+        "quality": {
+          "status": "GOOD",
+          "reason": "Contains mathematical content"
+        },
+        "latency_ms": 13.998031616210938,
+        "cost": 0.0108
+      },
+      {
+        "question": "What is 15% of 240?",
+        "response": "Response from tinyllama_1b: Thank you for your question. Regarding 'What is 15% of 240?...', here's what I can share:",
+        "quality": {
+          "status": "GOOD",
+          "reason": "Contains mathematical content"
+        },
+        "latency_ms": 15.999555587768555,
+        "cost": 0.011399999999999999
+      }
+    ]
+  },
+  "reasoning": {
+    "passed": 0,
+    "total": 3,
+    "responses": [
+      {
+        "question": "All birds have wings. Some birds can fly. Some things that can fly are not birds. What can we conclude about wings and flying?",
+        "response": "Response from tinyllama_1b: Thank you for your question. Regarding 'All birds have wings. Some bir...', here's what I can share:",
+        "quality": {
+          "status": "POOR",
+          "reason": "Missing logical reasoning"
+        },
+        "latency_ms": 14.99795913696289,
+        "cost": 0.012
+      },
+      {
+        "question": "If it's raining, then the ground gets wet. The ground is not wet. What can we conclude?",
+        "response": "Response from tinyllama_1b: Machine learning is a subset of AI that enables systems to learn and improve from experience without being explicitly programmed for every scenario.",
+        "quality": {
+          "status": "POOR",
+          "reason": "Missing logical reasoning"
+        },
+        "latency_ms": 14.997482299804688,
+        "cost": 0.015600000000000001
+      },
+      {
+        "question": "A farmer has chickens and rabbits. There are 35 heads and 94 legs total. How many chickens and how many rabbits?",
+        "response": "Response from mistral_0.5b: I understand your question about 'A farmer has chickens and rabb...' Let me provide a thoughtful response based on the information available.",
+        "quality": {
+          "status": "POOR",
+          "reason": "Missing logical reasoning"
+        },
+        "latency_ms": 14.999866485595703,
+        "cost": 0.0075
+      }
+    ]
+  },
+  "coding": {
+    "passed": 1,
+    "total": 3,
+    "responses": [
+      {
+        "question": "Write a Python function that returns the factorial of a number n.",
+        "response": "Response from tinyllama_1b: I'd be happy to help with creative writing! Here's a start: 'In a world where technology and nature coexist, a young explorer discovers...'",
+        "quality": {
+          "status": "POOR",
+          "reason": "Missing code elements"
+        },
+        "latency_ms": 13.999223709106445,
+        "cost": 0.015600000000000001
+      },
+      {
+        "question": "Debug this code: def reverse_string(s): return s[::-1] # What's wrong if it doesn't work for 'hello'?",
+        "response": "Response from mistral_0.5b: I can help with mathematical calculations. What specific problem would you like me to solve?",
+        "quality": {
+          "status": "POOR",
+          "reason": "Missing code elements"
+        },
+        "latency_ms": 15.999555587768555,
+        "cost": 0.0054
+      },
+      {
+        "question": "What does this code do? def mystery(arr): return [x for x in arr if x % 2 == 0]",
+        "response": "Response from mistral_0.5b: That's an interesting topic. I'd be happy to discuss 'What does this code do? def my...' in more detail.",
+        "quality": {
+          "status": "GOOD",
+          "reason": "Contains code elements"
+        },
+        "latency_ms": 15.000343322753906,
+        "cost": 0.006599999999999999
+      }
+    ]
+  },
+  "science": {
+    "passed": 0,
+    "total": 3,
+    "responses": [
+      {
+        "question": "What is the molecular formula for glucose and how many carbon atoms does it contain?",
+        "response": "Response from tinyllama_1b: AI technology has evolved rapidly, with applications in healthcare, transportation, communication, and many other fields that benefit society.",
+        "quality": {
+          "status": "FAIR",
+          "reason": "Some scientific content"
+        },
+        "latency_ms": 14.001131057739258,
+        "cost": 0.0126
+      },
+      {
+        "question": "If a ball is dropped from 20 meters high, how long does it take to hit the ground? (g = 9.8 m/s\u00b2)",
+        "response": "Response from tinyllama_1b: I can help with mathematical calculations. What specific problem would you like me to solve?",
+        "quality": {
+          "status": "FAIR",
+          "reason": "Some scientific content"
+        },
+        "latency_ms": 13.999462127685547,
+        "cost": 0.0108
+      },
+      {
+        "question": "What is the difference between mitosis and meiosis?",
+        "response": "Response from tinyllama_1b: Thank you for your question. Regarding 'What is the difference between...', here's what I can share:",
+        "quality": {
+          "status": "FAIR",
+          "reason": "Some scientific content"
+        },
+        "latency_ms": 14.999628067016602,
+        "cost": 0.011399999999999999
+      }
+    ]
+  },
+  "planning": {
+    "passed": 0,
+    "total": 2,
+    "responses": [
+      {
+        "question": "You need to get from New York to Tokyo, then to London, then back to New York. What's the most efficient route?",
+        "response": "Response from tinyllama_1b: Thank you for your question. Regarding 'You need to get from New York ...', here's what I can share:",
+        "quality": {
+          "status": "FAIR",
+          "reason": "Basic planning attempt"
+        },
+        "latency_ms": 13.00048828125,
+        "cost": 0.013199999999999998
+      },
+      {
+        "question": "Plan a 3-day trip to Paris with a $500 budget. What are the key priorities?",
+        "response": "Response from tinyllama_1b: I can help with mathematical calculations. What specific problem would you like me to solve?",
+        "quality": {
+          "status": "FAIR",
+          "reason": "Basic planning attempt"
+        },
+        "latency_ms": 15.999794006347656,
+        "cost": 0.0108
+      }
+    ]
+  },
+  "writing": {
+    "passed": 2,
+    "total": 2,
+    "responses": [
+      {
+        "question": "Summarize the main themes of Romeo and Juliet in 2-3 sentences.",
+        "response": "Response from tinyllama_1b: I can help with mathematical calculations. What specific problem would you like me to solve?",
+        "quality": {
+          "status": "GOOD",
+          "reason": "Well-structured writing"
+        },
+        "latency_ms": 13.00191879272461,
+        "cost": 0.0108
+      },
+      {
+        "question": "Write a professional email declining a job offer politely.",
+        "response": "Response from tinyllama_1b: Machine learning is a subset of AI that enables systems to learn and improve from experience without being explicitly programmed for every scenario.",
+        "quality": {
+          "status": "GOOD",
+          "reason": "Well-structured writing"
+        },
+        "latency_ms": 13.997793197631836,
+        "cost": 0.015600000000000001
+      }
+    ]
+  }
+}

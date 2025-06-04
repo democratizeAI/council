@@ -1,0 +1,47 @@
+# These owners will be the default owners for everything in the repo
+* @lumina-eng-manager
+
+# Core backend services
+/lumina_core/ @backend-lead @sre-lead
+/lumina_core/api/ @backend-lead @api-lead
+/lumina_core/event_mux.py @backend-lead @sre-lead
+
+# Frontend and UI
+/ui/ @frontend-lead @ui-lead
+/ui/src/ @frontend-lead @ui-lead
+/ui/cypress/ @frontend-lead @qa-lead
+
+# Infrastructure and DevOps
+/ops/ @devops-lead @sre-lead
+/docker/ @devops-lead @sre-lead
+/kubernetes/ @devops-lead @sre-lead
+
+# Documentation
+/docs/ @tech-writer @eng-manager
+/docs/adr/ @tech-writer @eng-manager
+/docs/runbooks/ @sre-lead @devops-lead
+
+# Testing and Quality
+/tests/ @qa-lead @backend-lead
+/cypress/ @qa-lead @frontend-lead
+/.github/workflows/ @devops-lead @sre-lead
+
+# Data and ML
+/crawler/ @ml-lead @backend-lead
+/vector_store/ @ml-lead @backend-lead
+/masterchat/ @ml-lead @backend-lead
+
+# Security and Compliance
+/security/ @security-lead @sre-lead
+/compliance/ @security-lead @legal-lead
+
+# Configuration files
+*.yml @devops-lead @sre-lead
+*.yaml @devops-lead @sre-lead
+*.json @devops-lead @sre-lead
+*.env* @devops-lead @sre-lead
+
+# Monitoring and Observability
+/grafana/ @sre-lead @devops-lead
+/prometheus/ @sre-lead @devops-lead
+/logging/ @sre-lead @devops-lead 

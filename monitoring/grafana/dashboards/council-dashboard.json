@@ -1,0 +1,329 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "🌌 Council-in-the-Loop Monitoring",
+    "tags": ["swarm", "council", "ai", "voices"],
+    "style": "dark",
+    "timezone": "",
+    "refresh": "5s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Council Request Rate",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(swarm_council_requests_total[5m])",
+            "format": "time_series",
+            "legendFormat": "Requests/sec"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 0.1},
+                {"color": "red", "value": 1.0}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Council vs Quick Path Distribution",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sum(rate(swarm_council_requests_total[5m]))",
+            "format": "time_series",
+            "legendFormat": "Council Deliberations"
+          },
+          {
+            "expr": "sum(rate(swarm_router_requests_total[5m])) - sum(rate(swarm_council_requests_total[5m]))",
+            "format": "time_series", 
+            "legendFormat": "Quick Path"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps"
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "Council P95 Latency",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(swarm_council_latency_seconds_bucket[5m])) * 1000",
+            "format": "time_series",
+            "legendFormat": "P95 Latency"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 1000},
+                {"color": "red", "value": 2000}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0}
+      },
+      {
+        "id": 4,
+        "title": "Council Cost Rate",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(swarm_council_cost_dollars_total[5m]) * 3600",
+            "format": "time_series",
+            "legendFormat": "$/hour"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 0.50},
+                {"color": "red", "value": 1.00}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0}
+      },
+      {
+        "id": 5,
+        "title": "Voice Activity Heatmap",
+        "type": "heatmap",
+        "targets": [
+          {
+            "expr": "sum by (voice) (rate(swarm_council_voices_active[5m]))",
+            "format": "time_series",
+            "legendFormat": "{{voice}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+      },
+      {
+        "id": 6,
+        "title": "Edge Risk Flags by Category",
+        "type": "bargauge",
+        "targets": [
+          {
+            "expr": "increase(swarm_council_edge_risk_flags_total[1h])",
+            "format": "time_series",
+            "legendFormat": "Risk Flags/hour"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": {
+              "mode": "palette-classic"
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+      },
+      {
+        "id": 7,
+        "title": "Council Latency Distribution",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(swarm_council_latency_seconds_bucket[5m])) * 1000",
+            "format": "time_series",
+            "legendFormat": "P50"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(swarm_council_latency_seconds_bucket[5m])) * 1000",
+            "format": "time_series",
+            "legendFormat": "P95"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(swarm_council_latency_seconds_bucket[5m])) * 1000",
+            "format": "time_series",
+            "legendFormat": "P99"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+      },
+      {
+        "id": 8,
+        "title": "Council Cost Breakdown",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(swarm_council_cost_dollars_total[5m]) * 3600",
+            "format": "time_series",
+            "legendFormat": "Total Cost/hour"
+          },
+          {
+            "expr": "rate(swarm_cloud_cost_dollars_total[5m]) * 3600",
+            "format": "time_series",
+            "legendFormat": "Cloud Cost/hour"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+      },
+      {
+        "id": 9,
+        "title": "Voice Response Times",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "avg by (voice) (swarm_council_voice_latency_ms)",
+            "format": "time_series",
+            "legendFormat": "{{voice}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms"
+          }
+        },
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 24}
+      },
+      {
+        "id": 10,
+        "title": "Consensus Achievement Rate",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(swarm_council_consensus_achieved_total[5m]) / rate(swarm_council_requests_total[5m]) * 100",
+            "format": "time_series",
+            "legendFormat": "Consensus %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": null},
+                {"color": "yellow", "value": 70},
+                {"color": "green", "value": 85}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 32}
+      },
+      {
+        "id": 11,
+        "title": "Council Trigger Reasons",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sum by (reason) (rate(swarm_council_trigger_reason_total[5m]))",
+            "format": "time_series",
+            "legendFormat": "{{reason}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 6, "y": 32}
+      },
+      {
+        "id": 12,
+        "title": "Model Fallback Rate",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(swarm_council_model_fallback_total[5m]) / rate(swarm_council_requests_total[5m]) * 100",
+            "format": "time_series",
+            "legendFormat": "Fallback %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 10},
+                {"color": "red", "value": 25}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 32}
+      }
+    ],
+    "annotations": {
+      "list": [
+        {
+          "name": "Council Deployments",
+          "datasource": "prometheus",
+          "enable": true,
+          "expr": "changes(swarm_council_version_info[1h])",
+          "iconColor": "blue",
+          "titleFormat": "Council Deployment"
+        }
+      ]
+    },
+    "templating": {
+      "list": [
+        {
+          "name": "voice",
+          "type": "query",
+          "query": "label_values(swarm_council_voices_active, voice)",
+          "refresh": "time",
+          "includeAll": true,
+          "allValue": ".*"
+        }
+      ]
+    }
+  }
+} 

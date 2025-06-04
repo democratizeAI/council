@@ -1,0 +1,72 @@
+[
+  {
+    "endpoint": "hybrid",
+    "prompt": "What is 8!?",
+    "response": "Response from tinyllama_1b: I understand your question about 'What is 8!?...' Let me provide a thoughtful response based on the information available.",
+    "confidence": 0.8,
+    "model_used": "tinyllama_1b",
+    "latency_ms": 87.93425559997559,
+    "correct": false,
+    "score": 0.0,
+    "reason": "Template response detected",
+    "grade": "FAIL_LOUD",
+    "question_type": "math",
+    "grader_used": "grade_math",
+    "expected_answer": "40320",
+    "type": "math"
+  },
+  {
+    "endpoint": "hybrid",
+    "prompt": "What is 25% of 240?",
+    "response": "Response from tinyllama_1b: I understand your question about 'What is 25% of 240?...' Let me provide a thoughtful response based on the information available.",
+    "confidence": 0.8,
+    "model_used": "tinyllama_1b",
+    "latency_ms": 6.749868392944336,
+    "correct": false,
+    "score": 0.0,
+    "reason": "Template response detected",
+    "grade": "FAIL_LOUD",
+    "question_type": "math",
+    "grader_used": "grade_math",
+    "expected_answer": "60",
+    "type": "math"
+  },
+  {
+    "endpoint": "hybrid",
+    "prompt": "Write a Python function to calculate GCD of two numbers",
+    "response": "Response from tinyllama_1b: I can help with mathematical calculations. What specific problem would you like me to solve?",
+    "confidence": 0.8,
+    "model_used": "tinyllama_1b",
+    "latency_ms": 5.640268325805664,
+    "correct": false,
+    "score": 0.3,
+    "reason": "Contains code keywords but no complete function",
+    "grade": "PARTIAL",
+    "question_type": "code",
+    "grader_used": "grade_code",
+    "expected_keywords": [
+      "def",
+      "gcd",
+      "return",
+      "%",
+      "while"
+    ],
+    "type": "code"
+  },
+  {
+    "endpoint": "hybrid",
+    "prompt": "Logic puzzle: All bloops are razzles. All razzles are lazzles. Are all bloops lazzles?",
+    "response": "Response from tinyllama_1b: I understand your question about 'Logic puzzle: All bloops are r...' Let me provide a thoughtful response based on the information available.",
+    "confidence": 0.8,
+    "model_used": "tinyllama_1b",
+    "latency_ms": 4.5185089111328125,
+    "correct": false,
+    "score": 0.0,
+    "reason": "Template response detected",
+    "grade": "FAIL_LOUD",
+    "question_type": "reasoning",
+    "grader_used": "grade_logic",
+    "expected_answer": "yes",
+    "type": "reasoning"
+  }
+]

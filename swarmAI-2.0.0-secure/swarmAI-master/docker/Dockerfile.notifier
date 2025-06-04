@@ -1,0 +1,100 @@
+FROM python:3.11-alpine
+
+# Install dependencies
+RUN pip install --no-cache-dir \
+    requests==2.31.0 \
+    python-telegram-bot==20.6
+
+# Set working directory
+WORKDIR /app
+
+# Create notifier script
+RUN echo '#!/usr/bin/env python3\n\
+import os\n\
+import time\n\
+import requests\n\
+from telegram import Bot\n\
+import asyncio\n\
+\n\
+class TamagotchiNotifier:\n\
+    def __init__(self):\n\
+        self.bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")\n\
+        self.chat_id = os.environ.get("TELEGRAM_CHAT_ID")\n\
+        self.prometheus_url = os.environ.get("PROMETHEUS_URL", "http://prometheus:9090")\n\
+        \n\
+        if not self.bot_token or not self.chat_id:\n\
+            print("⚠️  Telegram credentials not provided, notifications disabled")\n\
+            self.enabled = False\n\
+        else:\n\
+            self.bot = Bot(token=self.bot_token)\n\
+            self.enabled = True\n\
+            print("📱 Telegram notifier initialized")\n\
+    \n\
+    async def send_notification(self, message):\n\
+        if not self.enabled:\n\
+            return\n\
+        try:\n\
+            await self.bot.send_message(chat_id=self.chat_id, text=message)\n\
+            print(f"📤 Sent: {message[:50]}...")\n\
+        except Exception as e:\n\
+            print(f"❌ Failed to send notification: {e}")\n\
+    \n\
+    def check_training_status(self):\n\
+        try:\n\
+            # Query Prometheus for training metrics\n\
+            response = requests.get(f"{self.prometheus_url}/api/v1/query", \n\
+                                   params={"query": "lora_jobs_total"})\n\
+            \n\
+            if response.status_code == 200:\n\
+                data = response.json()\n\
+                # Parse metrics and detect changes\n\
+                return data.get("data", {}).get("result", [])\n\
+        except Exception as e:\n\
+            print(f"❌ Failed to query Prometheus: {e}")\n\
+        return []\n\
+    \n\
+    async def monitor_loop(self):\n\
+        last_job_count = 0\n\
+        \n\
+        while True:\n\
+            try:\n\
+                # Check for new training completions\n\
+                metrics = self.check_training_status()\n\
+                current_jobs = len(metrics)\n\
+                \n\
+                if current_jobs > last_job_count:\n\
+                    await self.send_notification(\n\
+                        f"🎭🪴 Emotional Tamagotchi Update\\n"\n\
+                        f"New training job completed!\\n"\n\
+                        f"Total jobs: {current_jobs}\\n"\n\
+                        f"Time: {time.strftime('"'"'%Y-%m-%d %H:%M:%S'"'"')}"\n\
+                    )\n\
+                    last_job_count = current_jobs\n\
+                \n\
+                # Sleep for 5 minutes between checks\n\
+                await asyncio.sleep(300)\n\
+                \n\
+            except Exception as e:\n\
+                print(f"❌ Monitor loop error: {e}")\n\
+                await asyncio.sleep(60)\n\
+\n\
+async def main():\n\
+    print("🤖 Starting Tamagotchi Telegram Notifier")\n\
+    notifier = TamagotchiNotifier()\n\
+    \n\
+    # Send startup notification\n\
+    await notifier.send_notification("🎭🪴🚀 Emotional Tamagotchi system started!")\n\
+    \n\
+    # Start monitoring\n\
+    await notifier.monitor_loop()\n\
+\n\
+if __name__ == "__main__":\n\
+    asyncio.run(main())\n\
+' > /notifier.py && chmod +x /notifier.py
+
+# Health check
+HEALTHCHECK --interval=300s --timeout=30s --start-period=10s --retries=3 \
+    CMD ps aux | grep -q python3 || exit 1
+
+# Start the notifier
+CMD ["python3", "/notifier.py"] 

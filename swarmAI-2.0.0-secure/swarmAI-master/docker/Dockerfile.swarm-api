@@ -1,0 +1,82 @@
+FROM nvidia/cuda:12.2-runtime-ubuntu22.04
+
+# Build arguments
+ARG CUDA_VERSION=12.2
+ARG PYTHON_VERSION=3.11
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    python${PYTHON_VERSION} \
+    python3-pip \
+    curl \
+    git \
+    build-essential \
+    cmake \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements and install Python dependencies
+COPY requirements.txt .
+RUN pip3 install --no-cache-dir -r requirements.txt
+
+# Install additional dependencies for emotional swarm with INT4 optimization
+RUN pip3 install --no-cache-dir \
+    fastapi==0.104.1 \
+    uvicorn[standard]==0.24.0 \
+    httpx==0.25.0 \
+    prometheus-client==0.18.0 \
+    pydantic==2.4.2 \
+    ollama \
+    asyncio-extensions \
+    bitsandbytes==0.41.0 \
+    accelerate==0.24.0 \
+    transformers==4.35.0
+
+# Install INT4 LLama.cpp build for optimized inference
+RUN git clone https://github.com/ggerganov/llama.cpp.git /tmp/llama.cpp && \
+    cd /tmp/llama.cpp && \
+    make LLAMA_CUBLAS=1 && \
+    cp main /usr/local/bin/llama-cpp-main && \
+    rm -rf /tmp/llama.cpp
+
+# Copy application code
+COPY v11_emotional_swarm.py .
+COPY emotional_roundtable_protocol.py .
+COPY evolve_with_emotions.py .
+COPY real_emotional_a2a_orchestrator.py .
+COPY real_emotional_a2a_server.py .
+COPY logic_god_v11_production_server.py .
+
+# Create health check script with enhanced endpoints
+RUN echo '#!/bin/bash\n\
+curl -f http://localhost:8000/health || exit 1\n\
+curl -f http://localhost:8000/health/logic_god || exit 1\n\
+curl -f http://localhost:9090/metrics || exit 1\n\
+' > /health_check.sh && chmod +x /health_check.sh
+
+# Create app directories with proper permissions
+RUN mkdir -p models loras config jobs logs && \
+    chmod 755 models loras config jobs logs
+
+# Expose ports
+EXPOSE 8000 9090
+
+# Health check with multiple endpoints
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD /health_check.sh
+
+# Non-root user for security
+RUN useradd -m -u 1000 tamagotchi && \
+    chown -R tamagotchi:tamagotchi /app
+USER tamagotchi
+
+# Environment variables for production
+ENV PYTHONUNBUFFERED=1
+ENV CUDA_VISIBLE_DEVICES=0
+ENV PROMETHEUS_PORT=9090
+ENV EVOLUTION_MODE=production
+
+# Start the emotional swarm API with production settings
+CMD ["python3", "real_emotional_a2a_server.py", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"] 

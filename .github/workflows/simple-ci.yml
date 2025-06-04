@@ -1,0 +1,121 @@
+name: AutoGen Council CI
+
+on:
+  push:
+    branches: [ fresh-autogen-council ]
+  pull_request:
+    branches: [ fresh-autogen-council ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with: 
+          python-version: '3.10'
+      
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+          pip install pytest
+      
+      - name: Validate AutoGen Council files
+        run: |
+          echo "🚀 Validating AutoGen Council system..."
+          
+          # Check essential files that should exist
+          files_to_check=(
+            "router_cascade.py"
+            "autogen_api_shim.py" 
+            "autogen_titanic_gauntlet.py"
+            "requirements.txt"
+            "swarm_system_report.json"
+          )
+          
+          for file in "${files_to_check[@]}"; do
+            if [ -f "$file" ]; then
+              echo "✅ $file found"
+            else
+              echo "❌ $file missing"
+              exit 1
+            fi
+          done
+          
+          # Check directories
+          directories_to_check=(
+            "router"
+            "config"
+          )
+          
+          for dir in "${directories_to_check[@]}"; do
+            if [ -d "$dir" ]; then
+              echo "✅ $dir directory found"
+            else
+              echo "❌ $dir directory missing"
+              exit 1
+            fi
+          done
+          
+          echo "✅ All essential files and directories found"
+      
+      - name: Python syntax validation
+        run: |
+          echo "🔍 Validating Python syntax..."
+          
+          # Compile key Python files to check syntax
+          python -m py_compile router_cascade.py
+          python -m py_compile autogen_api_shim.py
+          python -m py_compile autogen_titanic_gauntlet.py
+          
+          # Check router modules if they exist
+          if [ -f "router/council.py" ]; then
+            python -m py_compile router/council.py
+          fi
+          
+          if [ -f "router/voting.py" ]; then
+            python -m py_compile router/voting.py
+          fi
+          
+          echo "✅ Python syntax validation passed"
+      
+      - name: Basic functionality test
+        run: |
+          echo "🧪 Running basic functionality tests..."
+          
+          # Test router_cascade import and basic functionality
+          python -c "
+import sys
+sys.path.append('.')
+
+try:
+    from router_cascade import AutoGenCouncilCascade, create_autogen_council
+    print('✅ Successfully imported router_cascade')
+    
+    # Test basic instantiation
+    council = create_autogen_council()
+    status = council.get_status()
+    print('✅ Successfully created council instance')
+    print(f'✅ Status check passed: {len(status)} components')
+    
+except Exception as e:
+    print(f'❌ Error testing router_cascade: {e}')
+    exit(1)
+          "
+          
+          echo "✅ Basic functionality tests passed"
+          
+      - name: Upload validation results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: validation-results
+          path: |
+            router_cascade.py
+            autogen_api_shim.py
+            swarm_system_report.json 

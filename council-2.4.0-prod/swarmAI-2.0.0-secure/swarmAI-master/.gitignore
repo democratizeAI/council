@@ -1,0 +1,259 @@
+# 🐳🎭🪴 Evolution-Main Branch .gitignore
+# Only essential containerization and production files allowed
+
+# ===== PYTHON =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ===== VIRTUAL ENVIRONMENTS =====
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# ===== JUPYTER NOTEBOOKS =====
+.ipynb_checkpoints
+
+# ===== PYTEST =====
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ===== MYPY =====
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ===== DOCKER =====
+.dockerignore
+
+# ===== LOGS =====
+*.log
+logs/
+trainer.log
+
+# ===== TEMPORARY FILES =====
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# ===== IDE =====
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ===== SYSTEM FILES =====
+.DS_Store
+Thumbs.db
+
+# ===== EXCLUDE ALL EXPERIMENTAL/TEST FILES =====
+# Only allow essential production files
+
+# Exclude all test files
+test_*.py
+*_test.py
+quick_*.py
+simple_*.py
+demo_*.py
+experimental_*.py
+prototype_*.py
+
+# Exclude all research/development files
+research_*.py
+enhanced_*.py
+ultimate_*.py
+final_*.py
+optimized_*.py
+improved_*.py
+fixed_*.py
+real_*.py
+working_*.py
+
+# Exclude all benchmark/evaluation files
+benchmark_*.py
+*_benchmark.py
+evaluation_*.py
+*_evaluation.py
+stress_*.py
+*_stress.py
+
+# Exclude all temporary/generated content
+*.md
+*.html
+*.txt
+*.json
+*.jsonl
+*.yaml
+*.yml
+!docker-compose.evolution.yml
+!live_wire_100.yaml
+!requirements.txt
+
+# Exclude all directories except essential ones
+**/
+!docker/
+!scripts/
+!trainer/
+!templates/
+!static/
+!monitoring/
+!jobs/
+!datasets/
+!models/
+!lora_adapters/
+!config/
+!.github/
+
+# Exclude all Python files except core production files
+*.py
+!web_ui.py
+!web_ui_security_patch.py
+!emotional_roundtable_protocol.py
+!real_emotional_a2a_server.py
+!real_emotional_a2a_orchestrator.py
+!v11_emotional_swarm.py
+!logic_god_v11_production_server.py
+!evolve_with_emotions.py
+
+# Allow essential scripts
+!scripts/monitor_evolution.py
+!scripts/auto_crawler.py
+!scripts/auto_feeder_daemon.py
+!scripts/evolution_telegram_notifier.py
+
+# Allow trainer files
+!trainer/trainer_worker.py
+
+# Allow Docker files
+!docker/Dockerfile.*
+!docker-compose*.yml
+
+# Allow essential config files
+!requirements.txt
+!pyproject.toml
+!pytest.ini
+!Makefile
+!README.md
+!DOCKER_DEPLOYMENT_CHECKLIST.md
+!EVOLUTION_CHECKLIST.md
+
+# Exclude all data/output directories
+results/
+archives/
+lora_output/
+test_lora_output/
+training_data/
+data/
+qdrant_storage/
+ollama_models/
+papers_for_grading/
+ultra_enhanced_papers/
+
+# Exclude all service directories
+services/
+specialists/
+modules/
+tools/
+ui/
+ops/
+infrastructure/
+foundation/
+fortress/
+lumina*/
+event_mux/
+masterchat/
+graph_api/
+loki/
+prometheus/
+promtail/
+grafana/
+verl/
+
+# Exclude all generated/compiled content
+*.so
+*.dll
+*.exe
+*.bin
+*.dat
+*.db
+*.sqlite
+*.sqlite3
+
+# Exclude all backup/archive files
+*.bak
+*.backup
+*.old
+*.orig
+*.save
+
+# Exclude all compressed files
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+# Exclude all media files
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.ico
+*.mp4
+*.avi
+*.mov
+
+# Exclude all office documents
+*.doc
+*.docx
+*.pdf
+*.ppt
+*.pptx
+*.xls
+*.xlsx
+
+# Exclude all configuration overrides
+*.local
+*.dev
+*.prod
+*.staging
+config.local.*
+.env.local
+.env.development
+.env.production
+
+# Exclude all monitoring/metrics data
+prometheus_data/
+grafana_data/
+metrics/
+monitoring_data/
+
+# Exclude all temporary Docker files
+docker-compose.override.yml
+.dockerignore.local 

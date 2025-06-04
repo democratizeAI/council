@@ -1,0 +1,199 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools-scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "emotional-tamagotchi"
+description = "Autonomous AI Evolution System with Emotional Consensus"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "Emotional Tamagotchi Team"},
+]
+keywords = ["ai", "machine-learning", "emotional-ai", "autonomous-evolution", "consensus"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "fastapi>=0.104.1",
+    "uvicorn[standard]>=0.24.0",
+    "httpx>=0.25.0",
+    "asyncio-extensions>=0.1.0",
+    "ollama>=0.1.7",
+    "prometheus-client>=0.18.0",
+    "pydantic>=2.4.2",
+    "pyyaml>=6.0",
+    "schedule>=1.2.0",
+    "requests>=2.31.0",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-mock>=3.11.0",
+    "pytest-html>=3.1.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.7.0",
+    "isort>=5.12.0",
+    "flake8>=6.0.0",
+    "mypy>=1.5.0",
+    "pre-commit>=3.0.0",
+]
+training = [
+    "transformers>=4.35.0",
+    "torch>=2.1.0",
+    "datasets>=2.14.0",
+    "peft>=0.6.0",
+    "accelerate>=0.24.0",
+    "bitsandbytes>=0.41.0",
+    "wandb>=0.15.0",
+]
+monitoring = [
+    "grafana-client>=0.5.0",
+    "python-telegram-bot>=20.6",
+]
+
+[project.urls]
+Homepage = "https://github.com/emotional-tamagotchi/evolution"
+Repository = "https://github.com/emotional-tamagotchi/evolution.git"
+Documentation = "https://emotional-tamagotchi.readthedocs.io"
+"Bug Tracker" = "https://github.com/emotional-tamagotchi/evolution/issues"
+
+[project.scripts]
+emotional-swarm = "v11_emotional_swarm:main"
+roundtable = "emotional_roundtable_protocol:main" 
+evolve = "evolve_with_emotions:main"
+
+# Black configuration
+[tool.black]
+line-length = 88
+target-version = ['py39', 'py310', 'py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # Exclude build artifacts and vendor code
+  \.eggs
+  | \.git
+  | \.mypy_cache
+  | \.pytest_cache
+  | \.venv
+  | build
+  | dist
+  | docker
+  | logs
+  | models
+  | loras
+)/
+'''
+
+# isort configuration  
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["v11_emotional_swarm", "emotional_roundtable_protocol", "evolve_with_emotions"]
+known_third_party = ["pytest", "fastapi", "uvicorn", "httpx", "ollama", "prometheus_client", "pydantic", "yaml", "schedule", "requests"]
+sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
+skip_gitignore = true
+extend_skip_glob = ["docker/*", "logs/*", "models/*", "loras/*"]
+
+# MyPy configuration
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+show_error_codes = true
+show_column_numbers = true
+pretty = true
+
+# Exclude paths that don't need strict typing
+exclude = [
+    "docker/",
+    "logs/", 
+    "models/",
+    "loras/",
+    "datasets/",
+    "monitoring/",
+]
+
+# Module-specific overrides
+[[tool.mypy.overrides]]
+module = [
+    "ollama.*",
+    "prometheus_client.*",
+    "schedule.*",
+    "docker.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+# Pytest configuration (also in pytest.ini but here for completeness)
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --strict-markers --strict-config"
+testpaths = ["tests"]
+markers = [
+    "slow: marks tests as slow (taking > 5 seconds)",
+    "integration: marks tests as integration tests requiring Docker",
+    "gpu: marks tests requiring GPU access",
+    "unit: marks tests as fast unit tests",
+    "consensus: marks tests for emotional consensus functionality",
+    "docker: marks tests for Docker container functionality",
+]
+asyncio_mode = "auto"
+
+# Coverage configuration
+[tool.coverage.run]
+source = ["v11_emotional_swarm", "emotional_roundtable_protocol", "evolve_with_emotions"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "docker/*",
+    "logs/*",
+    "models/*", 
+    "loras/*",
+    "datasets/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+show_missing = true
+precision = 2
+
+[tool.coverage.html]
+directory = "test-results/coverage" 

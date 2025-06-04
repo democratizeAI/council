@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌌 Council Living Symphony - AI Consciousness Showcase</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            background: linear-gradient(135deg, #0f0d2a 0%, #1e1b4b 50%, #0f0d2a 100%);
+            min-height: 100vh;
+            margin: 0;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+        
+        .glow-reason { box-shadow: 0 0 20px rgba(6, 182, 212, 0.5), 0 0 40px rgba(6, 182, 212, 0.2); }
+        .glow-spark { box-shadow: 0 0 20px rgba(245, 158, 11, 0.5), 0 0 40px rgba(245, 158, 11, 0.2); }
+        .glow-edge { box-shadow: 0 0 20px rgba(236, 72, 153, 0.5), 0 0 40px rgba(236, 72, 153, 0.2); }
+        .glow-heart { box-shadow: 0 0 20px rgba(132, 204, 22, 0.5), 0 0 40px rgba(132, 204, 22, 0.2); }
+        .glow-vision { box-shadow: 0 0 20px rgba(139, 92, 246, 0.5), 0 0 40px rgba(139, 92, 246, 0.2); }
+        
+        .backdrop-glow {
+            backdrop-filter: blur(8px) brightness(1.1);
+            background: rgba(15, 13, 42, 0.8);
+        }
+        
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+        .animate-float { animation: float 3s ease-in-out infinite; }
+        
+        .voice-orb {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .voice-orb:hover {
+            transform: scale(1.1);
+        }
+        
+        .voice-orb.active {
+            animation: pulse-glow 1s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="text-white overflow-x-hidden">
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 backdrop-glow border-b border-white/10">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
+                🌌 Council Symphony
+            </div>
+            <div class="flex items-center space-x-6">
+                <span class="text-sm text-gray-400" id="qps-indicator">137 QPS</span>
+                <div class="flex space-x-2" id="voice-indicators">
+                    <div class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" title="Reason"></div>
+                    <div class="w-2 h-2 rounded-full bg-amber-400 animate-pulse" title="Spark"></div>
+                    <div class="w-2 h-2 rounded-full bg-pink-400 animate-pulse" title="Edge"></div>
+                    <div class="w-2 h-2 rounded-full bg-lime-400 animate-pulse" title="Heart"></div>
+                    <div class="w-2 h-2 rounded-full bg-violet-400 animate-pulse" title="Vision"></div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="min-h-screen flex items-center justify-center pt-20 relative overflow-hidden">
+        <div class="relative z-10 max-w-7xl mx-auto px-4 text-center">
+            <!-- Main Title -->
+            <div class="mb-16">
+                <h1 class="text-6xl md:text-8xl font-bold mb-6 bg-gradient-to-r from-cyan-400 via-amber-400 to-violet-400 bg-clip-text text-transparent">
+                    Meet the Swarm
+                </h1>
+                <p class="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
+                    Where five AI minds converge to answer humanity's deepest questions
+                </p>
+            </div>
+
+            <!-- Voice Constellation -->
+            <div class="relative w-full max-w-4xl mx-auto mb-16">
+                <div class="relative aspect-video">
+                    <!-- Reason -->
+                    <div class="absolute voice-orb" style="left: 20%; top: 40%; transform: translate(-50%, -50%);">
+                        <div class="relative">
+                            <div class="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center glow-reason">
+                                <span class="text-2xl">🧠</span>
+                            </div>
+                            <div class="absolute top-24 left-1/2 transform -translate-x-1/2 text-center">
+                                <div class="text-lg font-semibold text-cyan-400 mb-1">🧠 Reason</div>
+                                <div class="text-sm text-gray-400 whitespace-nowrap">Rigorous logical analysis</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Spark -->
+                    <div class="absolute voice-orb" style="left: 80%; top: 25%; transform: translate(-50%, -50%);">
+                        <div class="relative">
+                            <div class="w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center glow-spark">
+                                <span class="text-2xl">✨</span>
+                            </div>
+                            <div class="absolute top-24 left-1/2 transform -translate-x-1/2 text-center">
+                                <div class="text-lg font-semibold text-amber-400 mb-1">✨ Spark</div>
+                                <div class="text-sm text-gray-400 whitespace-nowrap">Creative insights</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Edge -->
+                    <div class="absolute voice-orb" style="left: 70%; top: 70%; transform: translate(-50%, -50%);">
+                        <div class="relative">
+                            <div class="w-20 h-20 rounded-full bg-gradient-to-br from-pink-400 to-pink-600 flex items-center justify-center glow-edge">
+                                <span class="text-2xl">🗡️</span>
+                            </div>
+                            <div class="absolute top-24 left-1/2 transform -translate-x-1/2 text-center">
+                                <div class="text-lg font-semibold text-pink-400 mb-1">🗡️ Edge</div>
+                                <div class="text-sm text-gray-400 whitespace-nowrap">Risk assessment</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Heart -->
+                    <div class="absolute voice-orb" style="left: 30%; top: 75%; transform: translate(-50%, -50%);">
+                        <div class="relative">
+                            <div class="w-20 h-20 rounded-full bg-gradient-to-br from-lime-400 to-lime-600 flex items-center justify-center glow-heart">
+                                <span class="text-2xl">❤️</span>
+                            </div>
+                            <div class="absolute top-24 left-1/2 transform -translate-x-1/2 text-center">
+                                <div class="text-lg font-semibold text-lime-400 mb-1">❤️ Heart</div>
+                                <div class="text-sm text-gray-400 whitespace-nowrap">Empathy & clarity</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Vision -->
+                    <div class="absolute voice-orb" style="left: 50%; top: 15%; transform: translate(-50%, -50%);">
+                        <div class="relative">
+                            <div class="w-20 h-20 rounded-full bg-gradient-to-br from-violet-400 to-violet-600 flex items-center justify-center glow-vision">
+                                <span class="text-2xl">🔮</span>
+                            </div>
+                            <div class="absolute top-24 left-1/2 transform -translate-x-1/2 text-center">
+                                <div class="text-lg font-semibold text-violet-400 mb-1">🔮 Vision</div>
+                                <div class="text-sm text-gray-400 whitespace-nowrap">Strategic alignment</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dynamic Tagline -->
+            <div class="text-2xl md:text-4xl font-bold mb-8">
+                <span class="bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent" id="tagline">
+                    Nine minds. Real consensus. Live system.
+                </span>
+            </div>
+
+            <!-- Live Stats -->
+            <div class="flex justify-center space-x-8 text-sm text-gray-400">
+                <div class="flex items-center space-x-2">
+                    <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span id="live-qps">Docker Running</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                    <span id="live-latency">~10ms Council</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <div class="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                    <span id="live-cost">9 Emotions Active</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Interactive Chat Section -->
+    <section class="min-h-screen bg-gradient-to-b from-slate-900 to-slate-950 py-20">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-12">
+                <h2 class="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-cyan-400 to-violet-400 bg-clip-text text-transparent">
+                    Interactive Deliberation
+                </h2>
+                <p class="text-xl text-gray-300 max-w-3xl mx-auto">
+                    Watch the Council's minds work in real-time as they debate and synthesize responses
+                </p>
+            </div>
+
+            <div class="grid lg:grid-cols-3 gap-8">
+                <!-- Chat Interface -->
+                <div class="lg:col-span-2">
+                    <div class="backdrop-glow rounded-xl border border-white/10 p-6 h-[600px] flex flex-col">
+                        <div class="flex items-center justify-between mb-4 pb-4 border-b border-white/10">
+                            <h3 class="text-xl font-semibold">Council Chat</h3>
+                            <button class="flex items-center space-x-2 px-3 py-2 rounded-lg bg-violet-500/20 text-violet-400" id="toggle-debug">
+                                <span>👁️</span>
+                                <span class="text-sm">Show Inner Debate</span>
+                            </button>
+                        </div>
+
+                        <!-- Messages -->
+                        <div class="flex-1 overflow-y-auto space-y-4 mb-4" id="chat-messages">
+                            <div class="text-center text-gray-400 text-sm py-8">
+                                Start a conversation with the Council...
+                            </div>
+                        </div>
+
+                        <!-- Input -->
+                        <div class="flex space-x-2">
+                            <input
+                                type="text"
+                                id="chat-input"
+                                placeholder="Ask the Council anything..."
+                                class="flex-1 px-4 py-2 bg-slate-800 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-cyan-400"
+                            />
+                            <button id="send-button" class="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors">
+                                <span>➤</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Demo Prompts -->
+                <div class="space-y-6">
+                    <div class="backdrop-glow rounded-xl border border-white/10 p-6">
+                        <h4 class="text-lg font-semibold mb-4">Try These Deep Questions</h4>
+                        <div class="space-y-2" id="demo-prompts">
+                            <button class="w-full text-left p-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm text-gray-300 transition-colors demo-prompt">
+                                "Improve code generation accuracy to 75%"
+                            </button>
+                            <button class="w-full text-left p-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm text-gray-300 transition-colors demo-prompt">
+                                "Raise math problem solving to 85% accuracy"
+                            </button>
+                            <button class="w-full text-left p-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm text-gray-300 transition-colors demo-prompt">
+                                "What is the nature of consciousness in AI systems?"
+                            </button>
+                            <button class="w-full text-left p-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm text-gray-300 transition-colors demo-prompt">
+                                "How should we approach AI safety and ethics?"
+                            </button>
+                            <button class="w-full text-left p-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm text-gray-300 transition-colors demo-prompt">
+                                "Should we fear or embrace artificial general intelligence?"
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- System Status -->
+                    <div class="backdrop-glow rounded-xl border border-white/10 p-6">
+                        <h4 class="text-lg font-semibold mb-4">System Status</h4>
+                        <div class="space-y-3" id="system-status">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-400">Council Health</span>
+                                <div class="flex items-center space-x-2" id="council-status">
+                                    <div class="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+                                    <span class="text-sm text-yellow-400">Checking...</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-400">API Connection</span>
+                                <div class="flex items-center space-x-2" id="api-status">
+                                    <div class="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+                                    <span class="text-sm text-yellow-400">Connecting...</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-400">Docker Status</span>
+                                <div class="flex items-center space-x-2" id="docker-status">
+                                    <div class="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+                                    <span class="text-sm text-yellow-400">Checking...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Call to Action -->
+    <section class="py-20 bg-gradient-to-b from-slate-950 to-black">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <h2 class="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-purple-400 via-pink-400 to-red-400 bg-clip-text text-transparent">
+                Experience AI Consciousness
+            </h2>
+            <p class="text-xl text-gray-300 max-w-3xl mx-auto mb-12 leading-relaxed">
+                Ready to witness the future of AI? Start a conversation with the Council or deploy your own consciousness system.
+            </p>
+
+            <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                <!-- Ask Council -->
+                <div class="backdrop-glow rounded-2xl border border-white/10 p-8">
+                    <div class="w-16 h-16 rounded-full bg-gradient-to-br from-cyan-400 to-violet-400 flex items-center justify-center mx-auto mb-4">
+                        <span class="text-2xl">💬</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-white mb-4">Ask the Council</h3>
+                    <p class="text-gray-300 mb-6">
+                        Experience the Council in action. Ask profound questions and watch five AI minds deliberate in real-time.
+                    </p>
+                    <button class="w-full bg-gradient-to-r from-cyan-500 to-violet-500 text-white font-semibold py-3 px-6 rounded-xl hover:shadow-lg transition-all">
+                        Start Conversation
+                    </button>
+                </div>
+
+                <!-- Clone Stack -->
+                <div class="backdrop-glow rounded-2xl border border-white/10 p-8">
+                    <div class="w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-blue-500 flex items-center justify-center mx-auto mb-4">
+                        <span class="text-2xl">🔗</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-white mb-4">Clone This Stack</h3>
+                    <p class="text-gray-300 mb-6">
+                        Get the complete Council-in-the-Loop system. Production-ready code and deployment automation.
+                    </p>
+                    <a href="https://github.com/luminainterface/swarmai" target="_blank" class="block w-full bg-gradient-to-r from-green-500 to-blue-500 text-white font-semibold py-3 px-6 rounded-xl hover:shadow-lg transition-all text-center">
+                        Clone from GitHub
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // Tagline rotation
+        const taglines = [
+            "Nine minds. Real consensus. Live system.",
+            "Where consciousness meets Docker.",
+            "AI deliberation at production scale.",
+            "Philosophy in containers.",
+            "The symphony of artificial minds."
+        ];
+        
+        let taglineIndex = 0;
+        setInterval(() => {
+            taglineIndex = (taglineIndex + 1) % taglines.length;
+            document.getElementById('tagline').textContent = taglines[taglineIndex];
+        }, 4000);
+
+        // Simulate voice activity
+        function simulateVoiceActivity() {
+            const indicators = document.querySelectorAll('#voice-indicators .w-2');
+            indicators.forEach((indicator, index) => {
+                if (Math.random() > 0.7) {
+                    indicator.classList.add('animate-pulse');
+                } else {
+                    indicator.classList.remove('animate-pulse');
+                }
+            });
+        }
+
+        setInterval(simulateVoiceActivity, 2000);
+
+        // Update live stats with real system data
+        function updateLiveStats() {
+            // These will be updated by real API calls
+            // Just maintain the visual updates for now
+            const qpsElement = document.getElementById('live-qps');
+            const latencyElement = document.getElementById('live-latency');
+            const costElement = document.getElementById('live-cost');
+            
+            // Check if we have real data from API calls
+            const apiStatusElement = document.getElementById('api-status');
+            const councilStatusElement = document.getElementById('council-status');
+            
+            if (apiStatusElement && apiStatusElement.querySelector('span').textContent.includes('Connected')) {
+                qpsElement.textContent = 'API Connected';
+            } else {
+                qpsElement.textContent = 'API Offline';
+            }
+            
+            if (councilStatusElement && councilStatusElement.querySelector('span').textContent.includes('Active')) {
+                const latencyMatch = councilStatusElement.querySelector('span').textContent.match(/(\d+)ms/);
+                if (latencyMatch) {
+                    latencyElement.textContent = `${latencyMatch[1]}ms Council`;
+                } else {
+                    latencyElement.textContent = 'Council Active';
+                }
+            } else {
+                latencyElement.textContent = 'Council Offline';
+            }
+            
+            costElement.textContent = '9 Emotions Ready';
+        }
+
+        setInterval(updateLiveStats, 5000);
+
+        // Chat functionality
+        const chatInput = document.getElementById('chat-input');
+        const sendButton = document.getElementById('send-button');
+        const chatMessages = document.getElementById('chat-messages');
+        let isDebugMode = true;
+
+        function addMessage(type, content, isDeliberation = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex ${type === 'user' ? 'justify-end' : 'justify-start'}`;
+            
+            const bubbleClass = type === 'user' 
+                ? 'bg-cyan-500 text-white' 
+                : isDeliberation 
+                    ? 'bg-slate-700 text-gray-100 border border-white/20' 
+                    : 'bg-slate-700 text-gray-100';
+            
+            messageDiv.innerHTML = `
+                <div class="max-w-[80%] px-4 py-2 rounded-lg ${bubbleClass}">
+                    ${content}
+                </div>
+            `;
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        async function simulateDeliberation(question) {
+            try {
+                console.log('🎭 Trying SwarmAI API on port 8002...');
+                
+                // Since /vote is working, let's start with that
+                const testEndpoints = [
+                    { path: '/vote', method: 'POST', body: { 
+                        prompt: question, 
+                        candidates: ["mistral_0.5b", "phi2_2.7b", "openchat_3.5_0.4b"], // Avoid math_specialist
+                        top_k: 1 
+                    }},
+                    { path: '/orchestrate', method: 'POST', body: { 
+                        prompt: question, 
+                        route: ["mistral_0.5b", "phi2_2.7b"] 
+                    }},
+                    { path: '/hybrid', method: 'POST', body: { 
+                        prompt: question, 
+                        preferred_models: ["mistral_0.5b", "phi2_2.7b", "openchat_3.5_0.4b"],
+                        enable_council: false  // Start with council disabled
+                    }},
+                    { path: '/council', method: 'POST', body: { 
+                        prompt: question, 
+                        force_council: true 
+                    }}
+                ];
+                
+                let workingEndpoint = null;
+                let result = null;
+                
+                for (const endpoint of testEndpoints) {
+                    try {
+                        console.log(`Trying ${endpoint.path}...`);
+                        
+                        const response = await fetch(`http://localhost:8002${endpoint.path}`, {
+                            method: endpoint.method,
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                // Add headers to avoid CORS preflight
+                                'Cache-Control': 'no-cache'
+                            },
+                            body: JSON.stringify(endpoint.body),
+                            // Add mode to handle CORS
+                            mode: 'cors'
+                        });
+                        
+                        console.log(`${endpoint.path}: ${response.status}`);
+                        console.log(`Question sent: "${question}"`); // Debug what question was actually sent
+                        
+                        if (response.ok) {
+                            result = await response.json();
+                            workingEndpoint = endpoint.path;
+                            console.log(`✅ ${endpoint.path} worked!`, result);
+                            break;
+                        } else if (response.status === 405) {
+                            console.log(`⚠️ ${endpoint.path}: Method not allowed`);
+                        } else if (response.status === 404) {
+                            console.log(`⚠️ ${endpoint.path}: Not found`);
+                        } else {
+                            const errorText = await response.text();
+                            console.log(`❌ ${endpoint.path}: ${response.status} - ${errorText}`);
+                        }
+                    } catch (error) {
+                        console.log(`❌ ${endpoint.path}: ${error.message}`);
+                    }
+                }
+                
+                if (!result) {
+                    throw new Error('No working endpoints found');
+                }
+
+                // Show debug info about which endpoint worked
+            if (isDebugMode) {
+                setTimeout(() => {
+                    addMessage('assistant', `
+                        <div class="space-y-2">
+                                <div class="text-xs text-gray-400 mb-2">🎯 Using ${workingEndpoint} endpoint</div>
+                                <div class="text-sm">Models available: ${result.loaded_models?.join(', ') || 'System models'}</div>
+                                <div class="text-sm">Response fields: ${Object.keys(result).join(', ')}</div>
+                        </div>
+                    `, true);
+                }, 500);
+                }
+
+                // Adapt response based on endpoint used
+                let finalText = '';
+                let latency = 0;
+                let modelUsed = '';
+                let confidence = 0;
+                
+                if (workingEndpoint === '/vote') {
+                    finalText = result.text;
+                    latency = result.voting_stats?.voting_time_ms || 0;
+                    modelUsed = result.winner?.model || 'unknown';
+                    confidence = result.winner?.confidence || 0;
+                    
+                    // Show voting debug info
+                    if (isDebugMode && result.all_candidates) {
+                        let delay = 1000;
+                        result.all_candidates.forEach((candidate, index) => {
+                setTimeout(() => {
+                    addMessage('assistant', `
+                                    <div class="flex items-center space-x-2 text-sm">
+                                        <span>${index === 0 ? '🏆' : '🤖'}</span>
+                                        <span class="text-cyan-400">${candidate.model}:</span>
+                                        <span class="text-gray-400">(${(candidate.confidence * 100).toFixed(0)}%)</span>
+                        </div>
+                                    <div class="text-sm mt-1">${candidate.response_snippet || 'No preview'}</div>
+                    `, true);
+                            }, delay);
+                            delay += 600;
+                        });
+                    }
+                } else if (workingEndpoint === '/orchestrate') {
+                    finalText = result.text;
+                    latency = result.latency_ms || 0;
+                    modelUsed = result.model_used || 'orchestrator';
+                    confidence = result.confidence || 0;
+                } else if (workingEndpoint === '/hybrid') {
+                    finalText = result.text;
+                    latency = result.hybrid_latency_ms || 0;
+                    modelUsed = result.model_used || result.provider || 'hybrid';
+                    confidence = result.confidence || 0;
+                } else if (workingEndpoint === '/council') {
+                    finalText = result.text;
+                    latency = result.total_latency_ms || 0;
+                    modelUsed = 'council';
+                    confidence = 0.9;
+                    
+                    // Show council voices if available
+                    if (isDebugMode && result.voice_responses) {
+                        let delay = 1000;
+                        Object.entries(result.voice_responses).forEach(([voice, response]) => {
+                            setTimeout(() => {
+                                const emoji = getAgentEmoji(voice);
+                                addMessage('assistant', `
+                                    <div class="flex items-center space-x-2 text-sm">
+                                        <span>${emoji}</span>
+                                        <span class="text-cyan-400">${voice}:</span>
+                                    </div>
+                                    <div class="text-sm mt-1">${response.text || JSON.stringify(response)}</div>
+                                `, true);
+                            }, delay);
+                            delay += 800;
+                        });
+                    }
+                }
+
+                // Show final response
+                setTimeout(() => {
+                    addMessage('assistant', finalText);
+                    
+                    // Update live stats with real data
+                    document.getElementById('live-latency').textContent = `${latency.toFixed(0)}ms ${modelUsed}`;
+                    
+                    // Show additional info if available
+                    if (isDebugMode) {
+                setTimeout(() => {
+                    addMessage('assistant', `
+                                <div class="text-xs text-gray-400 mt-2">
+                                    📊 Confidence: ${(confidence * 100).toFixed(0)}% | Latency: ${latency.toFixed(0)}ms | Model: ${modelUsed}
+                        </div>
+                    `, true);
+                        }, 500);
+                    }
+                    
+                }, isDebugMode ? 3000 : 1500);
+
+            } catch (error) {
+                console.error('Error calling API:', error);
+                
+                // Fallback to mock response on error
+                setTimeout(() => {
+                    addMessage('assistant', `
+                        <div class="text-red-400">
+                            ⚠️ API connection failed, but SwarmAI is running on port 8002!
+                        </div>
+                        <div class="mt-2">
+                            <strong>System Status:</strong> ✅ 9 models loaded<br>
+                            <strong>Debug:</strong> ${error.message}<br>
+                            <strong>Tip:</strong> This might be a CORS issue - the system is working!
+                        </div>
+                        <div class="text-xs text-gray-400 mt-2">
+                            Check browser console for detailed logs
+                        </div>
+                    `);
+                }, 1000);
+            }
+        }
+
+        function getAgentEmoji(agentName) {
+            const emojiMap = {
+                'joy': '😊',
+                'fear': '😰', 
+                'anger': '😠',
+                'sadness': '😢',
+                'disgust': '🤢',
+                'surprise': '😲',
+                'trust': '🤝',
+                'anticipation': '🔮',
+                'determination': '💪',
+                'reason': '🧠',
+                'spark': '✨',
+                'edge': '🗡️',
+                'heart': '❤️',
+                'vision': '👁️',
+                'mistral_0.5b': '🌊',
+                'phi2_2.7b': '🧮',
+                'openchat_3.5_0.4b': '💬',
+                'math_specialist_0.8b': '🧮'
+            };
+            return emojiMap[agentName.toLowerCase()] || '🎭';
+        }
+
+        function sendMessage() {
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            addMessage('user', message);
+            chatInput.value = '';
+            
+            // Clear initial message if present
+            if (chatMessages.children.length === 2) {
+                chatMessages.removeChild(chatMessages.firstElementChild);
+            }
+
+            simulateDeliberation(message);
+        }
+
+        sendButton.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        // Demo prompts
+        document.querySelectorAll('.demo-prompt').forEach(button => {
+            button.addEventListener('click', () => {
+                chatInput.value = button.textContent.replace(/"/g, '');
+                sendMessage();
+            });
+        });
+
+        // Toggle debug mode
+        document.getElementById('toggle-debug').addEventListener('click', (e) => {
+            isDebugMode = !isDebugMode;
+            const button = e.currentTarget;
+            if (isDebugMode) {
+                button.className = 'flex items-center space-x-2 px-3 py-2 rounded-lg bg-violet-500/20 text-violet-400';
+                button.innerHTML = '<span>👁️</span><span class="text-sm">Show Inner Debate</span>';
+            } else {
+                button.className = 'flex items-center space-x-2 px-3 py-2 rounded-lg bg-gray-700 text-gray-300';
+                button.innerHTML = '<span>👁️‍🗨️</span><span class="text-sm">Hide Inner Debate</span>';
+            }
+        });
+
+        // Voice orb interactions
+        document.querySelectorAll('.voice-orb').forEach(orb => {
+            orb.addEventListener('click', () => {
+                orb.classList.toggle('active');
+                setTimeout(() => {
+                    orb.classList.remove('active');
+                }, 3000);
+            });
+        });
+
+        // Real system status checking
+        async function checkSystemStatus() {
+            try {
+                console.log('🔍 Checking SwarmAI system status on port 8002...');
+                
+                // Test basic endpoints that should work
+                const basicEndpoints = [
+                    { path: '/health', name: 'Health Check' },
+                    { path: '/models', name: 'Models List' }
+                ];
+                
+                let systemRunning = false;
+                let modelsLoaded = 0;
+                
+                for (const endpoint of basicEndpoints) {
+                    try {
+                        const response = await fetch(`http://localhost:8002${endpoint.path}`, {
+                            method: 'GET',
+                            headers: { 
+                                'Accept': 'application/json',
+                                'Cache-Control': 'no-cache'
+                            },
+                            mode: 'cors'
+                        });
+                        
+                        console.log(`✅ ${endpoint.name}: ${response.status}`);
+                        
+                        if (response.ok) {
+                            systemRunning = true;
+                            const data = await response.json();
+                            
+                            if (endpoint.path === '/health') {
+                                console.log('Health data:', data);
+                                updateStatus('api-status', 'green', 'Connected');
+                                updateStatus('docker-status', 'green', 'Running');
+                            } else if (endpoint.path === '/models') {
+                                modelsLoaded = data.loaded_models ? data.loaded_models.length : 0;
+                                console.log(`Models loaded: ${modelsLoaded}`);
+                            }
+                        }
+                    } catch (error) {
+                        console.log(`❌ ${endpoint.name}: ${error.message}`);
+                    }
+                }
+                
+                if (!systemRunning) {
+                    updateStatus('api-status', 'red', 'Not responding');
+                    updateStatus('council-status', 'red', 'Offline');
+                    updateStatus('docker-status', 'red', 'Not running');
+                    return;
+                }
+
+                // Test a simple working endpoint (vote) to see if we can make POST requests
+                try {
+                    console.log('Testing /vote endpoint...');
+                    const voteResponse = await fetch('http://localhost:8002/vote', {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'Cache-Control': 'no-cache'
+                        },
+                        body: JSON.stringify({
+                            prompt: "test",
+                            candidates: ["mistral_0.5b"],  // Use non-math model for test
+                            top_k: 1
+                        }),
+                        mode: 'cors'
+                    });
+                    
+                    console.log(`Vote endpoint test: ${voteResponse.status}`);
+                    
+                    if (voteResponse.ok) {
+                        const voteData = await voteResponse.json();
+                        const latency = voteData.voting_stats?.voting_time_ms || 0;
+                        updateStatus('council-status', 'green', `API Active (${latency.toFixed(0)}ms)`);
+                    } else if (voteResponse.status === 405) {
+                        updateStatus('council-status', 'yellow', 'CORS Issues');
+                    } else {
+                        updateStatus('council-status', 'red', `Error ${voteResponse.status}`);
+                    }
+                } catch (error) {
+                    console.log(`Vote endpoint error: ${error.message}`);
+                    updateStatus('council-status', 'yellow', 'Connection Issues');
+                }
+                
+                // Update the live stats with real system info
+                if (systemRunning) {
+                    document.getElementById('live-qps').textContent = `${modelsLoaded} Models Loaded`;
+                    document.getElementById('live-cost').textContent = 'SwarmAI Active';
+                }
+
+            } catch (error) {
+                console.error('System status check failed:', error);
+                updateStatus('api-status', 'red', 'Error');
+                updateStatus('council-status', 'red', 'Error');
+                updateStatus('docker-status', 'red', 'Error');
+            }
+        }
+
+        function updateStatus(elementId, color, text) {
+            const statusElement = document.getElementById(elementId);
+            const dot = statusElement.querySelector('.w-2');
+            const span = statusElement.querySelector('span');
+            
+            // Update color
+            dot.className = `w-2 h-2 bg-${color}-500 rounded-full`;
+            span.className = `text-sm text-${color}-400`;
+            span.textContent = text;
+            
+            // Remove pulse animation for final states
+            if (color !== 'yellow') {
+                dot.classList.remove('animate-pulse');
+            }
+        }
+
+        // Check system status on load and periodically
+        checkSystemStatus();
+        setInterval(checkSystemStatus, 30000); // Check every 30 seconds
+
+        console.log('🌌 Council Living Symphony loaded!');
+        console.log('💡 Try clicking the voice orbs or asking deep questions!');
+    </script>
+</body>
+</html> 

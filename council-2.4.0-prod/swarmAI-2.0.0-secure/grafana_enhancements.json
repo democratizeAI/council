@@ -1,0 +1,93 @@
+{
+  "additional_panels": [
+    {
+      "type": "stat",
+      "title": "GPU Temperature (°C)",
+      "datasource": "${DS_PROMETHEUS}",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "thresholds": {
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 70},
+              {"color": "red", "value": 85}
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "swarm_gpu_temperature_celsius{gpu=\"0\"}",
+          "legendFormat": "GPU-0 Temp"
+        }
+      ],
+      "gridPos": {"x": 12, "y": 0, "w": 4, "h": 4}
+    },
+    {
+      "type": "timeseries", 
+      "title": "Memory Fragmentation Events",
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [
+        {
+          "expr": "increase(swarm_cuda_fragmentation_events_total[5m])",
+          "legendFormat": "Frag Events/5m"
+        }
+      ],
+      "gridPos": {"x": 0, "y": 24, "w": 12, "h": 6}
+    },
+    {
+      "type": "timeseries",
+      "title": "QPS vs Latency Correlation", 
+      "datasource": "${DS_PROMETHEUS}",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "axisPlacement": "right"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "QPS"},
+            "properties": [
+              {"id": "custom.axisPlacement", "value": "left"},
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "blue"}}
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "expr": "rate(swarm_router_requests_total[1m])",
+          "legendFormat": "QPS"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(swarm_router_request_latency_bucket[1m])) by (le)) * 1000",
+          "legendFormat": "p95 Latency (ms)"
+        }
+      ],
+      "gridPos": {"x": 0, "y": 30, "w": 12, "h": 8}
+    },
+    {
+      "type": "table",
+      "title": "Model Load Status",
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [
+        {
+          "expr": "swarm_model_loaded{profile=\"rtx_4070\"}",
+          "format": "table"
+        }
+      ],
+      "gridPos": {"x": 12, "y": 8, "w": 8, "h": 12}
+    }
+  ],
+  "annotations": [
+    {
+      "name": "65 QPS Threshold",
+      "datasource": "${DS_PROMETHEUS}",
+      "expr": "rate(swarm_router_requests_total[1m]) > 65",
+      "titleFormat": "Fragmentation Risk Zone",
+      "textFormat": "QPS exceeded 65 - monitor for memory fragmentation"
+    }
+  ]
+} 

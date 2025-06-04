@@ -1,0 +1,125 @@
+FROM python:3.11-slim
+
+# Build arguments
+ARG PYTHON_VERSION=3.11-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    cron \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Install scheduler dependencies (CPU-only)
+RUN pip install --no-cache-dir \
+    requests==2.31.0 \
+    pyyaml==6.0 \
+    schedule==1.2.0 \
+    prometheus-client==0.18.0 \
+    psutil==5.9.0 \
+    python-dateutil==2.8.2
+
+# Copy scheduler scripts
+COPY emotional_roundtable_protocol.py .
+COPY scripts/monitor_evolution.py ./scripts/
+COPY scripts/auto_feeder_daemon.py ./scripts/
+COPY scripts/evolution_telegram_notifier.py ./scripts/
+
+# Create enhanced scheduler entrypoint
+RUN echo '#!/bin/bash\n\
+echo "🎭 Starting Emotional Round-Table Scheduler"\n\
+echo "System Status:"\n\
+free -h\n\
+echo "Starting nightly evolution scheduler..."\n\
+python3 -c "\n\
+import schedule\n\
+import time\n\
+import subprocess\n\
+import requests\n\
+from prometheus_client import start_http_server, Gauge, Counter\n\
+\n\
+# Metrics\n\
+evolution_cycles_total = Counter(\"evolution_cycles_total\", \"Total evolution cycles\")\n\
+last_evolution_timestamp = Gauge(\"last_evolution_timestamp\", \"Timestamp of last evolution\")\n\
+\n\
+def run_evolution():\n\
+    print(\"🌙 Running nightly emotional evolution...\")\n\
+    try:\n\
+        result = subprocess.run([\"python3\", \"emotional_roundtable_protocol.py\"], \n\
+                              capture_output=True, text=True, timeout=3600)\n\
+        if result.returncode == 0:\n\
+            evolution_cycles_total.inc()\n\
+            last_evolution_timestamp.set_to_current_time()\n\
+            print(\"✅ Evolution cycle completed successfully\")\n\
+        else:\n\
+            print(f\"❌ Evolution cycle failed: {result.stderr}\")\n\
+    except Exception as e:\n\
+        print(f\"💥 Evolution cycle error: {e}\")\n\
+\n\
+def health_check():\n\
+    return {\"status\": \"healthy\", \"scheduler\": \"running\"}\n\
+\n\
+# Start metrics server\n\
+start_http_server(8081)\n\
+\n\
+# Schedule nightly evolution\n\
+schedule.every().day.at(\"02:00\").do(run_evolution)\n\
+\n\
+print(\"📅 Scheduler started - Next evolution at 02:00\")\n\
+while True:\n\
+    schedule.run_pending()\n\
+    time.sleep(60)\n\
+"\n\
+' > /start_scheduler.sh && chmod +x /start_scheduler.sh
+
+# Create health endpoint script
+RUN echo '#!/usr/bin/env python3\n\
+from http.server import HTTPServer, BaseHTTPRequestHandler\n\
+import json\n\
+import threading\n\
+\n\
+class HealthHandler(BaseHTTPRequestHandler):\n\
+    def do_GET(self):\n\
+        if self.path == "/health":\n\
+            self.send_response(200)\n\
+            self.send_header("Content-type", "application/json")\n\
+            self.end_headers()\n\
+            response = {"status": "healthy", "service": "scheduler"}\n\
+            self.wfile.write(json.dumps(response).encode())\n\
+        else:\n\
+            self.send_response(404)\n\
+            self.end_headers()\n\
+\n\
+def start_health_server():\n\
+    server = HTTPServer(("0.0.0.0", 8081), HealthHandler)\n\
+    server.serve_forever()\n\
+\n\
+if __name__ == "__main__":\n\
+    threading.Thread(target=start_health_server, daemon=True).start()\n\
+' > /health_server.py && chmod +x /health_server.py
+
+# Create directories with proper permissions
+RUN mkdir -p jobs config scripts logs && \
+    chmod 755 jobs config scripts logs
+
+# Non-root user for security
+RUN useradd -m -u 1000 scheduler && \
+    chown -R scheduler:scheduler /app
+USER scheduler
+
+# Environment variables
+ENV PYTHONUNBUFFERED=1
+ENV SCHEDULER_METRICS_PORT=8081
+ENV EVOLUTION_BRANCH=evolution-main
+
+# Health check with HTTP endpoint
+HEALTHCHECK --interval=120s --timeout=30s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:8081/health || exit 1
+
+# Expose metrics/health port
+EXPOSE 8081
+
+# Start the emotional round-table scheduler
+CMD ["/start_scheduler.sh"] 
