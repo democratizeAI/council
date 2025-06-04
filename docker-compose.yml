@@ -31,37 +31,26 @@ services:
       timeout: 10s
       retries: 3
 
-  # AutoGen Council API with Memory
+  # AutoGen Council API with Memory & Sandbox
   council:
     build: .
     container_name: autogen-council
     ports:
       - "9000:9000"
-    environment:
-      - LLM_ENDPOINT=http://llm:8000/v1
-      - MODEL_NAME=mistral-13b-gptq
-      - SWARM_CLOUD_ENABLED=true
-      - SWARM_CLOUD_BUDGET_USD=10.0
-      - HEALTH_CHECK_TIMEOUT=5
-      - HEALTH_CHECK_RETRIES=3
-      - MAX_TOKENS=150
-      - TEMPERATURE=0.7
-      # Memory system configuration
-      - MEMORY_PATH=/app/memory
-      - MEM_EMB_MODEL=all-MiniLM-L6-v2
-      - MEMORY_MAX_CONTEXT_ITEMS=10
-      - MEMORY_PERSISTENCE_INTERVAL=100
-    depends_on:
-      llm:
-        condition: service_healthy
-    restart: unless-stopped
     volumes:
-      - ./logs:/app/logs
-      - ./memory:/app/memory  # Persistent memory storage
+      - memory-store:/app/memory
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus
+      - AZ_SHELL_TRUSTED=yes
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - seccomp:unconfined
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
-      interval: 15s
-      timeout: 5s
+      interval: 30s
+      timeout: 10s
       retries: 3
 
   # Prometheus monitoring (optional)
@@ -94,4 +83,6 @@ services:
     restart: unless-stopped
 
 volumes:
-  grafana-storage: 
+  grafana-storage:
+  memory-store:
+    driver: local 

@@ -44,6 +44,19 @@ class SkillConfig:
     confidence_boost: float = 0.0
     enabled: bool = True
 
+# Add sandbox execution import
+try:
+    from sandbox_exec import exec_safe
+    SANDBOX_AVAILABLE = True
+except ImportError:
+    SANDBOX_AVAILABLE = False
+    exec_safe = None
+
+from prometheus_client import Counter, Histogram, Summary
+
+# Add sandbox routing confidence
+EXEC_CONFIDENCE_THRESHOLD = 0.6
+
 # Backward compatibility RouterCascade class
 class RouterCascade:
     """Backward compatible router for AutoGen Council system"""
@@ -115,6 +128,9 @@ class RouterCascade:
         logger.info(f"   Cloud Enabled: {self.cloud_enabled}")
         logger.info(f"   Budget: ${self.budget_usd}")
 
+        self.sandbox_enabled = os.getenv("AZ_SHELL_TRUSTED", "no").lower() == "yes"
+        logger.info(f"🛡️ Sandbox execution: {'enabled' if self.sandbox_enabled and SANDBOX_AVAILABLE else 'disabled'}")
+
     async def _health_check_llm(self) -> bool:
         """Check if LLM endpoint is healthy"""
         if self._health_check_done:
@@ -155,7 +171,7 @@ class RouterCascade:
         return min(confidence, 1.0)
 
     def _route_query(self, query: str) -> tuple[str, float]:
-        """Determine best skill for query"""
+        """Enhanced routing with sandbox execution detection"""
         confidences = {}
         
         for skill_name in self.skills:
@@ -168,6 +184,14 @@ class RouterCascade:
         # If no skill has good confidence, use agent-0 (LLM backend)
         if best_confidence < 0.3:
             return 'agent0', 0.5
+        
+        # Check for code execution requests
+        if self.sandbox_enabled and SANDBOX_AVAILABLE:
+            code_indicators = ["run", "execute", "python", "code", "script", "calculate", "compute"]
+            if any(indicator in query.lower() for indicator in code_indicators):
+                # Look for actual code blocks or expressions
+                if any(char in query for char in ["print(", "import ", "def ", "=", "+"]):
+                    return "exec_safe", EXEC_CONFIDENCE_THRESHOLD
         
         return best_skill, best_confidence
 
@@ -360,8 +384,8 @@ class RouterCascade:
             logger.error(f"Agent-0 LLM error: {e}")
             raise CloudRetry(f"Agent-0 LLM failed: {e}")
 
-    async def route_query(self, query: str) -> Dict[str, Any]:
-        """Main routing function"""
+    async def route_query(self, query: str, **kwargs) -> Dict[str, Any]:
+        """Enhanced query routing with sandbox execution"""
         start_time = time.time()
         
         try:
@@ -370,6 +394,28 @@ class RouterCascade:
             
             logger.info(f"🎯 Routing to {skill} (confidence: {confidence:.2f})")
             
+            if skill == "exec_safe" and self.sandbox_enabled and SANDBOX_AVAILABLE:
+                # Extract code from query
+                code = self._extract_code_from_query(query)
+                result = exec_safe(code)
+                
+                response = {
+                    "response": result["stdout"] or result["stderr"] or "Code executed successfully",
+                    "skill_used": "exec_safe",
+                    "confidence": confidence,
+                    "processing_time_ms": result["elapsed_ms"],
+                    "metadata": {
+                        "sandbox_execution": True,
+                        "code_executed": code[:100],  # First 100 chars for logging
+                        "stdout": result["stdout"],
+                        "stderr": result["stderr"]
+                    }
+                }
+                
+                REQUEST_SUCCESS.inc()
+                return response
+            
+            # Non-streaming path (original logic)
             # Call the appropriate skill
             if skill == 'math':
                 result = await self._call_math_skill(query)
@@ -395,9 +441,50 @@ class RouterCascade:
             logger.warning(f"☁️ CloudRetry triggered: {e.reason}")
             # Re-raise for higher-level handling (API will handle cloud fallback)
             raise
+        except RuntimeError as e:
+            if "sandbox" in str(e).lower() or "firejail" in str(e).lower():
+                logger.warning(f"🚨 Sandbox execution failed: {e}")
+                # Fallback to regular routing
+                return await self._route_to_fallback(query, **kwargs)
+            else:
+                raise
         except Exception as e:
             logger.error(f"❌ Router error: {e}")
             raise CloudRetry(f"Router cascade failed: {e}")
+    
+    def _extract_code_from_query(self, query: str) -> str:
+        """Extract code from natural language query"""
+        # Simple code extraction - look for common patterns
+        lines = query.split('\n')
+        code_lines = []
+        
+        for line in lines:
+            line = line.strip()
+            # Skip natural language lines
+            if any(word in line.lower() for word in ['run', 'execute', 'please', 'can you', 'calculate']):
+                # Look for code after the command
+                if ':' in line:
+                    potential_code = line.split(':', 1)[1].strip()
+                    if potential_code:
+                        code_lines.append(potential_code)
+            elif any(indicator in line for indicator in ['print(', 'import ', 'def ', '=', 'range(']):
+                code_lines.append(line)
+        
+        if code_lines:
+            return '\n'.join(code_lines)
+        
+        # Fallback: return the query as-is if it looks like code
+        if any(indicator in query for indicator in ['print(', 'import ', 'def ']):
+            return query
+            
+        # Default simple math expression
+        return f"print({query})"
+
+    async def _route_to_fallback(self, query: str, **kwargs) -> Dict[str, Any]:
+        """Fallback routing when sandbox fails"""
+        # Route to existing skills as fallback
+        skill, confidence = self._route_query(query.replace("run", "").replace("execute", ""))
+        # ... existing routing logic ...
 
 # Factory function for easy instantiation
 def create_autogen_council(config: Optional[Dict[str, Any]] = None):

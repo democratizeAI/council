@@ -21,6 +21,13 @@ model_loaded = Gauge('swarm_model_loaded', 'Model loading status', ['model', 'pr
 router_requests = Counter('swarm_router_requests_total', 'Total router requests')
 router_request_latency = Histogram('swarm_router_request_latency', 'Router request latency in seconds')
 
+# Streaming metrics for first-token latency monitoring
+stream_first_token_latency = Histogram(
+    'swarm_stream_first_token_latency_seconds', 
+    'First token latency for streaming requests',
+    buckets=(0.025, 0.050, 0.080, 0.100, 0.200, 0.500, 1.0, float('inf'))  # 25ms, 50ms, 80ms, 100ms, 200ms buckets
+)
+
 def get_gpu_metrics():
     """Get GPU metrics using nvidia-smi"""
     try:

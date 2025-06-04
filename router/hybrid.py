@@ -14,6 +14,7 @@ import os
 async def hybrid_route(prompt: str, preferred_models: List[str] = None, enable_council: bool = None) -> Dict[str, Any]:
     """
     Hybrid routing with confidence-based local/cloud decision making
+    Enhanced with Track ③ math specialist integration
     
     Args:
         prompt: Input prompt
@@ -31,6 +32,40 @@ async def hybrid_route(prompt: str, preferred_models: List[str] = None, enable_c
         preferred_models = list(loaded_models.keys())[:2]  # Use first 2 available
     
     try:
+        # 🧮 MATH SPECIALIST: Ultra-fast math routing (Track ③)
+        try:
+            from router.math_specialist import route_math_query, is_math_query
+            
+            if is_math_query(prompt):
+                print(f"🧮 Math query detected, using specialist routing...")
+                math_result = await route_math_query(prompt, preferred_models)
+                
+                if math_result and math_result.get('latency_ms', 0) < 100:
+                    # Math specialist succeeded and met latency target
+                    print(f"⚡ Math specialist: {math_result['latency_ms']:.1f}ms ({math_result['method']})")
+                    
+                    # Convert to hybrid router format
+                    return {
+                        "text": math_result["text"],
+                        "provider": math_result["provider"],
+                        "model_used": math_result.get("model_used", "math_specialist"),
+                        "confidence": math_result["confidence"],
+                        "hybrid_latency_ms": math_result["latency_ms"],
+                        "cloud_consulted": False,
+                        "cost_cents": 0.001,  # Minimal cost for local math
+                        "council_used": False,
+                        "math_method": math_result["method"],
+                        "accuracy_expected": math_result["accuracy_expected"],
+                        "council_voices": None
+                    }
+                    
+        except ImportError:
+            # Math specialist not available - continue with normal routing
+            pass
+        except Exception as e:
+            print(f"⚠️ Math specialist error: {e}")
+            # Continue with normal routing as fallback
+        
         # ⚡ FAST PATH: Smart single-model selection for simple prompts
         if (len(prompt) < 120 and 
             not any(keyword in prompt.lower() for keyword in ["explain", "why", "step by step", "analyze", "compare", "reasoning"])):
