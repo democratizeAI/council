@@ -115,13 +115,13 @@ jobs:
             python tools/bench_gate.py --p95 400 --acc 0.80
           else
             echo "Creating benchmark gate..."
-            python -c "
+            python -c '
 import time
 import requests
 import statistics
 from litmus_with_guards import GuardedLitmusTest
 
-print('🚀 Running GPU benchmark gate...')
+print("🚀 Running GPU benchmark gate...")
 
 # Test latency
 latencies = []
@@ -129,7 +129,7 @@ for i in range(10):
     start = time.time()
     try:
         # Simulate API call (would be actual inference endpoint)
-        # response = requests.post('http://localhost:8000/generate', json={'prompt': 'What is 2+2?'})
+        # response = requests.post("http://localhost:8000/generate", json={"prompt": "What is 2+2?"})
         time.sleep(0.1)  # Simulate processing time
         latency = (time.time() - start) * 1000
         latencies.append(latency)
@@ -137,25 +137,25 @@ for i in range(10):
         latencies.append(1000)  # Timeout
 
 p95_latency = statistics.quantiles(latencies, n=20)[18] if latencies else 1000
-print(f'P95 latency: {p95_latency:.1f}ms')
+print(f"P95 latency: {p95_latency:.1f}ms")
 
 # Test accuracy
 litmus = GuardedLitmusTest()
 try:
     success, results = litmus.run_guarded_litmus()
-    composite_acc = sum(1 for r in results if r['passed']) / len(results)
+    composite_acc = sum(1 for r in results if r["passed"]) / len(results)
     
-    print(f'Composite accuracy: {composite_acc:.2f}')
+    print(f"Composite accuracy: {composite_acc:.2f}")
     
     # Gates
-    assert composite_acc >= 0.80, f'Accuracy {composite_acc:.2f} < 0.80'
-    assert p95_latency <= 400, f'P95 latency {p95_latency:.1f}ms > 400ms'
+    assert composite_acc >= 0.80, f"Accuracy {composite_acc:.2f} < 0.80"
+    assert p95_latency <= 400, f"P95 latency {p95_latency:.1f}ms > 400ms"
     
-    print('✅ All gates passed')
+    print("✅ All gates passed")
     
 finally:
     litmus.cleanup()
-            "
+            '
           fi
       
       - name: Upload artifacts
