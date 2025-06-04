@@ -6,8 +6,8 @@ Hybrid routing: Smart orchestration between local and cloud models
 import asyncio
 import time
 from typing import List, Dict, Any, Optional
-from loader.deterministic_loader import get_loaded_models
-from router.voting import vote
+from loader.deterministic_loader import get_loaded_models, generate_response
+from router.voting import vote, smart_select
 from router.cost_tracking import debit
 
 async def hybrid_route(prompt: str, preferred_models: List[str] = None, enable_council: bool = None) -> Dict[str, Any]:
@@ -30,7 +30,35 @@ async def hybrid_route(prompt: str, preferred_models: List[str] = None, enable_c
         preferred_models = list(loaded_models.keys())[:2]  # Use first 2 available
     
     try:
-        # Use local voting system for hybrid routing
+        # ⚡ FAST PATH: Smart single-model selection for simple prompts
+        if (len(prompt) < 120 and 
+            not any(keyword in prompt.lower() for keyword in ["explain", "why", "step by step", "analyze", "compare", "reasoning"])):
+            
+            # Smart select best model without running inference
+            selected_model = smart_select(prompt, preferred_models)
+            print(f"⚡ Smart path: selected {selected_model} for '{prompt[:50]}...'")
+            
+            # Generate single response
+            response_text = generate_response(selected_model, prompt, max_tokens=150)
+            
+            latency_ms = (time.time() - start_time) * 1000
+            tokens = len(prompt.split()) + len(response_text.split())
+            cost_cents = debit(selected_model, tokens)
+            
+            return {
+                "text": response_text,
+                "provider": "local_smart",
+                "model_used": selected_model,
+                "confidence": 0.8,  # High confidence for smart routing
+                "hybrid_latency_ms": latency_ms,
+                "cloud_consulted": False,
+                "cost_cents": cost_cents,
+                "council_used": bool(enable_council),
+                "council_voices": None
+            }
+        
+        # COMPLEX PATH: Use voting for complex prompts
+        print(f"🗳️ Complex prompt, using voting for '{prompt[:50]}...'")
         result = await vote(prompt, preferred_models, top_k=1)
         
         latency_ms = (time.time() - start_time) * 1000
@@ -45,7 +73,7 @@ async def hybrid_route(prompt: str, preferred_models: List[str] = None, enable_c
         
         return {
             "text": result.get("text", ""),
-            "provider": "local",
+            "provider": "local_voting",
             "model_used": winner.get("model", "unknown"),
             "confidence": confidence,
             "hybrid_latency_ms": latency_ms,

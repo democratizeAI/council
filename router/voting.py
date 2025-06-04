@@ -243,6 +243,42 @@ class ConfidenceVoter:
 # Global voter instance
 voter = ConfidenceVoter()
 
+def smart_select(prompt: str, choices: List[str]) -> str:
+    """
+    Smart O(1) model selection based on prompt characteristics
+    Returns the single best model for the prompt without running inference
+    """
+    # Get available models
+    loaded_models = get_loaded_models()
+    available_choices = [c for c in choices if c in loaded_models]
+    
+    if not available_choices:
+        raise ValueError(f"No available models from choices: {choices}")
+    
+    # Quick heuristic-based model selection
+    prompt_lower = prompt.lower()
+    
+    # Math/calculation prompts
+    if any(keyword in prompt_lower for keyword in ["calculate", "math", "*", "+", "-", "/", "equation", "solve"]):
+        math_models = [m for m in available_choices if "math" in m.lower() or "specialist" in m.lower()]
+        if math_models:
+            return math_models[0]
+    
+    # Code-related prompts
+    if any(keyword in prompt_lower for keyword in ["code", "python", "function", "programming", "debug", "```"]):
+        code_models = [m for m in available_choices if "code" in m.lower() or "llama" in m.lower()]
+        if code_models:
+            return code_models[0]
+    
+    # Long/complex prompts - use larger models
+    if len(prompt) > 200:
+        large_models = [m for m in available_choices if "7b" in m.lower() or "mistral" in m.lower()]
+        if large_models:
+            return large_models[0]
+    
+    # Default: return the first available model (usually fastest)
+    return available_choices[0]
+
 async def vote(prompt: str, choices: List[str], top_k: int = 2) -> Dict[str, Any]:
     """Main voting function - facade for the ConfidenceVoter"""
     return await voter.vote(prompt, choices, top_k) 

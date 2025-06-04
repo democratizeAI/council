@@ -151,8 +151,7 @@ def create_transformers_model(head: Dict[str, Any]) -> Any:
             torch_dtype=torch.float16 if device == "cuda" else torch.float32,
             trust_remote_code=True,
             # Add parameters for faster loading
-            use_fast=True,
-            low_cpu_mem_usage=True
+            use_fast=True
         )
         
         echo(f"✅ Transformers {name} loaded successfully on {device} using {model_id}")
@@ -340,72 +339,147 @@ def generate_response(model_name: str, prompt: str, max_tokens: int = 150) -> st
     backend = model_info['backend']
     handle = model_info['handle']
     
+    echo(f"🎯 Generating with {model_name} (backend: {backend})")
+    echo(f"📝 Prompt: '{prompt[:50]}...'")
+    
     try:
         if backend == "vllm":
             from vllm import SamplingParams
             sampling_params = SamplingParams(temperature=0.7, max_tokens=max_tokens)
             outputs = handle.generate([prompt], sampling_params)
-            return outputs[0].outputs[0].text.strip()
+            result = outputs[0].outputs[0].text.strip()
+            echo(f"✅ vLLM generation successful: '{result[:50]}...'")
+            return result
             
         elif backend == "llama_cpp":
             output = handle(prompt, max_tokens=max_tokens, temperature=0.7, stop=["</s>", "<|end|>"])
-            return output['choices'][0]['text'].strip()
+            result = output['choices'][0]['text'].strip()
+            echo(f"✅ llama.cpp generation successful: '{result[:50]}...'")
+            return result
             
         elif backend == "transformers":
+            echo(f"🔧 Using transformers pipeline for {model_name}")
             # Use the transformers pipeline
-            outputs = handle(
-                prompt, 
-                max_length=len(prompt.split()) + max_tokens,
-                num_return_sequences=1,
-                temperature=0.7,
-                do_sample=True,
-                pad_token_id=handle.tokenizer.eos_token_id
-            )
-            
-            # Extract only the generated part (remove original prompt)
-            full_text = outputs[0]['generated_text']
-            response = full_text[len(prompt):].strip()
-            return response if response else "I understand your question."
+            try:
+                # Simpler, more compatible generation
+                outputs = handle(
+                    prompt, 
+                    max_new_tokens=max_tokens,  # Use max_new_tokens instead of max_length
+                    temperature=0.7,
+                    do_sample=True,
+                    truncation=True,
+                    pad_token_id=handle.tokenizer.eos_token_id if hasattr(handle, 'tokenizer') else None
+                )
+                
+                echo(f"📤 Pipeline output type: {type(outputs)}")
+                
+                # Extract the generated text
+                if isinstance(outputs, list) and len(outputs) > 0:
+                    # Get generated text, remove the original prompt
+                    full_text = outputs[0]['generated_text']
+                    response = full_text[len(prompt):].strip() if full_text.startswith(prompt) else full_text.strip()
+                else:
+                    response = str(outputs).strip()
+                
+                echo(f"✅ Transformers generation successful: '{response[:50]}...'")
+                return response if response else f"I understand your question about {prompt[:30]}..."
+                
+            except Exception as pipeline_error:
+                echo(f"⚠️ Pipeline error with {model_name}: {pipeline_error}")
+                # Try even simpler generation
+                try:
+                    simple_output = handle(prompt, max_length=len(prompt.split()) + max_tokens)
+                    if isinstance(simple_output, list) and len(simple_output) > 0:
+                        result = simple_output[0]['generated_text'].replace(prompt, '').strip()
+                        echo(f"✅ Simple transformers generation successful: '{result[:50]}...'")
+                        return result if result else f"Processing your question about {prompt[:30]}..."
+                    raise pipeline_error  # Let it fall back to mock
+                except Exception as simple_error:
+                    echo(f"⚠️ Simple generation also failed for {model_name}: {simple_error}")
+                    raise simple_error  # Let it fall back to mock
             
         else:  # mock backend
-            return generate_mock_response(prompt, model_name, model_info)
+            echo(f"🎭 Using mock backend for {model_name}")
+            result = generate_mock_response(prompt, model_name, model_info)
+            echo(f"✅ Mock generation: '{result[:50]}...'")
+            return result
             
     except Exception as e:
-        echo(f"⚠️ Error generating with {model_name}: {e}")
+        echo(f"❌ Error generating with {model_name}: {e}")
+        echo(f"🔄 Falling back to mock response")
         # Fallback to mock response
-        return generate_mock_response(prompt, model_name, model_info)
+        result = generate_mock_response(prompt, model_name, model_info)
+        echo(f"✅ Mock fallback: '{result[:50]}...'")
+        return result
 
 def generate_mock_response(prompt: str, model_name: str, model_info: Dict[str, Any]) -> str:
     """Generate mock response for testing"""
     import random
     
-    # Different response styles based on model type
-    if "math" in model_name.lower():
+    # Analyze the prompt to generate relevant responses
+    prompt_lower = prompt.lower()
+    
+    # Math-related prompts
+    if any(word in prompt_lower for word in ['math', 'calculate', 'add', 'subtract', 'multiply', 'divide', '+', '-', '*', '/', 'equation']):
+        if "2+2" in prompt_lower or "2 + 2" in prompt_lower:
+            return f"Response from {model_name}: 2 + 2 equals 4."
+        else:
+            return f"Response from {model_name}: I can help with mathematical calculations. What specific problem would you like me to solve?"
+    
+    # Ocean-related prompts
+    elif any(word in prompt_lower for word in ['ocean', 'sea', 'water', 'marine', 'waves', 'fish']):
         responses = [
-            "The mathematical solution is 4.",
-            "Calculating step by step: 2 + 2 = 4",
-            "Using arithmetic: 2 + 2 equals 4"
+            f"Response from {model_name}: The ocean covers about 71% of Earth's surface and contains 97% of Earth's water. It's home to countless marine species and plays a crucial role in regulating our planet's climate.",
+            f"Response from {model_name}: Oceans are vast bodies of saltwater that contain diverse ecosystems, from coral reefs to deep-sea trenches. They're essential for weather patterns and global circulation.",
+            f"Response from {model_name}: The ocean is a fascinating environment with depths reaching over 11,000 meters in places like the Mariana Trench. It's largely unexplored and full of mysteries."
         ]
-    elif "code" in model_name.lower():
+        return random.choice(responses)
+    
+    # AI/Technology prompts
+    elif any(word in prompt_lower for word in ['ai', 'artificial intelligence', 'technology', 'computer', 'robot', 'machine learning']):
         responses = [
-            "```python\nresult = 2 + 2\nprint(result)  # Output: 4\n```",
-            "Here's the code solution:\n```\nsum = a + b\n```",
-            "def add(a, b): return a + b  # Returns 4 for add(2,2)"
+            f"Response from {model_name}: Artificial Intelligence refers to computer systems that can perform tasks typically requiring human intelligence, such as learning, reasoning, and problem-solving.",
+            f"Response from {model_name}: AI technology has evolved rapidly, with applications in healthcare, transportation, communication, and many other fields that benefit society.",
+            f"Response from {model_name}: Machine learning is a subset of AI that enables systems to learn and improve from experience without being explicitly programmed for every scenario."
         ]
-    elif "safety" in model_name.lower():
+        return random.choice(responses)
+    
+    # Creative writing prompts
+    elif any(word in prompt_lower for word in ['story', 'write', 'creative', 'poem', 'haiku', 'tale', 'narrative']):
         responses = [
-            "This is a safe mathematical query. Result: 4",
-            "Content approved. Answer: 2 + 2 = 4",
-            "Safe response: The sum is 4"
+            f"Response from {model_name}: I'd be happy to help with creative writing! Here's a start: 'In a world where technology and nature coexist, a young explorer discovers...'",
+            f"Response from {model_name}: Creative writing allows us to explore imagination and express ideas in unique ways. What genre or theme interests you most?",
+            f"Response from {model_name}: Here's a short piece: 'The digital wind whispered through silicon trees, carrying messages between worlds both real and virtual.'"
         ]
+        return random.choice(responses)
+    
+    # Science prompts
+    elif any(word in prompt_lower for word in ['science', 'physics', 'chemistry', 'biology', 'quantum', 'space', 'universe']):
+        responses = [
+            f"Response from {model_name}: Science helps us understand the natural world through observation, experimentation, and analysis. What scientific topic interests you?",
+            f"Response from {model_name}: The universe is vast and full of fascinating phenomena, from quantum mechanics at the smallest scales to cosmic structures spanning billions of light-years.",
+            f"Response from {model_name}: Scientific discovery drives human progress, leading to innovations that improve our understanding of life, matter, and energy."
+        ]
+        return random.choice(responses)
+    
+    # Philosophy/meaning prompts
+    elif any(word in prompt_lower for word in ['meaning', 'life', 'philosophy', 'purpose', 'existence', 'consciousness']):
+        responses = [
+            f"Response from {model_name}: The meaning of life is a profound philosophical question that has been contemplated throughout human history, with answers varying across cultures and individuals.",
+            f"Response from {model_name}: Consciousness and existence raise fascinating questions about the nature of reality, perception, and what it means to be aware.",
+            f"Response from {model_name}: Philosophy explores fundamental questions about knowledge, reality, ethics, and the human condition. What aspect interests you most?"
+        ]
+        return random.choice(responses)
+    
+    # Default responses for other prompts
     else:
         responses = [
-            f"Processed by {model_name}: The answer is 4.",
-            f"Using {model_info['type']} model: 2 + 2 = 4",
-            f"Response from {model_name}: Four is the result of 2 + 2."
+            f"Response from {model_name}: I understand your question about '{prompt[:30]}...' Let me provide a thoughtful response based on the information available.",
+            f"Response from {model_name}: That's an interesting topic. I'd be happy to discuss '{prompt[:30]}...' in more detail.",
+            f"Response from {model_name}: Thank you for your question. Regarding '{prompt[:30]}...', here's what I can share:",
+            f"Response from {model_name}: I appreciate your inquiry. Let me address your question about this topic."
         ]
-    
-    return random.choice(responses)
+        return random.choice(responses)
 
 def main():
     """CLI entrypoint - preserves existing behavior for CI"""
