@@ -58,6 +58,30 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       `;
       
+      // Add consensus information if available
+      if (!msg.isUser && msg.metadata && msg.metadata.consensus_fusion && msg.metadata.candidates && msg.metadata.candidates.length > 1) {
+        const consensusInfo = document.createElement('div');
+        consensusInfo.className = 'consensus-info';
+        consensusInfo.innerHTML = `
+          <div class="consensus-badge">
+            🤝 <strong>Council Consensus</strong> (${msg.metadata.candidates.length} specialists)
+          </div>
+          <details class="head-votes">
+            <summary>📊 View individual specialist votes</summary>
+            <div class="specialist-votes">
+              ${msg.metadata.candidates.map(candidate => `
+                <div class="vote-item">
+                  <span class="specialist-name">${candidate.specialist}</span>
+                  <span class="confidence">${(candidate.confidence * 100).toFixed(0)}%</span>
+                  <div class="vote-text">${candidate.text}</div>
+                </div>
+              `).join('')}
+            </div>
+          </details>
+        `;
+        messageEl.appendChild(consensusInfo);
+      }
+      
       messagesContainer.appendChild(messageEl);
     });
 
@@ -81,6 +105,15 @@ document.addEventListener('DOMContentLoaded', () => {
       document.querySelectorAll('pre code').forEach((el) => {
         hljs.highlightElement(el);
       });
+    }
+
+    // Show performance info
+    if (state.msgs.length > 0 && state.msgs[state.msgs.length - 1].metadata && state.msgs[state.msgs.length - 1].metadata.routing_info && state.msgs[state.msgs.length - 1].metadata.routing_info.total_latency_ms) {
+      let perfInfo = `⚡ ${state.msgs[state.msgs.length - 1].metadata.routing_info.total_latency_ms}ms`;
+      if (state.msgs[state.msgs.length - 1].metadata.routing_info.consensus_fusion) {
+        perfInfo += ` (${state.msgs[state.msgs.length - 1].metadata.routing_info.candidates.length} heads fused)`;
+      }
+      addMessage('system', perfInfo);
     }
   }
 
@@ -139,7 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
           prompt: text,
-          candidates: [], // Let system auto-select specialists
+          candidates: ["math_specialist", "code_specialist", "logic_specialist", "knowledge_specialist", "mistral_general"], // Fixed specialist names
           top_k: 1
         })
       });
@@ -166,23 +199,47 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Add confidence indicator
       let confidenceIcon = "🟢";
-      if (confidence < 0.5) confidenceIcon = "🔴";
-      else if (confidence < 0.7) confidenceIcon = "🟠";
+      let confidenceClass = "high";
+      if (confidence < 0.5) {
+        confidenceIcon = "🔴";
+        confidenceClass = "low";
+      } else if (confidence < 0.7) {
+        confidenceIcon = "🟠";
+        confidenceClass = "medium";
+      }
+      
+      // Add specialist type emoji
+      let specialistEmoji = "🤖";
+      if (modelUsed.includes("math")) specialistEmoji = "🧮";
+      else if (modelUsed.includes("code")) specialistEmoji = "🔧";
+      else if (modelUsed.includes("logic")) specialistEmoji = "🧠";
+      else if (modelUsed.includes("knowledge") || modelUsed.includes("rag")) specialistEmoji = "📚";
+      else if (modelUsed.includes("mistral") || modelUsed.includes("openai")) specialistEmoji = "☁️";
+      
+      // Format response with enhanced styling
+      const specialistHeader = `${confidenceIcon} **${specialistEmoji} ${modelUsed}** (${(confidence * 100).toFixed(0)}% confidence${specialistInfo})`;
+      const performanceInfo = latencyMs < 1 ? `⚡ Lightning fast: ${latencyMs.toFixed(1)}ms` : `🚀 Fast response: ${latencyMs.toFixed(0)}ms`;
       
       // Add AI response to state with enhanced metadata
       state.msgs.push({
         isUser: false,
-        text: `${confidenceIcon} **${modelUsed}** (${(confidence * 100).toFixed(0)}% confidence${specialistInfo})\n\n${responseText}`,
+        text: `${specialistHeader}\n\n${responseText}\n\n---\n💨 ${performanceInfo} • 💰 $${(totalCost / 100).toFixed(3)}`,
         ms: latencyMs,
         $: (totalCost / 100).toFixed(3), // Convert cents to dollars
         timestamp: new Date(),
         metadata: {
           model: modelUsed,
           confidence: confidence,
+          confidenceClass: confidenceClass,
           specialists: j.candidates || [],
-          routing_info: j.voting_stats || {}
+          routing_info: j.voting_stats || {},
+          consensus_fusion: j.consensus_fusion || false,
+          candidates: j.candidates || []
         }
       });
+
+      // Display the response
+      renderMessages();
     } catch (error) {
       console.error('Chat request failed:', error);
       
@@ -280,27 +337,37 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize the chat
   initChat();
   
-  // Add enhanced welcome messages for the new specialist priority system
+  // Add enhanced welcome messages for the new consensus system
   state.msgs.push({
     isUser: false,
-    text: `🎯 **AutoGen Council v2.7.0 - Specialist Priority System**
+    text: `🗳️ **AutoGen Council v3.0.0 - Consensus Democracy System**
 
-Welcome to your enhanced desktop OS assistant! I now prioritize local specialists before cloud fallback:
+🟢 **System Status: OPERATIONAL** 
+🤝 **New Feature: Council Consensus Fusion**
+⚡ **Performance: ~150ms consensus latency**
 
-**🧮 Math Specialist** - Lightning-fast SymPy calculations (<1ms)  
+Welcome to your enhanced Council system! Now featuring **true consensus democracy**:
+
+**🤝 Consensus Fusion** - All 5 specialists contribute to every answer  
+**🧮 Math Specialist** - Lightning-fast SymPy calculations  
 **🔧 Code Specialist** - DeepSeek Coder with sandbox execution  
 **🧠 Logic Specialist** - SWI-Prolog reasoning engine  
 **📚 Knowledge Specialist** - FAISS vector search  
 **☁️ Cloud Fallback** - Mistral/OpenAI for complex queries  
 
-Try asking me math questions like "5*7" or "sqrt(64)" to see the specialist routing in action!`,
+🎨 **Try these examples to see consensus in action:**
+• \`What is 5*7 and why?\` - **Math + explanation fusion**
+• \`write python code with comments\` - **Code + knowledge fusion**  
+• \`explain quantum computing\` - **Multi-specialist consensus**
+
+🗳️ **Look for the "Council Consensus" badge and click "View individual specialist votes" to see how each head contributed!**`,
     ms: 0,
     $: '0.00',
     timestamp: new Date(Date.now() - 60000),
     metadata: {
       model: "system",
       welcome: true,
-      version: "2.7.0-preview"
+      version: "3.0.0-consensus"
     }
   });
   

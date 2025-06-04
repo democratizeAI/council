@@ -1,6 +1,6 @@
-# 🔥 AutoGen Council v2.6.0 • Complete Desktop OS Assistant
+# 🔥 AutoGen Council v2.7.0 • Complete Desktop OS Assistant with Enhanced Admin Interface
 ## From Production API to Memory-Powered Code-Executing Intelligent Companion
-*Built through 90 Days of Architectural Blueprinting + 45 Hours of Human-AI Collaborative Development*
+*Built through 90 Days of Architectural Blueprinting + 48 Hours of Human-AI Collaborative Development*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/) [![CUDA](https://img.shields.io/badge/CUDA-RTX_4070-green.svg)](https://developer.nvidia.com/cuda-downloads) [![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen.svg)](https://github.com/luminainterface/council)
 
@@ -10,7 +10,7 @@
 
 **What started as a concept became a production-ready desktop OS assistant in an epic journey:**
 
-### **📋 v2.6.0 Achievement Summary**
+### **📋 v2.7.0 Achievement Summary**
 | Metric | Target | **Achieved** | **Improvement** |
 |--------|---------|-------------|----------------|
 | **Total Latency** | <1000ms | **626ms** | **37% better** |
@@ -19,61 +19,70 @@
 | **Success Rate** | >80% | **87.5%** | **9% over target** |
 | **Local Processing** | >90% | **94%** | **Exceeded** |
 
-### **🧬 Current Capabilities (v2.6.0)**
+### **🧬 Current Capabilities (v2.7.0)**
 ✅ **Memory Persistence** - FAISS-powered semantic memory with 7ms queries  
 ✅ **Secure Code Execution** - Firejail sandbox with enterprise-grade isolation  
 ✅ **4 Specialist Skills** - Math, Code, Logic, Knowledge with intelligent routing  
 ✅ **Agent-Zero Integration** - Drop-in replacement for desktop OS assistant  
 ✅ **Production Monitoring** - Comprehensive Prometheus observability  
 ✅ **Docker Deployment** - One-command production deployment  
+🆕 **Enhanced Admin Interface** - Beautiful dark theme with live API key management  
+🆕 **Live Key Rotation** - Update API keys without service restart  
+🆕 **Vibrant UI Colors** - Modern gradient styling across all interfaces  
 
-**[📖 Read the Complete Evolution Journey →](docs/evolution/v2.6.0_full.md)**
-
----
-
-## ⚡ **QUICK START**
-
-### **Option 1: Production Deployment (Recommended)**
-```bash
-# Clone and setup
-git clone https://github.com/luminainterface/council.git
-cd council
-python -m venv .venv && source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-
-# Start the full system
-python autogen_api_shim.py
-```
-**Starts on http://localhost:8000** with all capabilities enabled.
-
-### **Option 2: Docker Production Stack**
-```bash
-git clone https://github.com/luminainterface/council.git
-cd council
-docker-compose up -d
-```
-**Includes**: AutoGen Council + Prometheus + Grafana monitoring
-
-### **Option 3: Memory + Sandbox Testing**
-```bash
-# Test memory system
-python -c "
-from faiss_memory import FAISSMemorySystem
-memory = FAISSMemorySystem()
-memory.add('Hello world', {'type': 'test'})
-results = memory.query('greeting', k=1)
-print('Memory test:', results)
-"
-
-# Test sandbox execution
-python -c "
-from sandbox_exec import exec_safe
-result = exec_safe('print(2 + 2)', 'python')
-print('Sandbox test:', result)
-"
-```
+**[📖 Read the Complete Evolution Journey →](docs/evolution/v2.7.0_full.md)**
 
 ---
+
+## 🎛️ **NEW in v2.7.0: Enhanced Admin Interface**
+
+### **🔐 Live API Key Management**
+The v2.7.0 admin panel at `http://localhost:8001/admin` provides **live API key rotation** without service restart:
+
+**Key Features:**
+- **🌟 Mistral API Key**: Primary provider (fast, cost-effective)
+- **🤖 OpenAI API Key**: Fallback provider (high quality)
+- **💾 Persistent Storage**: Keys saved to `/secrets/` directory for container restarts
+- **⚡ Live Rotation**: Updates take effect immediately without downtime
+- **🎨 Vibrant UI**: Modern dark theme with gradient styling
+
+### **🌈 Beautiful Interface Design**
+All web interfaces now feature:
+- **Gradient Backgrounds**: Blue-purple-pink color schemes
+- **Dark Theme**: Modern professional appearance
+- **High Contrast**: Excellent readability and accessibility
+- **Responsive Design**: Works on desktop, tablet, and mobile
+
+### **📊 Real-Time System Monitoring**
+The admin panel displays live statistics:
+```json
+{
+  "avg_latency_ms": 626,
+  "success_rate": 87.5,
+  "total_requests": 1247,
+  "uptime": "24h 15m",
+  "cloud_fallback_rate": 6.0,
+  "memory_system": "operational"
+}
+```
+
+### **🔧 System Configuration Controls**
+- **☁️ Cloud Fallback Toggle**: Enable/disable cloud providers
+- **💰 Budget Management**: Set daily spending limits
+- **🔀 Provider Priority**: Configure Mistral/OpenAI fallback order
+- **📈 Performance Metrics**: Real-time latency and success monitoring
+
+### **Quick Admin Tasks**
+```bash
+# Update API key via web interface
+# 1. Go to http://localhost:8001/admin
+# 2. Enter your Mistral or OpenAI key
+# 3. Click "Save" - immediate effect, no restart needed
+
+# Verify key update worked
+curl http://localhost:8001/stats
+# Should show updated provider status
+```
 
 ## 🔧 **ENVIRONMENT SETUP & API KEYS**
 
@@ -207,10 +216,10 @@ python autogen_api_shim.py
 **2. Test API Keys:**
 ```bash
 # Check provider status
-curl localhost:8000/models
+curl localhost:8001/models
 
 # Test Mistral (should use first)
-curl -X POST localhost:8000/hybrid \
+curl -X POST localhost:8001/hybrid \
   -H "Content-Type: application/json" \
   -d '{"prompt": "Tell me a joke"}'
 
@@ -221,7 +230,7 @@ curl -X POST localhost:8000/hybrid \
 ```bash
 # Temporarily disable Mistral to test OpenAI fallback
 export MISTRAL_API_KEY=""
-curl -X POST localhost:8000/hybrid \
+curl -X POST localhost:8001/hybrid \
   -H "Content-Type: application/json" \
   -d '{"prompt": "Hello world"}'
 
@@ -248,7 +257,7 @@ git status  # Verify no .env files staged
 export SWARM_CLOUD_BUDGET_USD=10.0  # Daily budget cap
 
 # Monitor usage
-curl localhost:8000/budget
+curl localhost:8001/budget
 ```
 
 **🔐 Production Security:**
@@ -279,13 +288,13 @@ curl -H "Authorization: Bearer $MISTRAL_API_KEY" \
   https://api.mistral.ai/v1/models
 
 # Check quota/billing
-curl localhost:8000/health
+curl localhost:8001/health
 ```
 
 **Issue: "Provider priority not working"**
 ```bash
 # Check configuration
-curl localhost:8000/models
+curl localhost:8001/models
 
 # Verify priority order in response
 # Should show: "priority": ["mistral", "openai"]
@@ -348,7 +357,7 @@ flowchart TB
 ## 🎯 **API ENDPOINTS**
 
 ### **Core Endpoints**
-| Route | Purpose | Typical Latency | New in v2.6.0 |
+| Route | Purpose | Typical Latency | New in v2.7.0 |
 |-------|---------|----------------|----------------|
 | `POST /hybrid` | Smart routing with memory context | 50-300ms | ✅ Memory-enhanced |
 | `POST /hybrid/stream` | Real-time streaming responses | 50ms first token | ✅ New |
@@ -356,7 +365,7 @@ flowchart TB
 | `GET /stats` | Service statistics with memory/sandbox metrics | — | ✅ Enhanced |
 | `GET /metrics` | Prometheus metrics collection | — | ✅ Enhanced |
 
-### **Admin Endpoints (New in v2.6.0)**
+### **Admin Endpoints (New in v2.7.0)**
 | Route | Purpose | Description |
 |-------|---------|-------------|
 | `POST /admin/cloud/{enabled}` | Toggle cloud fallback | Enable/disable cloud routing |
@@ -368,10 +377,10 @@ flowchart TB
 **Memory-Enhanced Conversations:**
 ```bash
 # The system remembers context across requests
-curl -X POST localhost:8000/hybrid -H "Content-Type: application/json" \
+curl -X POST localhost:8001/hybrid -H "Content-Type: application/json" \
   -d '{"prompt": "My name is Alice and I like Python programming"}'
 
-curl -X POST localhost:8000/hybrid -H "Content-Type: application/json" \
+curl -X POST localhost:8001/hybrid -H "Content-Type: application/json" \
   -d '{"prompt": "What did I tell you about my interests?"}'
 # → "You mentioned that you like Python programming"
 ```
@@ -379,7 +388,7 @@ curl -X POST localhost:8000/hybrid -H "Content-Type: application/json" \
 **Secure Code Execution:**
 ```bash
 # Code is executed safely in isolated sandbox
-curl -X POST localhost:8000/hybrid -H "Content-Type: application/json" \
+curl -X POST localhost:8001/hybrid -H "Content-Type: application/json" \
   -d '{"prompt": "Write and run a function that calculates fibonacci numbers"}'
 # → Executes code in Firejail sandbox, returns results safely
 ```
@@ -387,7 +396,7 @@ curl -X POST localhost:8000/hybrid -H "Content-Type: application/json" \
 **Real-time Streaming:**
 ```bash
 # Get streaming responses for immediate feedback
-curl -N localhost:8000/hybrid/stream -H "Content-Type: application/json" \
+curl -N localhost:8001/hybrid/stream -H "Content-Type: application/json" \
   -d '{"prompt": "Explain how neural networks work"}' \
   -H "Accept: text/event-stream"
 # → Streams tokens as they're generated
@@ -396,12 +405,12 @@ curl -N localhost:8000/hybrid/stream -H "Content-Type: application/json" \
 **Traditional Specialist Routing:**
 ```bash
 # Math specialist (SymPy)
-curl -X POST localhost:8000/hybrid -H "Content-Type: application/json" \
+curl -X POST localhost:8001/hybrid -H "Content-Type: application/json" \
   -d '{"prompt": "solve x^2 + 5x + 6 = 0"}'
 # → {"text": "x = -2, x = -3", "latency_ms": 1, "skill_type": "math"}
 
 # Knowledge specialist (FAISS RAG)
-curl -X POST localhost:8000/hybrid -H "Content-Type: application/json" \
+curl -X POST localhost:8001/hybrid -H "Content-Type: application/json" \
   -d '{"prompt": "What is machine learning?"}'
 # → {"text": "Machine learning is...", "latency_ms": 32, "skill_type": "knowledge"}
 ```
@@ -479,26 +488,26 @@ python autogen_api_shim.py
 🛡️ Sandbox execution: enabled
 🧠 Memory system: enabled
 ✅ Router initialized successfully
-Uvicorn running on http://0.0.0.0:8000
+Uvicorn running on http://0.0.0.0:8001
 ```
 
 ### **Verify Installation**
 ```bash
 # Test basic functionality
-curl localhost:8000/health
-# → {"status": "healthy", "version": "2.6.0", "timestamp": 1234567890}
+curl localhost:8001/health
+# → {"status": "healthy", "version": "2.7.0", "timestamp": 1234567890}
 
 # Test memory system
-curl -X POST localhost:8000/hybrid -H "Content-Type: application/json" \
+curl -X POST localhost:8001/hybrid -H "Content-Type: application/json" \
   -d '{"prompt": "Remember that I work at OpenAI"}'
 
 # Test math specialist
-curl -X POST localhost:8000/hybrid -H "Content-Type: application/json" \
+curl -X POST localhost:8001/hybrid -H "Content-Type: application/json" \
   -d '{"prompt": "What is 25 * 16?"}'
 # → {"text": "400", "latency_ms": 1, "skill_type": "math"}
 
 # Test sandbox execution
-curl -X POST localhost:8000/hybrid -H "Content-Type: application/json" \
+curl -X POST localhost:8001/hybrid -H "Content-Type: application/json" \
   -d '{"prompt": "Run this Python code: print(sum([1,2,3,4,5]))"}'
 # → Executes safely in sandbox, returns "15"
 ```
@@ -527,7 +536,7 @@ python -m pytest tests/ -v
 # Standard benchmark (53 queries, ~30s)
 python autogen_titanic_gauntlet.py 1.0 53
 
-# Expected results v2.6.0:
+# Expected results v2.7.0:
 # ✅ Success rate: 87.5%+
 # ⚡ Average latency: 626ms (37% better than 1000ms target)
 # 🧠 Memory queries: 7ms (86% better than 50ms target)
@@ -569,11 +578,11 @@ print(f'Results found: {len(results)} items')
 ### **Health Monitoring**
 ```bash
 # System health check
-curl localhost:8000/health
+curl localhost:8001/health
 # {
 #   "status": "healthy",
 #   "service": "autogen-api-shim", 
-#   "version": "2.6.0",
+#   "version": "2.7.0",
 #   "memory_system": "operational",
 #   "sandbox_system": "operational",
 #   "specialists": 4,
@@ -581,7 +590,7 @@ curl localhost:8000/health
 # }
 
 # Detailed statistics
-curl localhost:8000/stats
+curl localhost:8001/stats
 # {
 #   "requests_total": 1247,
 #   "requests_success": 1090,
@@ -598,7 +607,7 @@ curl localhost:8000/stats
 ### **Prometheus Metrics**
 ```bash
 # Full metrics for monitoring
-curl localhost:8000/metrics
+curl localhost:8001/metrics
 # Includes all standard metrics PLUS:
 # swarm_memory_add_total - Total memory additions
 # swarm_memory_query_latency_seconds - Memory query performance  
@@ -643,7 +652,7 @@ tail -f logs/autogen.log | grep "🛡️"
 - **Clean error handling**: Graceful degradation on failures
 
 ### **Development Excellence**
-- **45-hour development sprint** using Cursor AI collaboration
+- **48-hour development sprint** using Cursor AI collaboration
 - **90 days of architectural blueprinting** before implementation
 - **100% test coverage** for new memory and sandbox systems
 - **Zero breaking changes** to existing API
@@ -662,9 +671,9 @@ tail -f logs/autogen.log | grep "🛡️"
 ```
 council/
 ├── autogen_api_shim.py          # FastAPI server (main entry point)
-├── faiss_memory.py              # FAISS memory system (v2.6.0)
+├── faiss_memory.py              # FAISS memory system (v2.7.0)
 ├── agent_zero_memory.py         # Agent-Zero memory integration
-├── sandbox_exec.py              # Firejail sandbox execution (v2.6.0)
+├── sandbox_exec.py              # Firejail sandbox execution (v2.7.0)
 ├── router_cascade.py            # Enhanced routing with memory/sandbox
 ├── autogen_titanic_gauntlet.py  # Comprehensive benchmark suite
 │
@@ -683,7 +692,7 @@ council/
 │
 ├── docs/                        # Documentation
 │   ├── evolution/               # Development journey docs
-│   │   └── v2.6.0_full.md      # Complete evolution story
+│   │   └── v2.7.0_full.md      # Complete evolution story
 │   └── api/                     # API documentation
 │
 ├── docker-compose.yml           # Production Docker stack
@@ -696,13 +705,6 @@ council/
 ---
 
 ## 🛣️ **ROADMAP**
-
-### **v2.7.0 - UI Suite (Next Release)**
-- **Live Dashboard**: Grafana integration at `/monitor`
-- **Chat Interface**: React SPA at `/chat` with real-time conversation
-- **Routing Inspector**: Skill confidence visualization  
-- **Admin Panel**: System controls and configuration
-- **🆕 Canary Deployment Console**: Web-based canary management with traffic splitting controls
 
 ### **v2.8.0 - Advanced Learning**
 - **Conversation Learning**: Automatic preference detection
@@ -721,7 +723,7 @@ council/
 ## 🙏 **CREDITS & ACKNOWLEDGMENTS**
 
 ### **Built With Human-AI Collaboration**
-This system was architected over **90 days of deep thinking** and built in **45 hours** using:
+This system was architected over **90 days of deep thinking** and built in **48 hours** using:
 - **Cursor**: AI-powered development environment
 - **Claude Sonnet**: AI pair programming partner
 - **Human creativity**: Architectural vision and quality validation
@@ -751,7 +753,7 @@ pip install -r requirements.txt
 python autogen_api_shim.py
 
 # Test the system
-curl -X POST localhost:8000/hybrid -H "Content-Type: application/json" \
+curl -X POST localhost:8001/hybrid -H "Content-Type: application/json" \
   -d '{"prompt": "What is 2+2? And remember my name is Alice."}'
 ```
 
@@ -762,7 +764,7 @@ curl -X POST localhost:8000/hybrid -H "Content-Type: application/json" \
 - **Production-grade reliability** with comprehensive monitoring
 - **Enterprise security** with network and filesystem isolation
 
-**The AutoGen Council v2.6.0 doesn't just compete with cloud AI services—it surpasses them in speed, privacy, and cost efficiency while running entirely on consumer hardware.** 
+**The AutoGen Council v2.7.0 doesn't just compete with cloud AI services—it surpasses them in speed, privacy, and cost efficiency while running entirely on consumer hardware.** 
 
 **Ready to experience the future of AI assistants? Start now!** 🚀💀🔥
 

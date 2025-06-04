@@ -5,7 +5,143 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AutoGen Council Admin</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.4/dist/tailwind.min.css" rel="stylesheet"/>
-  <link rel="stylesheet" href="css/admin-styles.css">
+  <link rel="stylesheet" href="css/admin-styles.css?v=2.7.0">
+  <style>
+    /* Critical CSS - Inline to ensure vibrant styling */
+    body, html {
+      background: linear-gradient(135deg, rgba(17, 24, 39, 0.95) 0%, rgba(31, 41, 55, 0.95) 50%, rgba(55, 65, 81, 0.95) 100%) !important;
+      color: #f3f4f6 !important;
+      min-height: 100vh !important;
+    }
+    
+    .container h1 {
+      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%) !important;
+      -webkit-background-clip: text !important;
+      background-clip: text !important;
+      -webkit-text-fill-color: transparent !important;
+      color: transparent !important;
+    }
+    
+    .container h2 {
+      color: #a5b4fc !important;
+      border-bottom-color: rgba(96, 165, 250, 0.4) !important;
+    }
+    
+    .container h3 {
+      color: #60a5fa !important;
+    }
+    
+    .container .text-lg {
+      color: #d1d5db !important;
+    }
+    
+    .container .bg-gray-800 {
+      background: linear-gradient(135deg, rgba(31, 41, 55, 0.9) 0%, rgba(55, 65, 81, 0.9) 100%) !important;
+      border: 1px solid rgba(75, 85, 99, 0.7) !important;
+      box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.3) !important;
+    }
+    
+    .apply-button, .save-key-button {
+      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%) !important;
+      box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.4) !important;
+      color: white !important;
+      border: none !important;
+      border-radius: 0.5rem !important;
+      padding: 0.75rem 1.5rem !important;
+      font-weight: 600 !important;
+      cursor: pointer !important;
+      transition: all 0.2s ease !important;
+    }
+    
+    .apply-button:hover, .save-key-button:hover {
+      transform: translateY(-2px) !important;
+      box-shadow: 0 8px 25px 0 rgba(59, 130, 246, 0.6) !important;
+    }
+    
+    .status-card {
+      background: linear-gradient(135deg, rgba(31, 41, 55, 0.6) 0%, rgba(55, 65, 81, 0.4) 100%) !important;
+      border: 1px solid rgba(75, 85, 99, 0.5) !important;
+      border-radius: 0.5rem !important;
+      padding: 1rem !important;
+      transition: all 0.2s ease !important;
+    }
+    
+    .status-card:hover {
+      background: linear-gradient(135deg, rgba(96, 165, 250, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%) !important;
+      border-color: rgba(96, 165, 250, 0.3) !important;
+      transform: translateY(-1px) !important;
+    }
+    
+    .toggle-bg {
+      background: linear-gradient(135deg, rgba(55, 65, 81, 0.8) 0%, rgba(75, 85, 99, 0.8) 100%) !important;
+      border: 2px solid rgba(75, 85, 99, 0.7) !important;
+      transition: all 0.3s ease !important;
+    }
+    
+    input[type="checkbox"]:checked + .toggle-bg {
+      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%) !important;
+      border-color: #60a5fa !important;
+    }
+    
+    /* API Key input styling */
+    .api-key-input {
+      background: linear-gradient(135deg, rgba(17, 24, 39, 0.9) 0%, rgba(31, 41, 55, 0.9) 100%) !important;
+      border: 1px solid rgba(75, 85, 99, 0.7) !important;
+      color: #f3f4f6 !important;
+      border-radius: 0.375rem !important;
+      padding: 0.75rem 1rem !important;
+      width: 100% !important;
+      font-family: 'Fira Code', 'Courier New', monospace !important;
+      font-size: 0.875rem !important;
+    }
+    
+    .api-key-input:focus {
+      border-color: #a5b4fc !important;
+      box-shadow: 0 0 0 2px rgba(165, 180, 252, 0.2) !important;
+      outline: none !important;
+    }
+    
+    .key-section {
+      background: linear-gradient(135deg, rgba(31, 41, 55, 0.8) 0%, rgba(55, 65, 81, 0.6) 100%) !important;
+      border: 1px solid rgba(75, 85, 99, 0.6) !important;
+      border-radius: 0.5rem !important;
+      padding: 1rem !important;
+      margin-bottom: 1rem !important;
+    }
+    
+    .key-label {
+      color: #e5e7eb !important;
+      font-weight: 600 !important;
+      margin-bottom: 0.5rem !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 0.5rem !important;
+    }
+    
+    .provider-icon {
+      font-size: 1.25rem !important;
+    }
+    
+    .success-message {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%) !important;
+      border: 1px solid rgba(16, 185, 129, 0.4) !important;
+      color: #10b981 !important;
+      padding: 0.75rem !important;
+      border-radius: 0.375rem !important;
+      margin-top: 0.5rem !important;
+      font-size: 0.875rem !important;
+    }
+    
+    .error-message {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%) !important;
+      border: 1px solid rgba(239, 68, 68, 0.4) !important;
+      color: #ef4444 !important;
+      padding: 0.75rem !important;
+      border-radius: 0.375rem !important;
+      margin-top: 0.5rem !important;
+      font-size: 0.875rem !important;
+    }
+  </style>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen">
   <div class="container mx-auto px-4 py-8 max-w-5xl">
@@ -15,7 +151,7 @@
         AutoGen Council Admin
       </h1>
       <p class="text-lg text-gray-300">
-        System Configuration and Controls
+        🎯 System Configuration and Controls
       </p>
     </header>
 
@@ -24,10 +160,51 @@
       <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-gray-700">System Settings</h2>
       
       <form id="adminForm" class="space-y-6">
+        <!-- API Keys Section -->
+        <div class="bg-gray-800 p-4 rounded-lg border border-gray-700">
+          <h3 class="text-xl font-semibold mb-4 text-blue-300">🔐 API Key Management</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Mistral API Key -->
+            <div class="key-section">
+              <label class="key-label">
+                <span class="provider-icon">🌟</span>
+                Mistral API Key
+              </label>
+              <input type="password" id="key-mistral" class="api-key-input" 
+                placeholder="Enter Mistral API key..." 
+                autocomplete="off">
+              <button type="button" onclick="saveKey('mistral')" class="save-key-button mt-2">
+                Save Mistral Key
+              </button>
+              <div id="mistral-message"></div>
+            </div>
+            
+            <!-- OpenAI API Key -->
+            <div class="key-section">
+              <label class="key-label">
+                <span class="provider-icon">🤖</span>
+                OpenAI API Key
+              </label>
+              <input type="password" id="key-openai" class="api-key-input" 
+                placeholder="Enter OpenAI API key..." 
+                autocomplete="off">
+              <button type="button" onclick="saveKey('openai')" class="save-key-button mt-2">
+                Save OpenAI Key
+              </button>
+              <div id="openai-message"></div>
+            </div>
+          </div>
+          
+          <p class="text-sm text-gray-400 mt-4">
+            💡 Keys are securely stored and take effect immediately without restart
+          </p>
+        </div>
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <!-- Cloud Settings -->
           <div class="bg-gray-800 p-4 rounded-lg border border-gray-700">
-            <h3 class="text-xl font-semibold mb-4 text-blue-300">Cloud Configuration</h3>
+            <h3 class="text-xl font-semibold mb-4 text-blue-300">☁️ Cloud Configuration</h3>
             
             <div class="mb-4">
               <label class="flex items-center space-x-3 cursor-pointer">
@@ -44,7 +221,7 @@
 
           <!-- Budget Settings -->
           <div class="bg-gray-800 p-4 rounded-lg border border-gray-700">
-            <h3 class="text-xl font-semibold mb-4 text-blue-300">Budget Controls</h3>
+            <h3 class="text-xl font-semibold mb-4 text-blue-300">💰 Budget Controls</h3>
             
             <div class="mb-4">
               <label for="budget" class="block text-sm font-medium mb-1">Budget Cap (USD)</label>
@@ -60,7 +237,7 @@
 
         <!-- System Status -->
         <div class="bg-gray-800 p-4 rounded-lg border border-gray-700">
-          <h3 class="text-xl font-semibold mb-4 text-blue-300">System Status</h3>
+          <h3 class="text-xl font-semibold mb-4 text-blue-300">📊 System Status</h3>
           
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="status-card">
@@ -100,11 +277,92 @@
 
     <!-- Footer -->
     <footer class="mt-8 pt-4 border-t border-gray-700 text-center text-gray-400">
-      <p>AutoGen Council • Version 2.6.0</p>
+      <p>AutoGen Council • Version 2.7.0 • Specialist Priority System</p>
       <p class="text-sm mt-2">© 2025 • A Human-AI Collaborative Development</p>
     </footer>
   </div>
 
-  <script src="js/admin.js"></script>
+  <script>
+    // API Key Management
+    async function saveKey(provider) {
+      const keyInput = document.getElementById(`key-${provider}`);
+      const messageDiv = document.getElementById(`${provider}-message`);
+      const key = keyInput.value.trim();
+      
+      if (!key) {
+        showMessage(messageDiv, 'Please enter a valid API key', 'error');
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/admin/apikey/${provider}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ key: key })
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          showMessage(messageDiv, `${provider.charAt(0).toUpperCase() + provider.slice(1)} API key updated successfully!`, 'success');
+          keyInput.value = ''; // Clear the input for security
+        } else {
+          const error = await response.json();
+          showMessage(messageDiv, `Failed to update key: ${error.detail || 'Unknown error'}`, 'error');
+        }
+      } catch (error) {
+        showMessage(messageDiv, `Network error: ${error.message}`, 'error');
+      }
+    }
+    
+    function showMessage(element, message, type) {
+      element.innerHTML = `<div class="${type}-message">${message}</div>`;
+      setTimeout(() => {
+        element.innerHTML = '';
+      }, 5000);
+    }
+    
+    // Enhanced admin form handling
+    document.getElementById('adminForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const cloudEnabled = document.getElementById('cloud').checked;
+      const budget = document.getElementById('budget').value;
+      
+      try {
+        // Update cloud settings
+        const cloudResponse = await fetch(`/admin/cloud/${cloudEnabled}`, {
+          method: 'POST'
+        });
+        
+        // Update budget
+        const budgetResponse = await fetch(`/admin/cap/${budget}`, {
+          method: 'POST'
+        });
+        
+        if (cloudResponse.ok && budgetResponse.ok) {
+          alert('✅ Settings updated successfully!');
+        } else {
+          alert('❌ Failed to update some settings');
+        }
+      } catch (error) {
+        alert(`❌ Error updating settings: ${error.message}`);
+      }
+    });
+    
+    // Load current settings on page load
+    window.addEventListener('load', async () => {
+      try {
+        const response = await fetch('/stats');
+        const stats = await response.json();
+        
+        // Update status display if needed
+        console.log('Current system stats:', stats);
+      } catch (error) {
+        console.error('Failed to load system stats:', error);
+      }
+    });
+  </script>
 </body>
 </html>

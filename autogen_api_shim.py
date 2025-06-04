@@ -11,9 +11,9 @@ compatible with the Titanic Gauntlet benchmark harness.
 import asyncio
 import time
 import logging
-from typing import Dict, Any, Optional, List
-from fastapi import FastAPI, HTTPException, Query, Response
-from fastapi.responses import StreamingResponse, RedirectResponse
+from typing import Dict, Any, Optional, List, Union
+from fastapi import FastAPI, HTTPException, Query, Response, Request
+from fastapi.responses import StreamingResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -21,6 +21,8 @@ import uvicorn
 import sys
 import os
 import json
+import signal
+from contextlib import asynccontextmanager
 
 # Pre-import everything at startup to avoid cold start delays
 try:
@@ -120,6 +122,10 @@ class VoteResponse(BaseModel):
     candidates: List[str]
     total_cost_cents: float = 0.0
 
+# API Key management models
+class APIKeyRequest(BaseModel):
+    key: str
+
 # Global router instance
 router = None
 stats = {
@@ -193,6 +199,16 @@ async def startup_event():
     logger.info("  GET  /admin - Admin Panel")
     logger.info("  GET  /monitor - Monitoring Dashboard")
     
+    try:
+        router = RouterCascade()
+        logger.info("✅ Router initialized successfully")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize router: {e}")
+        raise
+
+# Move static file mounting to AFTER all API endpoints to prevent route conflicts
+def mount_static_files():
+    """Mount static files after all API routes are defined"""
     # Mount static files for web interface
     if os.path.exists("autogen_chat"):
         app.mount("/chat", NoCacheStaticFiles(directory="autogen_chat", html=True), name="autogen_chat")
@@ -200,10 +216,6 @@ async def startup_event():
     elif os.path.exists("webchat"):
         app.mount("/chat", NoCacheStaticFiles(directory="webchat", html=True), name="webchat")
         logger.info("📱 Legacy Web chat interface available at /chat")
-    
-    if os.path.exists("admin"):
-        app.mount("/admin", NoCacheStaticFiles(directory="admin", html=True), name="admin")
-        logger.info("⚙️ Admin panel available at /admin")
     
     if os.path.exists("monitor"):
         app.mount("/monitor", NoCacheStaticFiles(directory="monitor", html=True), name="monitor")
@@ -216,15 +228,13 @@ async def startup_event():
     else:
         logger.warning("⚠️ Evolution Journey frontend files not found")
     
+    # Mount admin LAST to prevent it from overriding API endpoints
+    if os.path.exists("admin"):
+        app.mount("/admin", NoCacheStaticFiles(directory="admin", html=True), name="admin")
+        logger.info("⚙️ Admin panel available at /admin")
+    
     logger.info("=" * 50)
     logger.info("🌐 Server starting on http://localhost:8000")
-    
-    try:
-        router = RouterCascade()
-        logger.info("✅ Router initialized successfully")
-    except Exception as e:
-        logger.error(f"❌ Failed to initialize router: {e}")
-        raise
 
 @app.post("/orchestrate", response_model=OrchestrateResponse)
 async def orchestrate_endpoint(request: OrchestrateRequest) -> OrchestrateResponse:
@@ -514,7 +524,7 @@ async def vote_endpoint(request: VoteRequest) -> VoteResponse:
     
     try:
         # If no candidates provided, use default models
-        candidates = request.candidates if request.candidates else ["autogen-hybrid", "math", "code", "logic", "knowledge"]
+        candidates = request.candidates if request.candidates else ["math_specialist", "code_specialist", "logic_specialist", "knowledge_specialist", "mistral_general"]
         
         # 🧠 Use memory-enhanced voting instead of hybrid routing
         from router.voting import vote
@@ -772,10 +782,64 @@ async def root():
     """Redirect to the Evolution Journey frontend"""
     return RedirectResponse("/journey")
 
+@app.post("/admin/apikey/{provider}")
+async def set_api_key(provider: str, request: APIKeyRequest):
+    """Update environment variable for API key and persist to storage"""
+    provider = provider.lower()
+    key = request.key.strip()
+    
+    # Validate provider
+    mapping = {
+        "mistral": "MISTRAL_API_KEY",
+        "openai": "OPENAI_API_KEY",
+    }
+    
+    if provider not in mapping:
+        raise HTTPException(status_code=400, detail=f"Unknown provider: {provider}")
+    
+    if not key:
+        raise HTTPException(status_code=400, detail="API key cannot be empty")
+    
+    env_var = mapping[provider]
+    
+    try:
+        # Update environment variable
+        os.environ[env_var] = key
+        
+        # Create secrets directory if it doesn't exist
+        secrets_dir = "secrets"
+        if not os.path.exists(secrets_dir):
+            os.makedirs(secrets_dir)
+        
+        # Save to persistent storage
+        key_file = os.path.join(secrets_dir, env_var)
+        with open(key_file, "w") as f:
+            f.write(key)
+        
+        logger.info(f"🔑 Updated {provider} API key and saved to {key_file}")
+        
+        # Optionally trigger a configuration reload signal
+        # Note: In a containerized environment, you might want to send SIGHUP to PID 1
+        # For now, we'll just update the environment variable
+        
+        return {
+            "ok": True, 
+            "provider": provider,
+            "message": f"{provider.capitalize()} API key updated successfully",
+            "env_var": env_var
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to update {provider} API key: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to update API key: {str(e)}")
+
+# Mount static files after all API endpoints are defined
+mount_static_files()
+
 if __name__ == "__main__":
     uvicorn.run(
         app,
         host="0.0.0.0",
-        port=8000,
+        port=8001,
         log_level="info"
     ) 
