@@ -1,175 +1,242 @@
 version: '3.8'
 
 services:
-  # Model Downloader (runs once to fetch models)
-  model-downloader:
-    image: alpine/git:latest
-    container_name: autogen-model-downloader
-    volumes:
-      - ./models:/models
-    command: >
-      sh -c "
-        if [ ! -d '/models/mistral-13b-gptq' ]; then
-          echo '📥 Downloading model (this may take 10-15 minutes)...'
-          apk add --no-cache curl
-          mkdir -p /models/mistral-13b-gptq
-          # Download model files from HuggingFace
-          cd /models/mistral-13b-gptq
-          curl -L -o config.json https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GPTQ/raw/main/config.json
-          curl -L -o tokenizer.json https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GPTQ/raw/main/tokenizer.json
-          curl -L -o tokenizer_config.json https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GPTQ/raw/main/tokenizer_config.json
-          echo '✅ Model download complete'
-        else
-          echo '✅ Model already exists'
-        fi
-      "
-    restart: "no"
-
-  # ExLlamaV2 LLM Backend (optional for GPU setups)
-  llm:
-    image: ghcr.io/turboderp/exllamav2:latest
-    container_name: autogen-llm
+  # Redis for LLM call caching and Agent-0 state
+  redis:
+    image: redis:7-alpine
+    container_name: council-redis
     ports:
-      - "8001:8000"
-    volumes:
-      - ./models:/models
-    command: [
-      "--model", "/models/mistral-13b-gptq",
-      "--listen", "0.0.0.0:8000", 
-      "--dtype", "auto",
-      "--max-input-tokens", "4096"
-    ]
+      - "6379:6379"
+    restart: on-failure:3
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
     deploy:
       resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-    environment:
-      - CUDA_VISIBLE_DEVICES=0
-    restart: unless-stopped
+        limits:
+          memory: 512m
+          cpus: "1.0"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/models"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 30s
-      timeout: 10s
+      timeout: 3s
       retries: 3
-      start_period: 60s
-    depends_on:
-      model-downloader:
-        condition: service_completed_successfully
-    profiles:
-      - gpu
-      - full
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
 
-  # AutoGen Council v2.6.0 - Memory-Powered Desktop OS Assistant
-  council:
+  # Main Council API - Stable traffic
+  council-api:
     build: .
-    container_name: autogen-council
+    container_name: council-api
     ports:
       - "8000:8000"
     volumes:
-      - memory-store:/app/memory_store
+      - models:/app/models
+      - memory:/app/memory
+      - loras:/app/loras
       - ./logs:/app/logs
     environment:
       - PYTHONUNBUFFERED=1
-      - PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus
       - AZ_MEMORY_ENABLED=yes
-      - AZ_MEMORY_PATH=/app/memory_store
+      - AZ_MEMORY_PATH=/app/memory
       - AZ_SHELL_TRUSTED=yes
       - ENABLE_SANDBOX=true
       - CLOUD_ENABLED=true
       - PROVIDER_PRIORITY=mistral,openai
-      - SWARM_PROFILE=${SWARM_PROFILE:-production}
-      - MEMORY_DIMENSION=${MEMORY_DIMENSION:-384}
-      - SWARM_MAX_CONCURRENT=10
-      - SWARM_TIMEOUT_MS=5000
+      - SWARM_PROFILE=production
       - SWARM_CLOUD_BUDGET_USD=10.0
+      - MEM_EMB_MODEL=all-MiniLM-L6-v2
+      - EXEC_TIMEOUT_SEC=5
+      - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
+      - COUNCIL_TRAFFIC_PERCENT=95
+      - REDIS_URL=redis://redis:6379
       - MISTRAL_API_KEY=${MISTRAL_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-    cap_add:
-      - SYS_ADMIN
-    security_opt:
-      - seccomp:unconfined
+    runtime: nvidia
+    deploy:
+      resources:
+        limits:
+          memory: 6g     # Leave 2-3GB headroom for OS + other containers
+          cpus: "6.0"
+        reservations:
+          devices:
+            - capabilities: ["gpu"]
+    depends_on:
+      - redis
+    restart: on-failure:3
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-fs", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # Canary Council API - New LoRA testing
+  council-api-canary:
+    build: .
+    container_name: council-api-canary
+    ports:
+      - "8001:8000"
+    volumes:
+      - models:/app/models
+      - memory:/app/memory
+      - loras:/app/loras
+      - ./logs:/app/logs
+    environment:
+      - PYTHONUNBUFFERED=1
+      - AZ_MEMORY_ENABLED=yes
+      - AZ_MEMORY_PATH=/app/memory
+      - AZ_SHELL_TRUSTED=yes
+      - ENABLE_SANDBOX=true
+      - CLOUD_ENABLED=true
+      - PROVIDER_PRIORITY=mistral,openai
+      - SWARM_PROFILE=canary
+      - SWARM_CLOUD_BUDGET_USD=1.5
+      - MEM_EMB_MODEL=all-MiniLM-L6-v2
+      - EXEC_TIMEOUT_SEC=5
+      - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
+      - COUNCIL_TRAFFIC_PERCENT=5
+      - REDIS_URL=redis://redis:6379
+      - LORA_PATH=/app/loras/latest
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    runtime: nvidia
+    deploy:
+      resources:
+        limits:
+          memory: 3g     # Smaller allocation for canary
+          cpus: "4.0"
+        reservations:
+          devices:
+            - capabilities: ["gpu"]
+    depends_on:
+      - redis
+      - council-api
+    restart: on-failure:3
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # Agent Zero Runner for failure rewriting
+  agent0-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent0
+    container_name: agent0-runner
+    volumes:
+      - memory:/app/memory
+      - workspace:/app/workspace
+    environment:
+      - PYTHONUNBUFFERED=1
+      - COUNCIL_API_URL=http://council-api:8000
+    depends_on:
+      - council-api
     restart: unless-stopped
 
-  # System Health Checker - v2.6.0 Enhanced
-  health-checker:
-    image: curlimages/curl:latest
-    container_name: autogen-health-checker
-    depends_on:
-      council:
-        condition: service_healthy
+  # Harvest Job - Nightly failure collection and rewriting
+  harvest-job:
+    image: python:3.11-slim
+    container_name: harvest-job
+    volumes:
+      - memory:/app/memory
+      - data-lora:/app/data/lora
+      - ./tools:/app/tools
+      - ./scripts:/app/scripts
+    environment:
+      - PYTHONUNBUFFERED=1
+      - AGENT0_URL=http://agent0-runner:8080
+      - REDIS_URL=redis://redis:6379
     command: >
       sh -c "
-        echo '🔍 Running AutoGen Council v2.6.0 health check...'
-        sleep 10
-        
-        # Test Council API
-        echo '📡 Testing Council API...'
-        if curl -f http://council:8000/health; then
-          echo '✅ Council API is healthy'
-        else
-          echo '❌ Council API failed health check'
-          exit 1
-        fi
-        
-        # Test v2.6.0 capabilities
-        echo '🧪 Testing v2.6.0 capabilities...'
-        
-        # Test memory system
-        echo '  🧠 Testing memory system...'
-        response=$$(curl -s -X POST http://council:8000/hybrid \\
-          -H 'Content-Type: application/json' \\
-          -d '{\"prompt\":\"Remember my name is TestUser\"}')
-        echo \"  Memory test response: $$response\"
-        
-        # Test math specialist
-        echo '  🧮 Testing math specialist...'
-        response=$$(curl -s -X POST http://council:8000/hybrid \\
-          -H 'Content-Type: application/json' \\
-          -d '{\"prompt\":\"What is 2+2?\"}')
-        
-        if echo \"$$response\" | grep -q '4'; then
-          echo '  ✅ Math specialist working!'
-        else
-          echo '  ⚠️ Math specialist response: '$$response
-        fi
-        
-        # Test sandbox execution (if enabled)
-        echo '  🛡️ Testing sandbox execution...'
-        response=$$(curl -s -X POST http://council:8000/hybrid \\
-          -H 'Content-Type: application/json' \\
-          -d '{\"prompt\":\"Run this Python code: print(\\\"Hello from sandbox\\\")\"}')
-        echo \"  Sandbox test response: $$response\"
-        
-        echo ''
-        echo '🎉 AutoGen Council v2.6.0 is ready!'
-        echo '=================================='
-        echo '🌐 Main API: http://localhost:8000'
-        echo '📊 Health: http://localhost:8000/health'
-        echo '📈 Stats: http://localhost:8000/stats'
-        echo '📊 Metrics: http://localhost:8000/metrics'
-        echo '📈 Grafana: http://localhost:3000 (admin/autogen123)'
-        echo '📊 Prometheus: http://localhost:9090'
-        echo ''
-        echo '✅ Memory Persistence: FAISS vector storage enabled'
-        echo '✅ Secure Code Execution: Firejail sandbox enabled'
-        echo '✅ 4 Specialist Skills: Math, Code, Logic, Knowledge'
-        echo '✅ Production Monitoring: Prometheus + Grafana'
+        apt-get update && apt-get install -y cron curl python3-pip &&
+        pip install requests redis faiss-cpu &&
+        echo '0 2 * * * cd /app && python /app/tools/harvest_failures.py' | crontab - &&
+        cron -f
       "
-    restart: "no"
-    profiles:
-      - test
-      - full
+    depends_on:
+      - agent0-runner
+      - redis
+    restart: unless-stopped
 
-  # Prometheus monitoring
+  # LoRA Trainer - Nightly fine-tuning
+  lora-trainer:
+    build:
+      context: .
+      dockerfile: Dockerfile.trainer
+    container_name: lora-trainer
+    volumes:
+      - loras:/app/loras
+      - data-lora:/app/data/lora
+      - models:/app/models
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
+      - TRAINING_BUDGET_USD=0.20
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: ["gpu"]
+    command: >
+      sh -c "
+        echo '0 3 * * * cd /app && python train_lora.py --data /app/data/lora/latest.jsonl --output /app/loras/latest' | crontab - &&
+        cron -f
+      "
+    depends_on:
+      - harvest-job
+    restart: unless-stopped
+
+  # Traefik Load Balancer with Canary Routing
+  lb-traefik:
+    image: traefik:v3.0
+    container_name: traefik-lb
+    ports:
+      - "80:80"
+      - "8080:8080"  # Traefik dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik:/etc/traefik
+    command:
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --metrics.prometheus=true
+    depends_on:
+      - council-api
+      - council-api-canary
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+
+  # Static Web Interface
+  static-web:
+    image: nginx:alpine
+    container_name: static-web
+    ports:
+      - "9000:80"
+    volumes:
+      - ./webchat:/usr/share/nginx/html/chat
+      - ./admin.html:/usr/share/nginx/html/admin.html
+      - ./index.html:/usr/share/nginx/html/index.html
+    depends_on:
+      - council-api
+    restart: unless-stopped
+
+  # Prometheus monitoring with enhanced config
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
@@ -177,6 +244,7 @@ services:
       - "9090:9090"
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts_simple.yml:/etc/prometheus/alerts.yml:ro
       - prometheus-data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -185,10 +253,23 @@ services:
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--web.enable-lifecycle'
       - '--storage.tsdb.retention.time=7d'
-    restart: unless-stopped
-    profiles:
-      - monitoring
-      - full
+      - '--web.enable-admin-api'
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+          cpus: "2.0"
+    restart: on-failure:3
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
 
   # Grafana dashboard
   grafana:
@@ -202,12 +283,24 @@ services:
     volumes:
       - grafana-storage:/var/lib/grafana
       - ./monitoring/grafana:/etc/grafana/provisioning:ro
-    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1.0"
+    restart: on-failure:3
     depends_on:
       - prometheus
-    profiles:
-      - monitoring
-      - full
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
 
   # AlertManager for handling alerts
   alertmanager:
@@ -223,19 +316,33 @@ services:
       - '--storage.path=/alertmanager'
       - '--web.external-url=http://localhost:9093'
       - '--web.listen-address=0.0.0.0:9093'
-    restart: unless-stopped
-    profiles:
-      - monitoring
-      - full
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
+    restart: on-failure:3
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9093/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
 
 volumes:
+  models:        # Static GGUF/Q4_K_M files
+  loras:         # Nightly adapter outputs  
+  memory:        # FAISS index & meta.jsonl
+  workspace:     # Agent-0 file sandbox
+  data-lora:     # Training data JSONLs
+  prometheus-data:  # TSDB
   grafana-storage:
-  prometheus-data:
   alertmanager-data:
-  memory-store:
-    driver: local
-  
-# Networks for better isolation
+
 networks:
   default:
-    name: autogen-network 
+    name: council-network 

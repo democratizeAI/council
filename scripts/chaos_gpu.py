@@ -12,6 +12,8 @@ import threading
 from typing import Optional
 import os
 import sys
+import requests
+from datetime import datetime
 
 # Configure logging
 logging.basicConfig(
@@ -218,34 +220,145 @@ class ChaosGPU:
         finally:
             self.stop_chaos()
 
+def push_metric(vram_percent, pushgateway_url="http://localhost:9091"):
+    """Push VRAM metric to Pushgateway for Prometheus scraping"""
+    # Convert percentage to bytes (assuming 12GB GPU like RTX 4070)
+    vram_bytes = (vram_percent / 100) * 12 * 1024**3
+    
+    # Prometheus metric format
+    metric_data = f"""# HELP swarm_gpu_memory_used_percent GPU memory usage percentage
+# TYPE swarm_gpu_memory_used_percent gauge
+swarm_gpu_memory_used_percent {vram_percent}
+# HELP swarm_gpu_memory_used_bytes GPU memory used in bytes  
+# TYPE swarm_gpu_memory_used_bytes gauge
+swarm_gpu_memory_used_bytes {vram_bytes}
+# HELP swarm_gpu_memory_total_bytes Total GPU memory in bytes
+# TYPE swarm_gpu_memory_total_bytes gauge
+swarm_gpu_memory_total_bytes {12 * 1024**3}
+"""
+    
+    try:
+        response = requests.post(
+            f"{pushgateway_url}/metrics/job/chaos_test/instance/gpu0",
+            data=metric_data,
+            headers={'Content-Type': 'text/plain'}
+        )
+        if response.status_code == 200:
+            print(f"📊 [{datetime.now().strftime('%H:%M:%S')}] VRAM metric pushed: {vram_percent}% ({vram_bytes/1024**3:.1f}GB)")
+            return True
+        else:
+            print(f"❌ Failed to push metric: {response.status_code} - {response.text}")
+            return False
+    except Exception as e:
+        print(f"❌ Error pushing metric: {e}")
+        return False
+
+def run_escalation_test(pushgateway_url="http://localhost:9091"):
+    """Run the complete VRAM alert escalation test"""
+    print("🚀 Starting End-to-End Alert Pipeline Test")
+    print("==========================================")
+    print("This will trigger: Warning → Critical → Page alerts")
+    print()
+    
+    # Start with normal levels
+    print("🟢 BASELINE: Setting VRAM to normal (25%)")
+    if not push_metric(25, pushgateway_url):
+        print("❌ Failed to connect to Pushgateway. Is it running?")
+        sys.exit(1)
+    time.sleep(10)
+    
+    # Step 1: Warning level (78%)
+    print()
+    print("⚠️  STEP 1: Triggering VRAM Warning (78%)")
+    print("   Expected: VRAMWarningDemo alert fires after 3 minutes")
+    push_metric(78, pushgateway_url)
+    print("   ⏳ Waiting 3 minutes for warning alert burn-in...")
+    
+    for i in range(18):  # 18 * 10s = 3 minutes
+        time.sleep(10)
+        if i % 6 == 0:  # Every minute
+            print(f"      ⏱️  {3 - (i//6)} minutes remaining...")
+    
+    # Step 2: Critical level (88%)
+    print()
+    print("🚨 STEP 2: Escalating to VRAM Critical (88%)")
+    print("   Expected: VRAMCriticalDemo alert fires after 2 minutes")
+    push_metric(88, pushgateway_url)
+    print("   ⏳ Waiting 2 minutes for critical alert burn-in...")
+    
+    for i in range(12):  # 12 * 10s = 2 minutes
+        time.sleep(10)
+        if i % 6 == 0:  # Every minute
+            print(f"      ⏱️  {2 - (i//6)} minutes remaining...")
+    
+    # Step 3: Emergency level (97%)
+    print()
+    print("🔥 STEP 3: Triggering VRAM Emergency (97%)")
+    print("   Expected: VRAMEmergencyDemo PAGES immediately (30s burn-in)")
+    push_metric(97, pushgateway_url)
+    print("   ⏳ Waiting 30 seconds for emergency alert...")
+    
+    for i in range(6):  # 6 * 5s = 30 seconds
+        time.sleep(5)
+        print(f"      🔥 {30 - (i*5)} seconds until PAGE alert...")
+    
+    # Cleanup
+    print()
+    print("✅ CLEANUP: Resetting VRAM to normal (25%)")
+    push_metric(25, pushgateway_url)
+    
+    print()
+    print("🎉 Alert escalation test complete!")
+    print("===================================")
+    print("Check results:")
+    print("🔍 Prometheus alerts:  http://localhost:9090/alerts")
+    print("📬 AlertManager:       http://localhost:9093")
+    print("📊 Grafana dashboards: http://localhost:3000")
+    print("📨 Expected notifications:")
+    print("   • Slack #swarm-ops: Warning & Critical alerts")
+    print("   • Slack #swarm-incidents: Emergency PAGE alert")
+    print("   • Email: Critical alert")
+    print("   • PagerDuty: Emergency PAGE alert")
+
+def check_pushgateway_health(pushgateway_url="http://localhost:9091"):
+    """Check if Pushgateway is accessible"""
+    try:
+        response = requests.get(f"{pushgateway_url}/metrics")
+        return response.status_code == 200
+    except:
+        return False
+
 def main():
     """Main chaos execution"""
-    parser = argparse.ArgumentParser(description="Chaos GPU Memory Testing")
-    parser.add_argument("--vram", type=float, default=80, help="Target VRAM percentage")
-    parser.add_argument("--duration", type=int, default=300, help="Duration in seconds")
+    parser = argparse.ArgumentParser(description="VRAM Chaos Testing with Alert Escalation")
+    parser.add_argument("--pushgateway", default="http://localhost:9091", help="Pushgateway URL")
     parser.add_argument("--escalation-test", action="store_true", help="Run full escalation test")
-    parser.add_argument("--stop", action="store_true", help="Stop any running chaos")
+    parser.add_argument("--vram", type=float, help="Set specific VRAM percentage")
+    parser.add_argument("--check-health", action="store_true", help="Check Pushgateway health")
     
     args = parser.parse_args()
     
-    chaos = ChaosGPU()
+    if args.check_health:
+        if check_pushgateway_health(args.pushgateway):
+            print("✅ Pushgateway is healthy")
+        else:
+            print("❌ Pushgateway is not accessible")
+        sys.exit(0)
     
-    if args.stop:
-        chaos.stop_chaos()
-        return
+    if not check_pushgateway_health(args.pushgateway):
+        print("❌ Pushgateway not accessible. Start it with:")
+        print("   docker-compose -f docker-compose.override.yml up -d pushgw")
+        sys.exit(1)
     
     if args.escalation_test:
-        chaos.escalation_test()
+        run_escalation_test(args.pushgateway)
+    elif args.vram is not None:
+        push_metric(args.vram, args.pushgateway)
+        print(f"✅ VRAM set to {args.vram}%")
     else:
-        chaos.simulate_vram_spike(args.vram, args.duration)
-        
-        try:
-            logger.info(f"⏳ Chaos running for {args.duration} seconds... (Ctrl+C to stop)")
-            time.sleep(args.duration)
-        except KeyboardInterrupt:
-            logger.info("⏹️ Chaos interrupted by user")
-        finally:
-            chaos.stop_chaos()
+        print("Usage: --escalation-test OR --vram <percentage>")
+        print("Example: python scripts/chaos_gpu.py --escalation-test")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main() 

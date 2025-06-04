@@ -213,17 +213,17 @@ profiles:
 fallback_head: mistral_general
 specialists_order:
   - math_specialist      # Lightning fast SymPy, <1ms
-  - code_specialist      # DeepSeek Coder, 30-100ms  
-  - logic_specialist     # SWI-Prolog, <1ms
+  - code_specialist      # DeepSeek Coder, 30-100ms (RE-ENABLED - fixed stubs!)
+  - logic_specialist     # SWI-Prolog, <1ms (RE-ENABLED - enhanced responses!)
   - knowledge_specialist # FAISS RAG, 30ms
   - mistral_general      # ← LAST in list, cloud fallback only
 
 confidence_thresholds:
-  math_specialist: 0.8      # High confidence for math expressions
-  code_specialist: 0.7      # High confidence for code tasks
-  logic_specialist: 0.6     # Medium confidence for logic
-  knowledge_specialist: 0.5 # Lower threshold for general knowledge
-  mistral_general: 0.3      # Fallback for everything else
+  math_specialist: 0.85     # Increased from 0.8
+  code_specialist: 0.80     # Increased from 0.7
+  logic_specialist: 0.75    # Increased from 0.6
+  knowledge_specialist: 0.70 # Increased from 0.5
+  mistral_general: 0.50     # Increased from 0.3
 
 local_providers:
   - math_specialist

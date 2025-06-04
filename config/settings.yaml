@@ -1,0 +1,54 @@
+# AutoGen Council Settings Configuration
+# =====================================
+
+# Sandbox Execution Configuration
+sandbox:
+  provider: wsl                      # Options: firejail, docker, podman, wsl, none, auto
+  enabled: true                      # Enable/disable sandbox execution
+  timeout_seconds: 5                 # Maximum execution time
+  memory_limit_mb: 256              # Memory limit for sandbox
+  cpu_limit: 1.0                    # CPU limit (cores)
+  
+  # Docker-specific settings
+  docker:
+    image: agent-sandbox:latest      # Docker image for code execution  
+    network: none                    # Network access: none, bridge, host
+    remove_after: true               # Remove container after execution
+    working_dir: /tmp/execution      # Working directory inside container
+    volumes: []                      # Additional volumes to mount
+    
+  # Firejail-specific settings (Linux only)
+  firejail:
+    profile: sandbox/profile.conf    # Firejail profile path
+    private_tmp: true                # Use private /tmp
+    no_network: true                 # Disable network access
+    
+  # WSL-specific settings (Windows)  
+  wsl:
+    distro: Ubuntu                   # WSL distribution name
+    user: sandbox                   # User to run code as
+
+# Cloud Provider Configuration
+cloud:
+  enabled: true
+  budget_usd: 10.0
+  providers:
+    mistral:
+      priority: 1
+      timeout_ms: 5000
+    openai:
+      priority: 2  
+      timeout_ms: 8000
+
+# Memory System Configuration
+memory:
+  provider: faiss                   # Memory backend
+  dimension: 384                    # Embedding dimension
+  persist_every: 100                # Save to disk frequency
+  max_entries: 10000               # Maximum memory entries
+
+# Logging Configuration
+logging:
+  level: INFO                       # DEBUG, INFO, WARNING, ERROR
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: logs/autogen.log           # Log file path 

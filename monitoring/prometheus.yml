@@ -6,19 +6,57 @@ rule_files:
   - "alerts.yml"
 
 scrape_configs:
-  # AutoGen Council API metrics
-  - job_name: 'autogen-council'
+  # Pushgateway for chaos testing and metrics injection
+  - job_name: 'pushgateway'
     static_configs:
-      - targets: ['council:8000']
+      - targets: ['pushgateway:9091']
     scrape_interval: 5s
     metrics_path: '/metrics'
 
-  # Canary deployment metrics  
-  - job_name: 'canary-server'
+  # Test Metrics Server - VRAM simulation for alert testing
+  - job_name: 'test-metrics-server'
     static_configs:
-      - targets: ['canary-server:8000']
+      - targets: ['host.docker.internal:8080']
     scrape_interval: 5s
     metrics_path: '/metrics'
+
+  # Main Council API metrics - VRAM, latency, request counts
+  - job_name: 'council-api'
+    static_configs:
+      - targets: ['council-api:8000']
+    scrape_interval: 5s
+    metrics_path: '/metrics'
+
+  # Canary Council API metrics - for A/B testing
+  - job_name: 'council-api-canary'
+    static_configs:
+      - targets: ['council-api-canary:8000']
+    scrape_interval: 5s
+    metrics_path: '/metrics'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance_type
+        replacement: canary
+
+  # LoRA Trainer metrics - training costs, success rates
+  - job_name: 'lora-trainer'
+    static_configs:
+      - targets: ['lora-trainer:8080']
+    scrape_interval: 30s
+    metrics_path: '/metrics'
+
+  # Traefik Load Balancer metrics - traffic distribution
+  - job_name: 'traefik'
+    static_configs:
+      - targets: ['lb-traefik:8080']
+    scrape_interval: 15s
+    metrics_path: '/metrics'
+
+  # Redis metrics for caching performance
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    scrape_interval: 30s
 
   # Prometheus self-monitoring
   - job_name: 'prometheus'

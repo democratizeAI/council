@@ -80,7 +80,7 @@ groups:
         for: 3m
         labels:
           severity: warning
-          environment: "{{ $labels.environment | default \"production\" }}"
+          environment: "production"
           team: "swarm-ops"
           component: "gpu-memory"
           runbook: "day2_ops_vram"
@@ -369,4 +369,3 @@ groups:
           summary: "⚠️ Low disk space on {{ $labels.device }}"
           description: "Filesystem {{ $labels.device }} has only {{ $value | printf \"%.1f\" }}% space remaining."
           runbook_url: "https://docs.swarm.ai/runbook/disk-space" 
-          description: "Memory usage increased by {{ $value | humanize1024 }}B in 1 hour without corresponding workload increase." 

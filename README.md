@@ -771,3 +771,57 @@ curl -X POST localhost:8001/hybrid -H "Content-Type: application/json" \
 ---
 
 *P.S. - This README documents not just a technical achievement, but a fundamental shift in how software can be built. The combination of deep architectural thinking, AI-assisted development, and relentless focus on performance has created something truly revolutionary. Welcome to the future of desktop AI assistants.* ⚡ 
+
+---
+
+## ⚡ **QUICK START**
+
+### **Option 1: Production Deployment (Recommended)**
+```bash
+# Clone and setup
+git clone https://github.com/luminainterface/council.git
+cd council
+python -m venv .venv && source .venv/bin/activate  # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+
+# Start the full system
+python autogen_api_shim.py
+```
+**Starts on http://localhost:8001** with all capabilities enabled.
+
+🌐 **Web Interfaces Available:**
+- **Main:** http://localhost:8001 → Evolution Journey
+- **Chat:** http://localhost:8001/chat → Enhanced Chat Interface  
+- **Admin:** http://localhost:8001/admin → Live API Key Management
+- **Monitor:** http://localhost:8001/monitor → System Monitoring
+
+### **Option 2: Docker Production Stack**
+```bash
+git clone https://github.com/luminainterface/council.git
+cd council
+docker-compose up -d
+```
+**Includes**: AutoGen Council + Prometheus + Grafana monitoring
+
+### **Option 3: Memory + Sandbox Testing**
+```bash
+# Test memory system
+python -c "
+from faiss_memory import FAISSMemorySystem
+memory = FAISSMemorySystem()
+memory.add('Hello world', {'type': 'test'})
+results = memory.query('greeting', k=1)
+print('Memory test:', results)
+"
+
+# Test sandbox execution
+python -c "
+from sandbox_exec import exec_safe
+result = exec_safe('print(2 + 2)', 'python')
+print('Sandbox test:', result)
+"
+```
+
+---
+
+## 🔧 **ENVIRONMENT SETUP & API KEYS**

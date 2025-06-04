@@ -1,0 +1,31 @@
+# Dockerfile.sandbox - Minimal Python sandbox for secure code execution
+FROM python:3.11-slim
+
+# Install only essential packages for code execution
+RUN apt-get update && apt-get install -y \
+    bash \
+    coreutils \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Install Python packages commonly needed for code execution
+RUN pip install --no-cache-dir \
+    numpy \
+    pandas \
+    matplotlib \
+    sympy \
+    requests
+
+# Create non-root user for code execution
+RUN useradd -m -u 1000 sandbox && \
+    mkdir -p /tmp/execution && \
+    chown sandbox:sandbox /tmp/execution
+
+# Set working directory
+WORKDIR /tmp/execution
+
+# Switch to non-root user
+USER sandbox
+
+# Default command - wait for code execution
+CMD ["python", "-c", "print('Sandbox ready for code execution')"] 
