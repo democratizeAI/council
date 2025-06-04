@@ -38,7 +38,16 @@ except ImportError:
     TRANSFORMERS_AVAILABLE = False
     print("WARNING: transformers not available - using mock inference")
 
-PROFILES = ('gtx_1080', 'rtx_4070')
+PROFILES = (
+    "quick_test",
+    "rtx_4070", 
+    "rtx_4070_conservative",
+    "rtx_4070_optimized",  # Memory-optimized 4-bit profile
+    "rtx_3080",
+    "rtx_4090",
+    "a100",
+    "working_test"  # Ultra-conservative for actual inference
+)
 
 # Global model registry
 loaded_models: Dict[str, Any] = {}
@@ -119,56 +128,54 @@ def create_llama_cpp_model(head: Dict[str, Any]) -> Any:
     return llama
 
 def create_transformers_model(head: Dict[str, Any]) -> Any:
-    """Create HuggingFace Transformers model instance"""
+    """Create HuggingFace Transformers model instance with memory-optimized loading"""
     name = head['name']
     
-    # Map our model names to lightweight HuggingFace models for fast loading
-    hf_model_map = {
-        'tinyllama_1b': 'distilgpt2',  # Fast lightweight model
-        'mistral_0.5b': 'distilgpt2',  # Fast lightweight model  
-        'qwen2_0.5b': 'distilgpt2',    # Fast lightweight model
-        'safety_guard_0.3b': 'distilgpt2',  # Fast lightweight model
-        'phi2_2.7b': 'gpt2',          # Slightly larger but still fast
-        'codellama_0.7b': 'distilgpt2',  # Fast for code tasks
-        'math_specialist_0.8b': 'distilgpt2',  # Fast for math
-        'openchat_3.5_0.4b': 'gpt2',  # Medium size for chat
-        'mistral_7b_instruct': 'gpt2-medium'  # Largest we'll use for now
-    }
+    # Use explicit HF model if specified, otherwise map to reasoning models
+    if 'hf_model' in head:
+        model_id = head['hf_model']
+    else:
+        # Fallback mapping for backwards compatibility
+        hf_model_map = {
+            'tinyllama_1b': 'microsoft/phi-2',
+            'mistral_0.5b': 'microsoft/phi-1_5',            
+            'qwen2_0.5b': 'microsoft/phi-1_5',
+            'safety_guard_0.3b': 'gpt2',
+            'phi2_2.7b': 'microsoft/phi-2',
+            'codellama_0.7b': 'microsoft/phi-2',
+            'math_specialist_0.8b': 'microsoft/phi-2',
+            'openchat_3.5_0.4b': 'microsoft/phi-2',
+            'mistral_7b_instruct': 'microsoft/phi-2'
+        }
+        model_id = hf_model_map.get(name, 'microsoft/phi-1_5')
     
-    model_id = hf_model_map.get(name, 'distilgpt2')  # Safe fast fallback
-    
-    echo(f"🔧 Loading {name} -> {model_id} with Transformers...")
+    echo(f"🔧 Loading {name} -> {model_id} with CPU to avoid CUDA OOM...")
     
     try:
-        # Use pipeline for simplicity and efficiency
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        # Force CPU to avoid CUDA OOM issues
+        device = "cpu"
+        echo(f"🖥️ Using CPU device for {name} to ensure reliable inference")
         
-        # Create text generation pipeline with smaller models
+        # CPU-optimized loading
         pipe = pipeline(
             "text-generation",
             model=model_id,
             device=device,
-            torch_dtype=torch.float16 if device == "cuda" else torch.float32,
+            torch_dtype=torch.float32,  # Use float32 for CPU
             trust_remote_code=True,
-            # Add parameters for faster loading
-            use_fast=True
+            use_fast=True,
+            # Conservative generation settings
+            max_new_tokens=150,
+            do_sample=True,
+            temperature=0.7,
         )
         
-        echo(f"✅ Transformers {name} loaded successfully on {device} using {model_id}")
+        echo(f"✅ Transformers {name} loaded successfully on CPU using {model_id}")
         return pipe
         
     except Exception as e:
-        echo(f"⚠️ Failed to load {model_id}, using safest fallback: {e}")
-        
-        # Fallback to the smallest possible model
-        pipe = pipeline(
-            "text-generation", 
-            model="distilgpt2",
-            device=device,
-            torch_dtype=torch.float16 if device == "cuda" else torch.float32
-        )
-        echo(f"✅ Transformers {name} loaded with DistilGPT-2 fallback")
-        return pipe
+        echo(f"⚠️ Failed to load {model_id} on CPU: {e}")
+        raise RuntimeError(f"CPU model loading failed for {name} -> {model_id}: {e}")
 
 def real_model_load(head: Dict[str, Any]) -> int:
     """Real model loading with backend selection"""
@@ -218,10 +225,22 @@ def real_model_load(head: Dict[str, Any]) -> int:
         return vram_mb
         
     except Exception as e:
+        # Check if this is a CUDA OOM error that should trigger cloud fallback
+        if "CUDA" in str(e) and "out of memory" in str(e):
+            echo(f"💥 CUDA OOM detected for {name}: {e}")
+            # Don't fall back to mock - let the error bubble up to trigger cloud fallback
+            raise RuntimeError(f"CUDA_OOM_{name}: {e}")
+        
         echo(f"❌ Failed to load {name} with {backend}: {e}")
+        
+        # For SWARM_FORCE_CLOUD mode, don't create mock models - force cloud fallback
+        if os.environ.get("SWARM_FORCE_CLOUD") == "true":
+            echo(f"🌩️ FORCE_CLOUD mode: Not creating mock for {name}")
+            raise RuntimeError(f"FORCED_CLOUD_FALLBACK_{name}: {e}")
+        
         echo(f"🔄 Falling back to mock loading for {name}")
         
-        # Fallback to mock
+        # Non-CUDA errors can still fall back to mock
         time.sleep(0.1)
         model_info = {
             'name': name,
@@ -261,14 +280,20 @@ def dummy_load(head: Dict[str, Any]) -> int:
         return head['vram_mb']
 
 def load_models(profile: Optional[str] = None, use_real_loading: bool = False) -> Dict[str, Any]:
-    """Load models according to profile. Returns loading summary."""
-    
+    """
+    Load models based on VRAM-aware profile from config.
+    """
     if profile is None:
-        profile = os.environ.get("SWARM_GPU_PROFILE", "gtx_1080").lower()
+        profile = os.environ.get("SWARM_GPU_PROFILE", "rtx_4070")
     
     if profile not in PROFILES:
-        raise ValueError(f"Unknown profile {profile!r}; choose one of {PROFILES}")
-
+        raise ValueError(f"Unknown profile '{profile}'; choose one of {PROFILES}")
+    
+    # Special handling for quick_test profile - always use mock loading
+    if profile == "quick_test":
+        use_real_loading = False
+        echo(f"[QUICK_TEST] Forcing mock loading for CI testing")
+    
     config_path = Path('config/models.yaml')
     if not config_path.exists():
         raise FileNotFoundError(f"Models config not found: {config_path}")
@@ -349,68 +374,77 @@ def generate_response(model_name: str, prompt: str, max_tokens: int = 150) -> st
             outputs = handle.generate([prompt], sampling_params)
             result = outputs[0].outputs[0].text.strip()
             echo(f"✅ vLLM generation successful: '{result[:50]}...'")
-            return result
             
         elif backend == "llama_cpp":
             output = handle(prompt, max_tokens=max_tokens, temperature=0.7, stop=["</s>", "<|end|>"])
             result = output['choices'][0]['text'].strip()
             echo(f"✅ llama.cpp generation successful: '{result[:50]}...'")
-            return result
             
         elif backend == "transformers":
             echo(f"🔧 Using transformers pipeline for {model_name}")
-            # Use the transformers pipeline
+            
             try:
-                # Simpler, more compatible generation
+                # Check if the model is on CPU or GPU based on the pipeline device
+                device = str(handle.device) if hasattr(handle, 'device') else "cpu"
+                echo(f"🖥️ Model device: {device}")
+                
+                # Only clear CUDA cache if using GPU
+                if device != "cpu" and torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                    echo(f"🧹 Cleared CUDA cache for GPU inference")
+                
+                # Use conservative settings for reliable inference
                 outputs = handle(
                     prompt, 
-                    max_new_tokens=max_tokens,  # Use max_new_tokens instead of max_length
+                    max_new_tokens=min(max_tokens, 100),  # Conservative limit
                     temperature=0.7,
                     do_sample=True,
                     truncation=True,
-                    pad_token_id=handle.tokenizer.eos_token_id if hasattr(handle, 'tokenizer') else None
+                    return_full_text=False,
+                    pad_token_id=handle.tokenizer.eos_token_id  # Explicit pad token
                 )
-                
-                echo(f"📤 Pipeline output type: {type(outputs)}")
                 
                 # Extract the generated text
                 if isinstance(outputs, list) and len(outputs) > 0:
-                    # Get generated text, remove the original prompt
-                    full_text = outputs[0]['generated_text']
-                    response = full_text[len(prompt):].strip() if full_text.startswith(prompt) else full_text.strip()
+                    result = outputs[0]['generated_text'].strip()
                 else:
-                    response = str(outputs).strip()
+                    result = str(outputs).strip()
                 
-                echo(f"✅ Transformers generation successful: '{response[:50]}...'")
-                return response if response else f"I understand your question about {prompt[:30]}..."
+                # Ensure we have actual content
+                if result and len(result) > 5:
+                    echo(f"✅ Transformers generation successful on {device}: '{result[:50]}...'")
+                else:
+                    raise ValueError(f"Empty response from {model_name} on {device}")
                 
             except Exception as pipeline_error:
-                echo(f"⚠️ Pipeline error with {model_name}: {pipeline_error}")
-                # Try even simpler generation
-                try:
-                    simple_output = handle(prompt, max_length=len(prompt.split()) + max_tokens)
-                    if isinstance(simple_output, list) and len(simple_output) > 0:
-                        result = simple_output[0]['generated_text'].replace(prompt, '').strip()
-                        echo(f"✅ Simple transformers generation successful: '{result[:50]}...'")
-                        return result if result else f"Processing your question about {prompt[:30]}..."
-                    raise pipeline_error  # Let it fall back to mock
-                except Exception as simple_error:
-                    echo(f"⚠️ Simple generation also failed for {model_name}: {simple_error}")
-                    raise simple_error  # Let it fall back to mock
+                echo(f"❌ Pipeline error with {model_name}: {pipeline_error}")
+                # For CPU models, this shouldn't be CUDA OOM
+                if "CUDA" in str(pipeline_error) and "out of memory" in str(pipeline_error):
+                    raise RuntimeError(f"UNEXPECTED CUDA OOM on CPU model {model_name}: {pipeline_error}")
+                else:
+                    raise RuntimeError(f"CPU inference failure with {model_name}: {pipeline_error}")
             
         else:  # mock backend
             echo(f"🎭 Using mock backend for {model_name}")
             result = generate_mock_response(prompt, model_name, model_info)
             echo(f"✅ Mock generation: '{result[:50]}...'")
-            return result
+        
+        # **FAIL FAST ON TEMPLATE RESPONSES** - Path C requirement
+        if result and ("Response from " in result or "[TEMPLATE]" in result or "Mock" in result):
+            raise RuntimeError(f"Template/mock response detected from {model_name} - model OOM? Result: {result[:100]}")
+        
+        return result
             
     except Exception as e:
         echo(f"❌ Error generating with {model_name}: {e}")
-        echo(f"🔄 Falling back to mock response")
-        # Fallback to mock response
-        result = generate_mock_response(prompt, model_name, model_info)
-        echo(f"✅ Mock fallback: '{result[:50]}...'")
-        return result
+        
+        # Check if we're in FORCE_CLOUD mode - don't fall back to mock
+        if os.environ.get("SWARM_FORCE_CLOUD") == "true":
+            echo(f"🌩️ FORCE_CLOUD mode: Raising error to trigger cloud fallback")
+            raise RuntimeError(f"FORCE_CLOUD_INFERENCE_FAILURE_{model_name}: {e}")
+        
+        # **NO MOCK FALLBACK** - fail fast for debugging
+        raise RuntimeError(f"Model inference failed for {model_name}: {e}")
 
 def generate_mock_response(prompt: str, model_name: str, model_info: Dict[str, Any]) -> str:
     """Generate mock response for testing"""

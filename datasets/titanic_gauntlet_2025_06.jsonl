@@ -1,0 +1,380 @@
+{"id": 0, "prompt": "Calculate 2 + 2 and show your work", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 1, "prompt": "What is 15% of 240?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 2, "prompt": "Solve for x: 3x + 7 = 22", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 3, "prompt": "Find the area of a circle with radius 5 cm", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 4, "prompt": "What is the factorial of 6?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 5, "prompt": "Calculate the square root of 144", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 6, "prompt": "What is 8! (8 factorial)?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 7, "prompt": "Solve: 2x\u00b2 - 8x + 6 = 0", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 8, "prompt": "Find the derivative of f(x) = x\u00b3 + 2x\u00b2 - 5x + 1", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 9, "prompt": "What is log\u2082(64)?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 10, "prompt": "Calculate the integral of 2x dx from 0 to 3", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 11, "prompt": "Find the slope of the line passing through (2,5) and (8,17)", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 12, "prompt": "What is the sum of the first 10 prime numbers?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 13, "prompt": "Calculate 3.7 \u00d7 8.9 - 2.1", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 14, "prompt": "What is 25% of 80% of 160?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 15, "prompt": "Solve the system: x + y = 10, 2x - y = 5", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 16, "prompt": "Find the perimeter of a rectangle with length 12 and width 8", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 17, "prompt": "What is the volume of a sphere with radius 3?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 18, "prompt": "Calculate (5!)/(3! \u00d7 2!)", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 19, "prompt": "What is the GCD of 48 and 18?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 20, "prompt": "Step by step: Calculate 2 + 2 and show your work", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 21, "prompt": "Explain and solve: What is 15% of 240?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 22, "prompt": "Show your reasoning: Solve for x: 3x + 7 = 22", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 23, "prompt": "Find the area of a circle with radius 5 cm", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 24, "prompt": "What is the factorial of 6?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 25, "prompt": "Calculate the square root of 144", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 26, "prompt": "What is 8! (8 factorial)?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 27, "prompt": "Using mathematical principles, solve: 2x\u00b2 - 8x + 6 = 0", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 28, "prompt": "Work through this problem: Find the derivative of f(x) = x\u00b3 + 2x\u00b2 - 5x + 1", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 29, "prompt": "Provide a detailed solution: What is log\u2082(64)?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 30, "prompt": "Step by step: Calculate the integral of 2x dx from 0 to 3", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 31, "prompt": "Explain and solve: Find the slope of the line passing through (2,5) and (8,17)", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 32, "prompt": "Show your reasoning: What is the sum of the first 10 prime numbers?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 33, "prompt": "Compute 3.7 \u00d7 8.9 - 2.1", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 34, "prompt": "What is 25% of 80% of 160?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 35, "prompt": "Solve the system: x + y = 10, 2x - y = 5", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 36, "prompt": "Find the perimeter of a rectangle with length 12 and width 8", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 37, "prompt": "Using mathematical principles, what is the volume of a sphere with radius 3?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 38, "prompt": "Work through this problem: Calculate (5!)/(3! \u00d7 2!)", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 39, "prompt": "Provide a detailed solution: What is the GCD of 48 and 18?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 40, "prompt": "Step by step: Calculate 2 + 2 and show your work", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 41, "prompt": "Explain and solve: What is 15% of 240?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 42, "prompt": "Show your reasoning: Solve for x: 3x + 7 = 22", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 43, "prompt": "Find the area of a circle with radius 5 cm", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 44, "prompt": "What is the factorial of 6?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 45, "prompt": "Calculate the square root of 144", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 46, "prompt": "What is 8! (8 factorial)?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 47, "prompt": "Using mathematical principles, solve: 2x\u00b2 - 8x + 6 = 0", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 48, "prompt": "Work through this problem: Find the derivative of f(x) = x\u00b3 + 2x\u00b2 - 5x + 1", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 49, "prompt": "Provide a detailed solution: What is log\u2082(64)?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 50, "prompt": "Step by step: Calculate the integral of 2x dx from 0 to 3", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 51, "prompt": "Explain and solve: Find the slope of the line passing through (2,5) and (8,17)", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 52, "prompt": "Show your reasoning: What is the sum of the first 10 prime numbers?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 53, "prompt": "Compute 3.7 \u00d7 8.9 - 2.1", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 54, "prompt": "What is 25% of 80% of 160?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 55, "prompt": "Solve the system: x + y = 10, 2x - y = 5", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 56, "prompt": "Find the perimeter of a rectangle with length 12 and width 8", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 57, "prompt": "Using mathematical principles, what is the volume of a sphere with radius 3?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 58, "prompt": "Work through this problem: Calculate (5!)/(3! \u00d7 2!)", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 59, "prompt": "Provide a detailed solution: What is the GCD of 48 and 18?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 60, "prompt": "Step by step: Calculate 2 + 2 and show your work", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 61, "prompt": "Explain and solve: What is 15% of 240?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 62, "prompt": "Show your reasoning: Solve for x: 3x + 7 = 22", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 63, "prompt": "Find the area of a circle with radius 5 cm", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 64, "prompt": "What is the factorial of 6?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 65, "prompt": "Calculate the square root of 144", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 66, "prompt": "What is 8! (8 factorial)?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 67, "prompt": "Using mathematical principles, solve: 2x\u00b2 - 8x + 6 = 0", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 68, "prompt": "Work through this problem: Find the derivative of f(x) = x\u00b3 + 2x\u00b2 - 5x + 1", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 69, "prompt": "Provide a detailed solution: What is log\u2082(64)?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 70, "prompt": "Step by step: Calculate the integral of 2x dx from 0 to 3", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 71, "prompt": "Explain and solve: Find the slope of the line passing through (2,5) and (8,17)", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 72, "prompt": "Show your reasoning: What is the sum of the first 10 prime numbers?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 73, "prompt": "Compute 3.7 \u00d7 8.9 - 2.1", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 74, "prompt": "What is 25% of 80% of 160?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 75, "prompt": "Solve the system: x + y = 10, 2x - y = 5", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 76, "prompt": "Find the perimeter of a rectangle with length 12 and width 8", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 77, "prompt": "Using mathematical principles, what is the volume of a sphere with radius 3?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 78, "prompt": "Work through this problem: Calculate (5!)/(3! \u00d7 2!)", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 79, "prompt": "Provide a detailed solution: What is the GCD of 48 and 18?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 80, "prompt": "Step by step: Calculate 2 + 2 and show your work", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 81, "prompt": "Explain and solve: What is 15% of 240?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 82, "prompt": "Show your reasoning: Solve for x: 3x + 7 = 22", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 83, "prompt": "Find the area of a circle with radius 5 cm", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 84, "prompt": "What is the factorial of 6?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 85, "prompt": "Calculate the square root of 144", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 86, "prompt": "What is 8! (8 factorial)?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 87, "prompt": "Using mathematical principles, solve: 2x\u00b2 - 8x + 6 = 0", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 88, "prompt": "Work through this problem: Find the derivative of f(x) = x\u00b3 + 2x\u00b2 - 5x + 1", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 89, "prompt": "Provide a detailed solution: What is log\u2082(64)?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 90, "prompt": "Step by step: Calculate the integral of 2x dx from 0 to 3", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 91, "prompt": "Explain and solve: Find the slope of the line passing through (2,5) and (8,17)", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 92, "prompt": "Show your reasoning: What is the sum of the first 10 prime numbers?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 93, "prompt": "Compute 3.7 \u00d7 8.9 - 2.1", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 94, "prompt": "What is 25% of 80% of 160?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 95, "prompt": "Solve the system: x + y = 10, 2x - y = 5", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 96, "prompt": "Find the perimeter of a rectangle with length 12 and width 8", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 97, "prompt": "Using mathematical principles, what is the volume of a sphere with radius 3?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 98, "prompt": "Work through this problem: Calculate (5!)/(3! \u00d7 2!)", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 99, "prompt": "Provide a detailed solution: What is the GCD of 48 and 18?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 100, "prompt": "Step by step: Calculate 2 + 2 and show your work", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 101, "prompt": "Explain and solve: What is 15% of 240?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 102, "prompt": "Show your reasoning: Solve for x: 3x + 7 = 22", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 103, "prompt": "Find the area of a circle with radius 5 cm", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 104, "prompt": "What is the factorial of 6?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 105, "prompt": "Calculate the square root of 144", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 106, "prompt": "What is 8! (8 factorial)?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 107, "prompt": "Using mathematical principles, solve: 2x\u00b2 - 8x + 6 = 0", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 108, "prompt": "Work through this problem: Find the derivative of f(x) = x\u00b3 + 2x\u00b2 - 5x + 1", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 109, "prompt": "Provide a detailed solution: What is log\u2082(64)?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 110, "prompt": "Step by step: Calculate the integral of 2x dx from 0 to 3", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 111, "prompt": "Explain and solve: Find the slope of the line passing through (2,5) and (8,17)", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 112, "prompt": "Show your reasoning: What is the sum of the first 10 prime numbers?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 113, "prompt": "Compute 3.7 \u00d7 8.9 - 2.1", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 114, "prompt": "What is 25% of 80% of 160?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 115, "prompt": "Solve the system: x + y = 10, 2x - y = 5", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 116, "prompt": "Find the perimeter of a rectangle with length 12 and width 8", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 117, "prompt": "Using mathematical principles, what is the volume of a sphere with radius 3?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 118, "prompt": "Work through this problem: Calculate (5!)/(3! \u00d7 2!)", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 119, "prompt": "Provide a detailed solution: What is the GCD of 48 and 18?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 120, "prompt": "Step by step: Calculate 2 + 2 and show your work", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 121, "prompt": "Explain and solve: What is 15% of 240?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 122, "prompt": "Show your reasoning: Solve for x: 3x + 7 = 22", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 123, "prompt": "Find the area of a circle with radius 5 cm", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 124, "prompt": "What is the factorial of 6?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 125, "prompt": "Calculate the square root of 144", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 126, "prompt": "What is 8! (8 factorial)?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 127, "prompt": "Using mathematical principles, solve: 2x\u00b2 - 8x + 6 = 0", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 128, "prompt": "Work through this problem: Find the derivative of f(x) = x\u00b3 + 2x\u00b2 - 5x + 1", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 129, "prompt": "Provide a detailed solution: What is log\u2082(64)?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 130, "prompt": "Step by step: Calculate the integral of 2x dx from 0 to 3", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 131, "prompt": "Explain and solve: Find the slope of the line passing through (2,5) and (8,17)", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 132, "prompt": "Show your reasoning: What is the sum of the first 10 prime numbers?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 133, "prompt": "Compute 3.7 \u00d7 8.9 - 2.1", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 134, "prompt": "What is 25% of 80% of 160?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 135, "prompt": "Solve the system: x + y = 10, 2x - y = 5", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 136, "prompt": "Find the perimeter of a rectangle with length 12 and width 8", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 137, "prompt": "Using mathematical principles, what is the volume of a sphere with radius 3?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 138, "prompt": "Work through this problem: Calculate (5!)/(3! \u00d7 2!)", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 139, "prompt": "Provide a detailed solution: What is the GCD of 48 and 18?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 140, "prompt": "Step by step: Calculate 2 + 2 and show your work", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 141, "prompt": "Explain and solve: What is 15% of 240?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 142, "prompt": "Show your reasoning: Solve for x: 3x + 7 = 22", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 143, "prompt": "Find the area of a circle with radius 5 cm", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 144, "prompt": "What is the factorial of 6?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 145, "prompt": "Calculate the square root of 144", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 146, "prompt": "What is 8! (8 factorial)?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 147, "prompt": "Using mathematical principles, solve: 2x\u00b2 - 8x + 6 = 0", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 148, "prompt": "Work through this problem: Find the derivative of f(x) = x\u00b3 + 2x\u00b2 - 5x + 1", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 149, "prompt": "Provide a detailed solution: What is log\u2082(64)?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 150, "prompt": "Step by step: Calculate the integral of 2x dx from 0 to 3", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 151, "prompt": "Explain and solve: Find the slope of the line passing through (2,5) and (8,17)", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 152, "prompt": "Show your reasoning: What is the sum of the first 10 prime numbers?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 153, "prompt": "Compute 3.7 \u00d7 8.9 - 2.1", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 154, "prompt": "What is 25% of 80% of 160?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 155, "prompt": "Solve the system: x + y = 10, 2x - y = 5", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 156, "prompt": "Find the perimeter of a rectangle with length 12 and width 8", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 157, "prompt": "Using mathematical principles, what is the volume of a sphere with radius 3?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 158, "prompt": "Work through this problem: Calculate (5!)/(3! \u00d7 2!)", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 159, "prompt": "Provide a detailed solution: What is the GCD of 48 and 18?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 160, "prompt": "Step by step: Calculate 2 + 2 and show your work", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 161, "prompt": "Explain and solve: What is 15% of 240?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 162, "prompt": "Show your reasoning: Solve for x: 3x + 7 = 22", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 163, "prompt": "Find the area of a circle with radius 5 cm", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 164, "prompt": "What is the factorial of 6?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 165, "prompt": "Calculate the square root of 144", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 166, "prompt": "What is 8! (8 factorial)?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 167, "prompt": "Using mathematical principles, solve: 2x\u00b2 - 8x + 6 = 0", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 168, "prompt": "Work through this problem: Find the derivative of f(x) = x\u00b3 + 2x\u00b2 - 5x + 1", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 169, "prompt": "Provide a detailed solution: What is log\u2082(64)?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 170, "prompt": "Step by step: Calculate the integral of 2x dx from 0 to 3", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 171, "prompt": "Explain and solve: Find the slope of the line passing through (2,5) and (8,17)", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 172, "prompt": "Show your reasoning: What is the sum of the first 10 prime numbers?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 173, "prompt": "Compute 3.7 \u00d7 8.9 - 2.1", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 174, "prompt": "What is 25% of 80% of 160?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 175, "prompt": "Solve the system: x + y = 10, 2x - y = 5", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 176, "prompt": "Find the perimeter of a rectangle with length 12 and width 8", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 177, "prompt": "Using mathematical principles, what is the volume of a sphere with radius 3?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 178, "prompt": "Work through this problem: Calculate (5!)/(3! \u00d7 2!)", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 179, "prompt": "Provide a detailed solution: What is the GCD of 48 and 18?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 180, "prompt": "Step by step: Calculate 2 + 2 and show your work", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 181, "prompt": "Explain and solve: What is 15% of 240?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 182, "prompt": "Show your reasoning: Solve for x: 3x + 7 = 22", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 183, "prompt": "Find the area of a circle with radius 5 cm", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 184, "prompt": "What is the factorial of 6?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 185, "prompt": "Calculate the square root of 144", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 186, "prompt": "What is 8! (8 factorial)?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 187, "prompt": "Using mathematical principles, solve: 2x\u00b2 - 8x + 6 = 0", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 188, "prompt": "Work through this problem: Find the derivative of f(x) = x\u00b3 + 2x\u00b2 - 5x + 1", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 189, "prompt": "Provide a detailed solution: What is log\u2082(64)?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 190, "prompt": "Step by step: Calculate the integral of 2x dx from 0 to 3", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 191, "prompt": "Explain and solve: Find the slope of the line passing through (2,5) and (8,17)", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 192, "prompt": "Show your reasoning: What is the sum of the first 10 prime numbers?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 193, "prompt": "Compute 3.7 \u00d7 8.9 - 2.1", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 194, "prompt": "What is 25% of 80% of 160?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 195, "prompt": "Solve the system: x + y = 10, 2x - y = 5", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 196, "prompt": "Find the perimeter of a rectangle with length 12 and width 8", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 197, "prompt": "Using mathematical principles, what is the volume of a sphere with radius 3?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 198, "prompt": "Work through this problem: Calculate (5!)/(3! \u00d7 2!)", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 199, "prompt": "Provide a detailed solution: What is the GCD of 48 and 18?", "domain": "math", "scoring_method": "exact_numeric", "weight": 0.3, "expected_tokens": 50}
+{"id": 200, "prompt": "If all birds can fly and penguins are birds, why can't penguins fly? Explain this logical puzzle.", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 201, "prompt": "You have two coins that add up to 30 cents. One is not a nickel. What are the two coins?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 202, "prompt": "A man lives on the 20th floor. Every morning he takes the elevator down. When he comes home, he takes the elevator to the 10th floor and walks the rest. Why?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 203, "prompt": "Three boxes contain apples and oranges. One contains only apples, one only oranges, one both. All labels are wrong. You can pick one fruit from one box. How do you label them correctly?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 204, "prompt": "If you have 3 switches and 3 light bulbs in another room, how can you determine which switch controls which bulb with only one trip to the room?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 205, "prompt": "A woman has two children. One is a boy. What's the probability the other is also a boy?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 206, "prompt": "You're in a room with 3 doors. Behind one is a car, behind the others are goats. You pick door 1. The host opens door 3 (goat). Should you switch to door 2?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 207, "prompt": "Five pirates have 100 gold coins. They vote on distribution. If majority disagrees, the proposer is thrown overboard. What should the first pirate propose?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 208, "prompt": "A snail climbs a 10-foot wall. Each day it climbs 3 feet, each night it slides down 2 feet. How many days to reach the top?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 209, "prompt": "Two trains approach each other at 60 mph each, 120 miles apart. A fly flies back and forth between them at 80 mph. How far does the fly travel?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 210, "prompt": "Analyze this complex scenario step by step: If all birds can fly and penguins are birds, why can't penguins fly? Explain this logical puzzle.", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 211, "prompt": "Analyze this complex scenario step by step: You have two coins that add up to 30 cents. One is not a nickel. What are the two coins?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 212, "prompt": "Analyze this complex scenario step by step: A man lives on the 20th floor. Every morning he takes the elevator down. When he comes home, he takes the elevator to the 10th floor and walks the rest. Why?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 213, "prompt": "Analyze this complex scenario step by step: Three boxes contain apples and oranges. One contains only apples, one only oranges, one both. All labels are wrong. You can pick one fruit from one box. How do you label them correctly?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 214, "prompt": "Analyze this complex scenario step by step: If you have 3 switches and 3 light bulbs in another room, how can you determine which switch controls which bulb with only one trip to the room?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 215, "prompt": "Analyze this complex scenario step by step: A woman has two children. One is a boy. What's the probability the other is also a boy?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 216, "prompt": "Analyze this complex scenario step by step: You're in a room with 3 doors. Behind one is a car, behind the others are goats. You pick door 1. The host opens door 3 (goat). Should you switch to door 2?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 217, "prompt": "Analyze this complex scenario step by step: Five pirates have 100 gold coins. They vote on distribution. If majority disagrees, the proposer is thrown overboard. What should the first pirate propose?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 218, "prompt": "Analyze this complex scenario step by step: A snail climbs a 10-foot wall. Each day it climbs 3 feet, each night it slides down 2 feet. How many days to reach the top?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 219, "prompt": "Analyze this complex scenario step by step: Two trains approach each other at 60 mph each, 120 miles apart. A fly flies back and forth between them at 80 mph. How far does the fly travel?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 220, "prompt": "Analyze this complex scenario step by step: If all birds can fly and penguins are birds, why can't penguins fly? Explain this logical puzzle.", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 221, "prompt": "Analyze this complex scenario step by step: You have two coins that add up to 30 cents. One is not a nickel. What are the two coins?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 222, "prompt": "Analyze this complex scenario step by step: A man lives on the 20th floor. Every morning he takes the elevator down. When he comes home, he takes the elevator to the 10th floor and walks the rest. Why?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 223, "prompt": "Analyze this complex scenario step by step: Three boxes contain apples and oranges. One contains only apples, one only oranges, one both. All labels are wrong. You can pick one fruit from one box. How do you label them correctly?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 224, "prompt": "Analyze this complex scenario step by step: If you have 3 switches and 3 light bulbs in another room, how can you determine which switch controls which bulb with only one trip to the room?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 225, "prompt": "Analyze this complex scenario step by step: A woman has two children. One is a boy. What's the probability the other is also a boy?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 226, "prompt": "Analyze this complex scenario step by step: You're in a room with 3 doors. Behind one is a car, behind the others are goats. You pick door 1. The host opens door 3 (goat). Should you switch to door 2?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 227, "prompt": "Analyze this complex scenario step by step: Five pirates have 100 gold coins. They vote on distribution. If majority disagrees, the proposer is thrown overboard. What should the first pirate propose?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 228, "prompt": "Analyze this complex scenario step by step: A snail climbs a 10-foot wall. Each day it climbs 3 feet, each night it slides down 2 feet. How many days to reach the top?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 229, "prompt": "Analyze this complex scenario step by step: Two trains approach each other at 60 mph each, 120 miles apart. A fly flies back and forth between them at 80 mph. How far does the fly travel?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 230, "prompt": "Analyze this complex scenario step by step: If all birds can fly and penguins are birds, why can't penguins fly? Explain this logical puzzle.", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 231, "prompt": "Analyze this complex scenario step by step: You have two coins that add up to 30 cents. One is not a nickel. What are the two coins?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 232, "prompt": "Analyze this complex scenario step by step: A man lives on the 20th floor. Every morning he takes the elevator down. When he comes home, he takes the elevator to the 10th floor and walks the rest. Why?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 233, "prompt": "Analyze this complex scenario step by step: Three boxes contain apples and oranges. One contains only apples, one only oranges, one both. All labels are wrong. You can pick one fruit from one box. How do you label them correctly?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 234, "prompt": "Analyze this complex scenario step by step: If you have 3 switches and 3 light bulbs in another room, how can you determine which switch controls which bulb with only one trip to the room?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 235, "prompt": "Analyze this complex scenario step by step: A woman has two children. One is a boy. What's the probability the other is also a boy?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 236, "prompt": "Analyze this complex scenario step by step: You're in a room with 3 doors. Behind one is a car, behind the others are goats. You pick door 1. The host opens door 3 (goat). Should you switch to door 2?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 237, "prompt": "Analyze this complex scenario step by step: Five pirates have 100 gold coins. They vote on distribution. If majority disagrees, the proposer is thrown overboard. What should the first pirate propose?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 238, "prompt": "Analyze this complex scenario step by step: A snail climbs a 10-foot wall. Each day it climbs 3 feet, each night it slides down 2 feet. How many days to reach the top?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 239, "prompt": "Analyze this complex scenario step by step: Two trains approach each other at 60 mph each, 120 miles apart. A fly flies back and forth between them at 80 mph. How far does the fly travel?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 240, "prompt": "Analyze this complex scenario step by step: If all birds can fly and penguins are birds, why can't penguins fly? Explain this logical puzzle.", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 241, "prompt": "Analyze this complex scenario step by step: You have two coins that add up to 30 cents. One is not a nickel. What are the two coins?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 242, "prompt": "Analyze this complex scenario step by step: A man lives on the 20th floor. Every morning he takes the elevator down. When he comes home, he takes the elevator to the 10th floor and walks the rest. Why?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 243, "prompt": "Analyze this complex scenario step by step: Three boxes contain apples and oranges. One contains only apples, one only oranges, one both. All labels are wrong. You can pick one fruit from one box. How do you label them correctly?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 244, "prompt": "Analyze this complex scenario step by step: If you have 3 switches and 3 light bulbs in another room, how can you determine which switch controls which bulb with only one trip to the room?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 245, "prompt": "Analyze this complex scenario step by step: A woman has two children. One is a boy. What's the probability the other is also a boy?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 246, "prompt": "Analyze this complex scenario step by step: You're in a room with 3 doors. Behind one is a car, behind the others are goats. You pick door 1. The host opens door 3 (goat). Should you switch to door 2?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 247, "prompt": "Analyze this complex scenario step by step: Five pirates have 100 gold coins. They vote on distribution. If majority disagrees, the proposer is thrown overboard. What should the first pirate propose?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 248, "prompt": "Analyze this complex scenario step by step: A snail climbs a 10-foot wall. Each day it climbs 3 feet, each night it slides down 2 feet. How many days to reach the top?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 249, "prompt": "Analyze this complex scenario step by step: Two trains approach each other at 60 mph each, 120 miles apart. A fly flies back and forth between them at 80 mph. How far does the fly travel?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 250, "prompt": "Analyze this complex scenario step by step: If all birds can fly and penguins are birds, why can't penguins fly? Explain this logical puzzle.", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 251, "prompt": "Analyze this complex scenario step by step: You have two coins that add up to 30 cents. One is not a nickel. What are the two coins?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 252, "prompt": "Analyze this complex scenario step by step: A man lives on the 20th floor. Every morning he takes the elevator down. When he comes home, he takes the elevator to the 10th floor and walks the rest. Why?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 253, "prompt": "Analyze this complex scenario step by step: Three boxes contain apples and oranges. One contains only apples, one only oranges, one both. All labels are wrong. You can pick one fruit from one box. How do you label them correctly?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 254, "prompt": "Analyze this complex scenario step by step: If you have 3 switches and 3 light bulbs in another room, how can you determine which switch controls which bulb with only one trip to the room?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 255, "prompt": "Analyze this complex scenario step by step: A woman has two children. One is a boy. What's the probability the other is also a boy?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 256, "prompt": "Analyze this complex scenario step by step: You're in a room with 3 doors. Behind one is a car, behind the others are goats. You pick door 1. The host opens door 3 (goat). Should you switch to door 2?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 257, "prompt": "Analyze this complex scenario step by step: Five pirates have 100 gold coins. They vote on distribution. If majority disagrees, the proposer is thrown overboard. What should the first pirate propose?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 258, "prompt": "Analyze this complex scenario step by step: A snail climbs a 10-foot wall. Each day it climbs 3 feet, each night it slides down 2 feet. How many days to reach the top?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 259, "prompt": "Analyze this complex scenario step by step: Two trains approach each other at 60 mph each, 120 miles apart. A fly flies back and forth between them at 80 mph. How far does the fly travel?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 260, "prompt": "Analyze this complex scenario step by step: If all birds can fly and penguins are birds, why can't penguins fly? Explain this logical puzzle.", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 261, "prompt": "Analyze this complex scenario step by step: You have two coins that add up to 30 cents. One is not a nickel. What are the two coins?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 262, "prompt": "Analyze this complex scenario step by step: A man lives on the 20th floor. Every morning he takes the elevator down. When he comes home, he takes the elevator to the 10th floor and walks the rest. Why?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 263, "prompt": "Analyze this complex scenario step by step: Three boxes contain apples and oranges. One contains only apples, one only oranges, one both. All labels are wrong. You can pick one fruit from one box. How do you label them correctly?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 264, "prompt": "Analyze this complex scenario step by step: If you have 3 switches and 3 light bulbs in another room, how can you determine which switch controls which bulb with only one trip to the room?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 265, "prompt": "Analyze this complex scenario step by step: A woman has two children. One is a boy. What's the probability the other is also a boy?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 266, "prompt": "Analyze this complex scenario step by step: You're in a room with 3 doors. Behind one is a car, behind the others are goats. You pick door 1. The host opens door 3 (goat). Should you switch to door 2?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 267, "prompt": "Analyze this complex scenario step by step: Five pirates have 100 gold coins. They vote on distribution. If majority disagrees, the proposer is thrown overboard. What should the first pirate propose?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 268, "prompt": "Analyze this complex scenario step by step: A snail climbs a 10-foot wall. Each day it climbs 3 feet, each night it slides down 2 feet. How many days to reach the top?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 269, "prompt": "Analyze this complex scenario step by step: Two trains approach each other at 60 mph each, 120 miles apart. A fly flies back and forth between them at 80 mph. How far does the fly travel?", "domain": "reasoning", "scoring_method": "exact_match", "weight": 0.25, "expected_tokens": 150}
+{"id": 270, "prompt": "Write a Python function to calculate the Fibonacci sequence up to n terms", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 271, "prompt": "Create a function to check if a string is a palindrome", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 272, "prompt": "Write a Python script to find all prime numbers up to 100", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 273, "prompt": "Implement a binary search algorithm in Python", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 274, "prompt": "Write a function to reverse a linked list", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 275, "prompt": "Create a Python function to merge two sorted arrays", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 276, "prompt": "Write a function to find the maximum element in a binary tree", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 277, "prompt": "Implement quicksort algorithm in Python", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 278, "prompt": "Write a function to detect cycles in a linked list", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 279, "prompt": "Create a Python class for a stack with push, pop, and peek operations", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 280, "prompt": "Write a function to calculate the greatest common divisor of two numbers", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 281, "prompt": "Implement a function to find the longest common subsequence", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 282, "prompt": "Write a Python function to validate if parentheses are balanced", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 283, "prompt": "Create a function to rotate an array to the right by k steps", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 284, "prompt": "Write a recursive function to calculate factorial", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 285, "prompt": "Implement a function to find the intersection of two arrays", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 286, "prompt": "Write a Python function to convert decimal to binary", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 287, "prompt": "Create a function to find the second largest element in an array", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 288, "prompt": "Write a function to check if a number is prime", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 289, "prompt": "Implement a simple hash table in Python", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 290, "prompt": "Write a function to find duplicates in an array", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 291, "prompt": "Create a Python function to calculate matrix multiplication", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 292, "prompt": "Write a function to implement breadth-first search", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 293, "prompt": "Implement a function to find anagrams in a list of strings", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 294, "prompt": "Write a Python function to compress a string using run-length encoding", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 295, "prompt": "Create a function to implement depth-first search", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 296, "prompt": "Write a Python function to calculate edit distance", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 297, "prompt": "Implement a function to find the kth largest element", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 298, "prompt": "Write a function to validate a binary search tree", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 299, "prompt": "Create a Python class for a queue using two stacks", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 300, "prompt": "Write a function to find the minimum window substring", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 301, "prompt": "Implement a function to merge k sorted lists", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 302, "prompt": "Write a Python function to calculate coin change combinations", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 303, "prompt": "Create a function to find the longest palindromic substring", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 304, "prompt": "Write a function to implement topological sorting", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 305, "prompt": "Implement a function to find strongly connected components", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 306, "prompt": "Write a Python function to calculate maximum subarray sum", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 307, "prompt": "Create a function to implement union-find data structure", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 308, "prompt": "Write a function to find the median of two sorted arrays", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 309, "prompt": "Implement a Python function to solve the knapsack problem", "domain": "coding", "scoring_method": "compile_and_test", "weight": 0.2, "expected_tokens": 200}
+{"id": 310, "prompt": "Calculate the orbital velocity needed for a satellite to orbit Earth at 400 km altitude", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 311, "prompt": "What is the escape velocity from Earth's surface?", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 312, "prompt": "Calculate the gravitational force between Earth and Moon", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 313, "prompt": "Determine the energy required to heat 1 kg of water from 20\u00b0C to 100\u00b0C", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 314, "prompt": "What is the wavelength of visible light with frequency 5\u00d710\u00b9\u2074 Hz?", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 315, "prompt": "Calculate the pH of a 0.1 M HCl solution", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 316, "prompt": "What is the half-life of carbon-14 and how is it used in dating?", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 317, "prompt": "Calculate the momentum of a 1000 kg car traveling at 25 m/s", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 318, "prompt": "What is the pressure at 10 meters depth in water?", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 319, "prompt": "Calculate the electric field around a point charge of 1 \u03bcC at 1 meter distance", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 320, "prompt": "Apply physics principles to solve: Calculate the orbital velocity needed for a satellite to orbit Earth at 400 km altitude", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 321, "prompt": "Apply physics principles to solve: What is the escape velocity from Earth's surface?", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 322, "prompt": "Apply physics principles to solve: Calculate the gravitational force between Earth and Moon", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 323, "prompt": "Apply physics principles to solve: Determine the energy required to heat 1 kg of water from 20\u00b0C to 100\u00b0C", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 324, "prompt": "Apply physics principles to solve: What is the wavelength of visible light with frequency 5\u00d710\u00b9\u2074 Hz?", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 325, "prompt": "Apply physics principles to solve: Calculate the pH of a 0.1 M HCl solution", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 326, "prompt": "Apply physics principles to solve: What is the half-life of carbon-14 and how is it used in dating?", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 327, "prompt": "Apply physics principles to solve: Calculate the momentum of a 1000 kg car traveling at 25 m/s", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 328, "prompt": "Apply physics principles to solve: What is the pressure at 10 meters depth in water?", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 329, "prompt": "Apply physics principles to solve: Calculate the electric field around a point charge of 1 \u03bcC at 1 meter distance", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 330, "prompt": "Apply physics principles to solve: Calculate the orbital velocity needed for a satellite to orbit Earth at 400 km altitude", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 331, "prompt": "Apply physics principles to solve: What is the escape velocity from Earth's surface?", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 332, "prompt": "Apply physics principles to solve: Calculate the gravitational force between Earth and Moon", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 333, "prompt": "Apply physics principles to solve: Determine the energy required to heat 1 kg of water from 20\u00b0C to 100\u00b0C", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 334, "prompt": "Apply physics principles to solve: What is the wavelength of visible light with frequency 5\u00d710\u00b9\u2074 Hz?", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 335, "prompt": "Apply physics principles to solve: Calculate the pH of a 0.1 M HCl solution", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 336, "prompt": "Apply physics principles to solve: What is the half-life of carbon-14 and how is it used in dating?", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 337, "prompt": "Apply physics principles to solve: Calculate the momentum of a 1000 kg car traveling at 25 m/s", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 338, "prompt": "Apply physics principles to solve: What is the pressure at 10 meters depth in water?", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 339, "prompt": "Apply physics principles to solve: Calculate the electric field around a point charge of 1 \u03bcC at 1 meter distance", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 340, "prompt": "Apply physics principles to solve: Calculate the orbital velocity needed for a satellite to orbit Earth at 400 km altitude", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 341, "prompt": "Apply physics principles to solve: What is the escape velocity from Earth's surface?", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 342, "prompt": "Apply physics principles to solve: Calculate the gravitational force between Earth and Moon", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 343, "prompt": "Apply physics principles to solve: Determine the energy required to heat 1 kg of water from 20\u00b0C to 100\u00b0C", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 344, "prompt": "Apply physics principles to solve: What is the wavelength of visible light with frequency 5\u00d710\u00b9\u2074 Hz?", "domain": "science", "scoring_method": "numeric_with_units", "weight": 0.15, "expected_tokens": 100}
+{"id": 345, "prompt": "Plan a 7-day vacation to Japan including flights, hotels, and activities", "domain": "planning", "scoring_method": "em_and_f1", "weight": 0.05, "expected_tokens": 300}
+{"id": 346, "prompt": "Create a project timeline for developing a mobile app in 6 months", "domain": "planning", "scoring_method": "em_and_f1", "weight": 0.05, "expected_tokens": 300}
+{"id": 347, "prompt": "Design a study schedule for preparing for a medical exam in 3 months", "domain": "planning", "scoring_method": "em_and_f1", "weight": 0.05, "expected_tokens": 300}
+{"id": 348, "prompt": "Plan the logistics for organizing a 500-person conference", "domain": "planning", "scoring_method": "em_and_f1", "weight": 0.05, "expected_tokens": 300}
+{"id": 349, "prompt": "Create a business plan for opening a small restaurant", "domain": "planning", "scoring_method": "em_and_f1", "weight": 0.05, "expected_tokens": 300}
+{"id": 350, "prompt": "Plan a route for a cross-country road trip in 2 weeks", "domain": "planning", "scoring_method": "em_and_f1", "weight": 0.05, "expected_tokens": 300}
+{"id": 351, "prompt": "Design a workout plan for training for a marathon in 6 months", "domain": "planning", "scoring_method": "em_and_f1", "weight": 0.05, "expected_tokens": 300}
+{"id": 352, "prompt": "Plan the renovation of a 3-bedroom house over 4 months", "domain": "planning", "scoring_method": "em_and_f1", "weight": 0.05, "expected_tokens": 300}
+{"id": 353, "prompt": "Create a meal prep plan for a family of 4 for one month", "domain": "planning", "scoring_method": "em_and_f1", "weight": 0.05, "expected_tokens": 300}
+{"id": 354, "prompt": "Plan the launch strategy for a new software product", "domain": "planning", "scoring_method": "em_and_f1", "weight": 0.05, "expected_tokens": 300}
+{"id": 355, "prompt": "Design a budget plan for a young professional's first year", "domain": "planning", "scoring_method": "em_and_f1", "weight": 0.05, "expected_tokens": 300}
+{"id": 356, "prompt": "Plan the curriculum for a 16-week programming course", "domain": "planning", "scoring_method": "em_and_f1", "weight": 0.05, "expected_tokens": 300}
+{"id": 357, "prompt": "Create a marketing campaign timeline for a product launch", "domain": "planning", "scoring_method": "em_and_f1", "weight": 0.05, "expected_tokens": 300}
+{"id": 358, "prompt": "Plan a garden layout for maximum yield in a small space", "domain": "planning", "scoring_method": "em_and_f1", "weight": 0.05, "expected_tokens": 300}
+{"id": 359, "prompt": "Design a disaster preparedness plan for a small town", "domain": "planning", "scoring_method": "em_and_f1", "weight": 0.05, "expected_tokens": 300}
+{"id": 360, "prompt": "Plan the organization of a large wedding with 200 guests", "domain": "planning", "scoring_method": "em_and_f1", "weight": 0.05, "expected_tokens": 300}
+{"id": 361, "prompt": "Create a retirement savings strategy for someone starting at age 25", "domain": "planning", "scoring_method": "em_and_f1", "weight": 0.05, "expected_tokens": 300}
+{"id": 362, "prompt": "Plan the setup and management of a home office", "domain": "planning", "scoring_method": "em_and_f1", "weight": 0.05, "expected_tokens": 300}
+{"id": 363, "prompt": "Design a supply chain strategy for a manufacturing company", "domain": "planning", "scoring_method": "em_and_f1", "weight": 0.05, "expected_tokens": 300}
+{"id": 364, "prompt": "Plan the implementation of a company-wide remote work policy", "domain": "planning", "scoring_method": "em_and_f1", "weight": 0.05, "expected_tokens": 300}
+{"id": 365, "prompt": "Write a creative short story about a robot who discovers emotions", "domain": "writing", "scoring_method": "rouge_l", "weight": 0.05, "expected_tokens": 250}
+{"id": 366, "prompt": "Compose a persuasive essay about the importance of renewable energy", "domain": "writing", "scoring_method": "rouge_l", "weight": 0.05, "expected_tokens": 250}
+{"id": 367, "prompt": "Write a haiku about the changing seasons", "domain": "writing", "scoring_method": "rouge_l", "weight": 0.05, "expected_tokens": 250}
+{"id": 368, "prompt": "Create a character description for a mysterious detective", "domain": "writing", "scoring_method": "rouge_l", "weight": 0.05, "expected_tokens": 250}
+{"id": 369, "prompt": "Write a technical explanation of how machine learning works for beginners", "domain": "writing", "scoring_method": "rouge_l", "weight": 0.05, "expected_tokens": 250}
+{"id": 370, "prompt": "Compose a letter of recommendation for a stellar employee", "domain": "writing", "scoring_method": "rouge_l", "weight": 0.05, "expected_tokens": 250}
+{"id": 371, "prompt": "Write a product description for an innovative kitchen gadget", "domain": "writing", "scoring_method": "rouge_l", "weight": 0.05, "expected_tokens": 250}
+{"id": 372, "prompt": "Create a dialogue between two characters discussing time travel", "domain": "writing", "scoring_method": "rouge_l", "weight": 0.05, "expected_tokens": 250}
+{"id": 373, "prompt": "Write a summary of the major themes in Shakespeare's Hamlet", "domain": "writing", "scoring_method": "rouge_l", "weight": 0.05, "expected_tokens": 250}
+{"id": 374, "prompt": "Compose a motivational speech for high school graduates", "domain": "writing", "scoring_method": "rouge_l", "weight": 0.05, "expected_tokens": 250}
+{"id": 375, "prompt": "Write a restaurant review of your ideal dining experience", "domain": "writing", "scoring_method": "rouge_l", "weight": 0.05, "expected_tokens": 250}
+{"id": 376, "prompt": "Create a press release for a groundbreaking scientific discovery", "domain": "writing", "scoring_method": "rouge_l", "weight": 0.05, "expected_tokens": 250}
+{"id": 377, "prompt": "Write a children's story about friendship and kindness", "domain": "writing", "scoring_method": "rouge_l", "weight": 0.05, "expected_tokens": 250}
+{"id": 378, "prompt": "Compose an article about the future of space exploration", "domain": "writing", "scoring_method": "rouge_l", "weight": 0.05, "expected_tokens": 250}
+{"id": 379, "prompt": "Write a poem about the beauty of nature", "domain": "writing", "scoring_method": "rouge_l", "weight": 0.05, "expected_tokens": 250}

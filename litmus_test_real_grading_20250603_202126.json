@@ -1,0 +1,40 @@
+[
+  {
+    "endpoint": "hybrid",
+    "prompt": "What is 8!?",
+    "error": "All connection attempts failed",
+    "response": "",
+    "expected_answer": "40320",
+    "type": "math"
+  },
+  {
+    "endpoint": "hybrid",
+    "prompt": "What is 25% of 240?",
+    "error": "All connection attempts failed",
+    "response": "",
+    "expected_answer": "60",
+    "type": "math"
+  },
+  {
+    "endpoint": "hybrid",
+    "prompt": "Write a Python function to calculate GCD of two numbers",
+    "error": "All connection attempts failed",
+    "response": "",
+    "expected_keywords": [
+      "def",
+      "gcd",
+      "return",
+      "%",
+      "while"
+    ],
+    "type": "code"
+  },
+  {
+    "endpoint": "hybrid",
+    "prompt": "Logic puzzle: All bloops are razzles. All razzles are lazzles. Are all bloops lazzles?",
+    "error": "All connection attempts failed",
+    "response": "",
+    "expected_answer": "yes",
+    "type": "reasoning"
+  }
+]

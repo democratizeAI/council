@@ -1,0 +1,72 @@
+[
+  {
+    "endpoint": "hybrid",
+    "prompt": "What is 8!?",
+    "response": "Response from tinyllama_1b: Thank you for your question. Regarding 'What is 8!?...', here's what I can share:",
+    "confidence": 0.8,
+    "model_used": "tinyllama_1b",
+    "latency_ms": 355.00454902648926,
+    "correct": false,
+    "score": 0.0,
+    "reason": "Template response detected",
+    "grade": "FAIL_LOUD",
+    "question_type": "math",
+    "grader_used": "grade_math",
+    "expected_answer": "40320",
+    "type": "math"
+  },
+  {
+    "endpoint": "hybrid",
+    "prompt": "What is 25% of 240?",
+    "response": "Response from tinyllama_1b: Thank you for your question. Regarding 'What is 25% of 240?...', here's what I can share:",
+    "confidence": 0.8,
+    "model_used": "tinyllama_1b",
+    "latency_ms": 10.984659194946289,
+    "correct": false,
+    "score": 0.0,
+    "reason": "Template response detected",
+    "grade": "FAIL_LOUD",
+    "question_type": "math",
+    "grader_used": "grade_math",
+    "expected_answer": "60",
+    "type": "math"
+  },
+  {
+    "endpoint": "hybrid",
+    "prompt": "Write a Python function to calculate GCD of two numbers",
+    "response": "Response from tinyllama_1b: I can help with mathematical calculations. What specific problem would you like me to solve?",
+    "confidence": 0.8,
+    "model_used": "tinyllama_1b",
+    "latency_ms": 10.328054428100586,
+    "correct": false,
+    "score": 0.3,
+    "reason": "Contains code keywords but no complete function",
+    "grade": "PARTIAL",
+    "question_type": "code",
+    "grader_used": "grade_code",
+    "expected_keywords": [
+      "def",
+      "gcd",
+      "return",
+      "%",
+      "while"
+    ],
+    "type": "code"
+  },
+  {
+    "endpoint": "hybrid",
+    "prompt": "Logic puzzle: All bloops are razzles. All razzles are lazzles. Are all bloops lazzles?",
+    "response": "Response from tinyllama_1b: Thank you for your question. Regarding 'Logic puzzle: All bloops are r...', here's what I can share:",
+    "confidence": 0.8,
+    "model_used": "tinyllama_1b",
+    "latency_ms": 26.142358779907227,
+    "correct": false,
+    "score": 0.0,
+    "reason": "Template response detected",
+    "grade": "FAIL_LOUD",
+    "question_type": "reasoning",
+    "grader_used": "grade_logic",
+    "expected_answer": "yes",
+    "type": "reasoning"
+  }
+]
