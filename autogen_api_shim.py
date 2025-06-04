@@ -57,7 +57,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="AutoGen API Shim",
     description="AutoGen skill system exposed as web API",
-    version="2.6.0"
+    version="2.7.0-preview"
 )
 
 # Mount static files for web interface
@@ -65,9 +65,13 @@ if os.path.exists("webchat"):
     app.mount("/chat", StaticFiles(directory="webchat", html=True), name="webchat")
     logger.info("📱 Web chat interface available at /chat")
 
-if os.path.exists("admin.html"):
-    app.mount("/admin", StaticFiles(directory=".", html=True), name="admin")
+if os.path.exists("admin"):
+    app.mount("/admin", StaticFiles(directory="admin", html=True), name="admin")
     logger.info("⚙️ Admin panel available at /admin")
+
+if os.path.exists("monitor"):
+    app.mount("/monitor", StaticFiles(directory="monitor", html=True), name="monitor")
+    logger.info("📊 Monitoring dashboard available at /monitor")
 
 class QueryRequest(BaseModel):
     prompt: str
@@ -176,9 +180,13 @@ async def startup_event():
         app.mount("/chat", StaticFiles(directory="webchat", html=True), name="webchat")
         logger.info("📱 Web chat interface available at /chat")
     
-    if os.path.exists("admin.html"):
-        app.mount("/admin", StaticFiles(directory=".", html=True), name="admin")
+    if os.path.exists("admin"):
+        app.mount("/admin", StaticFiles(directory="admin", html=True), name="admin")
         logger.info("⚙️ Admin panel available at /admin")
+    
+    if os.path.exists("monitor"):
+        app.mount("/monitor", StaticFiles(directory="monitor", html=True), name="monitor")
+        logger.info("📊 Monitoring dashboard available at /monitor")
     
     logger.info("=" * 50)
     logger.info("🌐 Server starting on http://localhost:8000")
@@ -370,7 +378,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "autogen-api-shim",
-        "version": "2.6.0",
+        "version": "2.7.0-preview",
         "timestamp": time.time()
     }
 
