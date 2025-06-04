@@ -291,8 +291,13 @@ def load_models(profile: Optional[str] = None, use_real_loading: bool = False) -
     
     # Special handling for quick_test profile - always use mock loading
     if profile == "quick_test":
-        use_real_loading = False
-        echo(f"[QUICK_TEST] Forcing mock loading for CI testing")
+        # OVERRIDE: If FORCE_CLOUD is enabled, use real loading to trigger cloud fallback
+        if os.environ.get("SWARM_FORCE_CLOUD") == "true":
+            use_real_loading = True
+            echo(f"[FORCE_CLOUD] Overriding quick_test profile to enable cloud fallback")
+        else:
+            use_real_loading = False
+            echo(f"[QUICK_TEST] Forcing mock loading for CI testing")
     
     config_path = Path('config/models.yaml')
     if not config_path.exists():
@@ -426,6 +431,12 @@ def generate_response(model_name: str, prompt: str, max_tokens: int = 150) -> st
             
         else:  # mock backend
             echo(f"🎭 Using mock backend for {model_name}")
+            
+            # **FORCE_CLOUD mode: Don't allow mock responses**
+            if os.environ.get("SWARM_FORCE_CLOUD") == "true":
+                echo(f"🌩️ FORCE_CLOUD: Rejecting mock backend for {model_name}")
+                raise RuntimeError(f"FORCE_CLOUD_NO_MOCK_{model_name}: Mock backend not allowed in cloud mode")
+            
             result = generate_mock_response(prompt, model_name, model_info)
             echo(f"✅ Mock generation: '{result[:50]}...'")
         
