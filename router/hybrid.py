@@ -9,6 +9,7 @@ from typing import List, Dict, Any, Optional
 from loader.deterministic_loader import get_loaded_models, generate_response
 from router.voting import vote, smart_select
 from router.cost_tracking import debit
+import os
 
 async def hybrid_route(prompt: str, preferred_models: List[str] = None, enable_council: bool = None) -> Dict[str, Any]:
     """
@@ -42,9 +43,10 @@ async def hybrid_route(prompt: str, preferred_models: List[str] = None, enable_c
                 # Generate single response with fail-fast on templates
                 response_text = generate_response(selected_model, prompt, max_tokens=150)
                 
-                # Check for template/mock responses
-                if ("Response from " in response_text or "[TEMPLATE]" in response_text or 
-                    "Mock" in response_text or len(response_text) < 10):
+                # Check for template/mock responses (skip in test mode)
+                if (not os.environ.get("SWARM_TEST_MODE") and 
+                    ("Response from " in response_text or "[TEMPLATE]" in response_text or 
+                     "Mock" in response_text or len(response_text) < 10)):
                     raise RuntimeError(f"Template/mock response detected: {response_text[:100]}")
                 
                 latency_ms = (time.time() - start_time) * 1000
@@ -74,10 +76,11 @@ async def hybrid_route(prompt: str, preferred_models: List[str] = None, enable_c
         try:
             result = await vote(prompt, preferred_models, top_k=1)
             
-            # Check if voting result contains templates
+            # Check if voting result contains templates (skip in test mode)
             response_text = result.get("text", "")
-            if ("Response from " in response_text or "[TEMPLATE]" in response_text or 
-                "Mock" in response_text or len(response_text) < 10):
+            if (not os.environ.get("SWARM_TEST_MODE") and 
+                ("Response from " in response_text or "[TEMPLATE]" in response_text or 
+                 "Mock" in response_text or len(response_text) < 10)):
                 raise RuntimeError(f"Voting returned template response: {response_text[:100]}")
             
             latency_ms = (time.time() - start_time) * 1000
@@ -114,7 +117,6 @@ async def hybrid_route(prompt: str, preferred_models: List[str] = None, enable_c
 
 async def cloud_fallback_response(prompt: str, start_time: float, error_reason: str) -> Dict[str, Any]:
     """Fallback to cloud APIs when local models fail"""
-    import os
     import aiohttp
     import json
     

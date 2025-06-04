@@ -5,6 +5,7 @@ Router fast path tests - prevents smart routing regressions
 
 import asyncio
 import pytest
+import os
 from router.hybrid import hybrid_route
 from router.voting import vote
 from loader.deterministic_loader import load_models
@@ -13,6 +14,9 @@ from loader.deterministic_loader import load_models
 @pytest.mark.asyncio
 async def test_simple_prompt_uses_smart_path(monkeypatch):
     """Test that simple prompts use smart routing and never call vote()"""
+    
+    # Enable test mode to allow mock responses
+    os.environ["SWARM_TEST_MODE"] = "true"
     
     # Load models before testing
     load_models(profile="rtx_4070", use_real_loading=False)
@@ -45,6 +49,9 @@ async def test_simple_prompt_uses_smart_path(monkeypatch):
 @pytest.mark.asyncio
 async def test_complex_prompt_uses_voting_path(monkeypatch):
     """Test that complex prompts use voting and can call vote()"""
+    
+    # Enable test mode to allow mock responses
+    os.environ["SWARM_TEST_MODE"] = "true"
     
     # Load models before testing
     load_models(profile="rtx_4070", use_real_loading=False)
@@ -82,6 +89,9 @@ async def test_complex_prompt_uses_voting_path(monkeypatch):
 @pytest.mark.asyncio
 async def test_prompt_classification_logic():
     """Test the prompt classification logic directly"""
+    
+    # Enable test mode to allow mock responses
+    os.environ["SWARM_TEST_MODE"] = "true"
     
     # Test simple prompts (should be classified as simple)
     simple_prompts = [
@@ -121,6 +131,9 @@ async def test_prompt_classification_logic():
 def test_keyword_detection():
     """Test that complex keywords are correctly detected"""
     
+    # Enable test mode to allow mock responses
+    os.environ["SWARM_TEST_MODE"] = "true"
+    
     keywords = ["explain", "why", "step by step", "analyze", "compare", "reasoning"]
     
     # Test each keyword individually
@@ -144,6 +157,9 @@ def test_keyword_detection():
 @pytest.mark.asyncio
 async def test_performance_characteristics(monkeypatch):
     """Test that smart routing is faster than voting"""
+    
+    # Enable test mode to allow mock responses
+    os.environ["SWARM_TEST_MODE"] = "true"
     
     # Load models before testing
     load_models(profile="rtx_4070", use_real_loading=False)

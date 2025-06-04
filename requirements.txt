@@ -9,9 +9,9 @@ sympy>=1.11.0
 numpy>=1.21.0
 
 # API & Web Framework
-fastapi>=0.95.0
-uvicorn>=0.20.0
-pydantic>=1.10.0
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.1
 
 # Optional Performance Boosters
 faiss-cpu>=1.7.3          # For vector search (use faiss-gpu if you have CUDA)
@@ -21,9 +21,38 @@ accelerate>=0.20.0        # For faster model loading
 # pyswip>=0.2.10          # Uncomment if SWI-Prolog is installed
 
 # Development & Testing
-pytest>=7.0.0
-requests>=2.28.0
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
 
 # Utilities
 python-dateutil>=2.8.0
-pathlib2>=2.3.0 
+pathlib2>=2.3.0
+
+# HTTP client for LLM endpoints
+aiohttp==3.9.1
+httpx==0.25.2
+requests==2.31.0
+
+# Data processing
+pandas==2.1.4
+
+# Async support
+asyncio-mqtt==0.13.0
+
+# Logging and monitoring
+prometheus-client==0.19.0
+structlog==23.2.0
+
+# Configuration
+python-dotenv==1.0.0
+pyyaml==6.0.1
+
+# Development
+black==23.11.0
+flake8==6.1.0
+mypy==1.7.1
+
+# Optional: Math and ML libraries (for local skills)
+sympy==1.12
+scipy==1.11.4 

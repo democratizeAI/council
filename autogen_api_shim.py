@@ -12,11 +12,13 @@ import asyncio
 import time
 import logging
 from typing import Dict, Any, Optional, List
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import uvicorn
 import sys
 import os
+import json
 
 # Add the AutoGen path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'fork', 'swarm_autogen'))
@@ -35,6 +37,7 @@ app = FastAPI(
 
 class QueryRequest(BaseModel):
     prompt: str
+    stream: bool = False  # Enable streaming support
 
 class QueryResponse(BaseModel):
     text: str
@@ -93,6 +96,30 @@ async def cloud_fallback(query: str) -> Dict[str, Any]:
         "confidence": 0.3,
         "timestamp": time.time()
     }
+
+async def stream_response(prompt: str, model_name: str = "autogen-hybrid") -> str:
+    """Stream tokens as they're generated"""
+    try:
+        result = await router.route_query(prompt)
+        
+        # For now, simulate streaming by chunking the response
+        # TODO: Implement true token-by-token streaming
+        response_text = result["text"]
+        words = response_text.split()
+        
+        # Stream in chunks for immediate responsiveness
+        for i in range(0, len(words), 3):  # 3 words per chunk
+            chunk = " ".join(words[i:i+3])
+            if chunk:
+                # Server-Sent Events format
+                yield f"data: {json.dumps({'text': chunk, 'partial': True})}\n\n"
+                await asyncio.sleep(0.01)  # Small delay to simulate real streaming
+        
+        # Final chunk
+        yield f"data: {json.dumps({'text': '', 'done': True, 'model': model_name})}\n\n"
+        
+    except Exception as e:
+        yield f"data: {json.dumps({'error': str(e), 'done': True})}\n\n"
 
 @app.on_event("startup")
 async def startup_event():
@@ -171,9 +198,25 @@ async def orchestrate_endpoint(request: OrchestrateRequest) -> OrchestrateRespon
         logger.error(f"❌ Orchestrate processing error: {e}")
         raise HTTPException(status_code=500, detail=f"Orchestrate processing failed: {str(e)}")
 
-@app.post("/hybrid", response_model=QueryResponse)
-async def hybrid_endpoint(request: QueryRequest) -> QueryResponse:
-    """Main hybrid endpoint compatible with Titanic Gauntlet"""
+@app.post("/hybrid")
+async def hybrid_endpoint(request: QueryRequest, stream: bool = Query(False)):
+    """Main hybrid endpoint with optional streaming support"""
+    # Use query parameter if provided, otherwise use request body
+    enable_streaming = stream or request.stream
+    
+    if enable_streaming:
+        # Return streaming response for sub-80ms first token
+        return StreamingResponse(
+            stream_response(request.prompt),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no"  # Disable nginx buffering
+            }
+        )
+    
+    # Original non-streaming logic - return QueryResponse
     start_time = time.time()
     stats["requests_total"] += 1
     

@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  # ExLlamaV2 LLM Backend
+  llm:
+    image: ghcr.io/turboderp/exllamav2:latest
+    container_name: autogen-llm
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/models
+    command: [
+      "--model", "/models/mistral-13b-gptq",
+      "--listen", "0.0.0.0:8000", 
+      "--dtype", "auto",
+      "--max-input-tokens", "4096"
+    ]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/models"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # AutoGen Council API
+  council:
+    build: .
+    container_name: autogen-council
+    ports:
+      - "9000:9000"
+    environment:
+      - LLM_ENDPOINT=http://llm:8000/v1
+      - MODEL_NAME=mistral-13b-gptq
+      - SWARM_CLOUD_ENABLED=true
+      - SWARM_CLOUD_BUDGET_USD=10.0
+      - HEALTH_CHECK_TIMEOUT=5
+      - HEALTH_CHECK_RETRIES=3
+      - MAX_TOKENS=150
+      - TEMPERATURE=0.7
+    depends_on:
+      llm:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # Prometheus monitoring (optional)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+
+  # Grafana dashboard (optional)  
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=autogen123
+    volumes:
+      - grafana-storage:/var/lib/grafana
+      - ./monitoring/grafana:/etc/grafana/provisioning
+    restart: unless-stopped
+
+volumes:
+  grafana-storage: 
