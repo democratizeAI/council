@@ -116,17 +116,42 @@ gpu_heads_optimized:
   backend: "transformers"
   hf_model: "microsoft/phi-2"  # Use Phi-2 for better reasoning
 - name: "math_specialist_q4"
-  vram_mb: 400          # Math specialist with 4-bit
-  kv_cache_mb: 128
+  vram_mb: 600          # Math specialist with VRAM pinning (Track ③)
+  kv_cache_mb: 256      # Dedicated KV cache for math
   dtype: "q4_K_S" 
   backend: "transformers"
   hf_model: "microsoft/phi-2"  # Phi-2 excels at math
+  gpu_layers: 32        # Pin entire model to VRAM
+  rope_scaling: "yarn"  # Faster high-token math (Track ③)
+  priority: "high"      # High priority loading
+  specialized_for: "math"  # Math specialization flag
 - name: "mistral_0.5b_q4"
   vram_mb: 200          # Ultra-light Mistral
   kv_cache_mb: 64
   dtype: "q4_K_S"
   backend: "transformers"
   hf_model: "microsoft/phi-1_5"  # Lighter but capable
+
+# TRACK ③: Math-optimized models for <100ms latency
+gpu_heads_math_optimized:
+- name: "lightning_math"
+  vram_mb: 800          # Dedicated math model  
+  kv_cache_mb: 512      # Large KV cache for complex equations
+  dtype: "q4_K_M"
+  backend: "transformers"  
+  hf_model: "microsoft/phi-2"  # Excellent math performance
+  gpu_layers: 32        # Keep entire GGUF on-card (Track ③)
+  rope_scaling: "yarn"  # Faster high-token math (Track ③)
+  priority: "critical"  # Critical priority - load first
+  specialized_for: "math"
+  optimization_target: "latency"  # <100ms target
+- name: "math_specialist_0.8b"
+  vram_mb: 512          # Standard math specialist
+  kv_cache_mb: 128
+  dtype: "q4_K_S"
+  backend: "transformers"
+  hf_model: "microsoft/phi-2"
+  specialized_for: "math"
 
 cpu_heads:
 - name: "openvino_head"

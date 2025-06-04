@@ -396,7 +396,7 @@ def get_loaded_models() -> Dict[str, Any]:
     return loaded_models.copy()
 
 def generate_response(model_name: str, prompt: str, max_tokens: int = 150) -> str:
-    """Generate response using the loaded model"""
+    """Generate response using the loaded model with quality optimizations"""
     if model_name not in loaded_models:
         raise ValueError(f"Model {model_name} not loaded")
     
@@ -407,16 +407,42 @@ def generate_response(model_name: str, prompt: str, max_tokens: int = 150) -> st
     echo(f"🎯 Generating with {model_name} (backend: {backend})")
     echo(f"📝 Prompt: '{prompt[:50]}...'")
     
+    # Import quality filters for optimal parameters
+    try:
+        from router.quality_filters import get_optimal_decoding_params
+        prompt_type = "simple" if len(prompt) < 50 else "complex"
+        quality_params = get_optimal_decoding_params(model_name, prompt_type)
+    except ImportError:
+        # Fallback parameters if quality filters not available
+        quality_params = {
+            'temperature': 0.7,
+            'top_p': 0.92,
+            'max_new_tokens': max_tokens
+        }
+    
     try:
         if backend == "vllm":
             from vllm import SamplingParams
-            sampling_params = SamplingParams(temperature=0.7, max_tokens=max_tokens)
+            sampling_params = SamplingParams(
+                temperature=quality_params.get('temperature', 0.7),
+                top_p=quality_params.get('top_p', 0.92),
+                max_tokens=min(max_tokens, quality_params.get('max_new_tokens', 150)),
+                repetition_penalty=quality_params.get('repetition_penalty', 1.1),
+                min_p=quality_params.get('min_p', 0.05)
+            )
             outputs = handle.generate([prompt], sampling_params)
             result = outputs[0].outputs[0].text.strip()
             echo(f"✅ vLLM generation successful: '{result[:50]}...'")
             
         elif backend == "llama_cpp":
-            output = handle(prompt, max_tokens=max_tokens, temperature=0.7, stop=["</s>", "<|end|>"])
+            output = handle(
+                prompt, 
+                max_tokens=min(max_tokens, quality_params.get('max_new_tokens', 150)),
+                temperature=quality_params.get('temperature', 0.7),
+                top_p=quality_params.get('top_p', 0.92),
+                repeat_penalty=quality_params.get('repetition_penalty', 1.1),
+                stop=["</s>", "<|end|>", "\n\n"]
+            )
             result = output['choices'][0]['text'].strip()
             echo(f"✅ llama.cpp generation successful: '{result[:50]}...'")
             
@@ -433,12 +459,14 @@ def generate_response(model_name: str, prompt: str, max_tokens: int = 150) -> st
                     torch.cuda.empty_cache()
                     echo(f"🧹 Cleared CUDA cache for GPU inference")
                 
-                # Use conservative settings for reliable inference
+                # Use quality-optimized settings for reliable inference
                 outputs = handle(
                     prompt, 
-                    max_new_tokens=min(max_tokens, 100),  # Conservative limit
-                    temperature=0.7,
-                    do_sample=True,
+                    max_new_tokens=min(max_tokens, quality_params.get('max_new_tokens', 100)),
+                    temperature=quality_params.get('temperature', 0.7),
+                    top_p=quality_params.get('top_p', 0.92),
+                    do_sample=quality_params.get('do_sample', True),
+                    repetition_penalty=quality_params.get('repetition_penalty', 1.1),
                     truncation=True,
                     return_full_text=False,
                     pad_token_id=handle.tokenizer.eos_token_id  # Explicit pad token

@@ -22,16 +22,16 @@ class CloudRetryException(Exception):
         self.reason = reason
         super().__init__(f"Quality issue detected: {reason}")
 
-def check_duplicate_tokens(text: str, window_size: int = 50, threshold: float = 0.04) -> bool:
+def check_duplicate_tokens(text: str, window_size: int = 100, threshold: float = 0.06) -> bool:
     """
-    Track ② Step 1: Duplicate-token guard
+    Track ② Step 1: Duplicate-token guard (Enhanced)
     
     Detects infinite "Yes yes yes..." loops and repetitive patterns.
     
     Args:
         text: Generated text to check
-        window_size: Look at last N characters
-        threshold: Max ratio of unique tokens allowed (default 4%)
+        window_size: Look at last N characters (increased for better detection)
+        threshold: Max ratio of unique tokens allowed (increased sensitivity)
         
     Returns:
         True if text has excessive duplication (should trigger cloud retry)
@@ -45,7 +45,7 @@ def check_duplicate_tokens(text: str, window_size: int = 50, threshold: float = 
     # Tokenize into words/tokens
     tokens = re.findall(r'\w+', recent_text.lower())
     
-    if len(tokens) < 10:  # Need sufficient tokens to evaluate
+    if len(tokens) < 8:  # Need sufficient tokens to evaluate (reduced threshold)
         return False
     
     # Calculate unique token ratio
@@ -57,16 +57,34 @@ def check_duplicate_tokens(text: str, window_size: int = 50, threshold: float = 
     if unique_ratio < threshold:
         return True
     
-    # Additional check: look for exact phrase repetition
+    # Additional check: look for exact phrase repetition (enhanced)
     words = recent_text.split()
-    if len(words) >= 6:
-        # Check for repeated 3-word phrases
-        trigrams = [' '.join(words[i:i+3]) for i in range(len(words)-2)]
-        trigram_counts = Counter(trigrams)
+    if len(words) >= 4:  # Reduced from 6 to catch shorter repetitions
+        # Check for repeated 2-word phrases (more sensitive)
+        bigrams = [' '.join(words[i:i+2]) for i in range(len(words)-1)]
+        bigram_counts = Counter(bigrams)
         
-        # If any 3-word phrase appears more than twice, it's likely repetitive
-        for count in trigram_counts.values():
-            if count > 2:
+        # If any 2-word phrase appears more than 3 times, it's repetitive
+        for phrase, count in bigram_counts.items():
+            if count > 3 and len(phrase.strip()) > 3:  # Ignore very short phrases
+                return True
+        
+        # Check for repeated 3-word phrases
+        if len(words) >= 6:
+            trigrams = [' '.join(words[i:i+3]) for i in range(len(words)-2)]
+            trigram_counts = Counter(trigrams)
+            
+            # If any 3-word phrase appears more than twice, it's likely repetitive
+            for count in trigram_counts.values():
+                if count > 2:
+                    return True
+    
+    # Check for sentence-level repetition
+    sentences = re.split(r'[.!?]+', text.strip())
+    if len(sentences) >= 3:
+        sentence_counts = Counter(sentence.strip().lower() for sentence in sentences if sentence.strip())
+        for count in sentence_counts.values():
+            if count > 2:  # Same sentence repeated more than twice
                 return True
     
     return False
