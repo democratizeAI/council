@@ -1,18 +1,266 @@
-
 <!DOCTYPE html>
-<html><body>
-<h1>Admin Controls</h1>
-<form onsubmit="toggle(event)">
-Cloud Enabled: <input type="checkbox" id="cloud"/> <br/>
-Budget USD: <input type="number" id="budget" value="10" step="1"/> <br/>
-<button type="submit">Apply</button>
-</form>
-<script>
-async function toggle(e){
-  e.preventDefault();
-  await fetch('/admin/cloud/' + document.getElementById('cloud').checked, {method:'POST'});
-  await fetch('/admin/cap/' + document.getElementById('budget').value, {method:'POST'});
-  alert('Updated');
-}
-</script>
-</body></html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>AutoGen Council - Admin Control Center</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.4/dist/tailwind.min.css" rel="stylesheet"/>
+    <style>
+        .status-indicator { 
+            display: inline-block; 
+            width: 12px; 
+            height: 12px; 
+            border-radius: 50%; 
+            margin-right: 8px; 
+        }
+        .status-healthy { background: #10b981; }
+        .status-warning { background: #f59e0b; }
+        .status-error { background: #ef4444; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-6">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800">🎛️ AutoGen Council Admin Center</h1>
+                    <p class="text-gray-600 mt-1">v2.7.0-preview • Complete System Control & Monitoring</p>
+                </div>
+                <div class="text-right">
+                    <div class="flex items-center text-sm">
+                        <span class="status-indicator status-healthy"></span>
+                        <span class="font-semibold text-green-700">System Healthy</span>
+                    </div>
+                    <div class="text-xs text-gray-500 mt-1" id="uptime">Uptime: Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <div class="bg-white rounded-lg shadow-md p-4">
+                <h3 class="font-semibold text-gray-700 mb-2">💬 Chat Interface</h3>
+                <p class="text-sm text-gray-600 mb-3">Access the web chat</p>
+                <a href="/chat/" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium inline-block">Open Chat</a>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-4">
+                <h3 class="font-semibold text-gray-700 mb-2">📊 Monitoring</h3>
+                <p class="text-sm text-gray-600 mb-3">System metrics & health</p>
+                <a href="/monitor/" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm font-medium inline-block">View Metrics</a>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-4">
+                <h3 class="font-semibold text-gray-700 mb-2">🔢 Raw Data</h3>
+                <p class="text-sm text-gray-600 mb-3">Prometheus metrics</p>
+                <a href="/metrics" class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded text-sm font-medium inline-block">View Metrics</a>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-4">
+                <h3 class="font-semibold text-gray-700 mb-2">📋 API Docs</h3>
+                <p class="text-sm text-gray-600 mb-3">FastAPI documentation</p>
+                <a href="/docs" class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded text-sm font-medium inline-block">Open Docs</a>
+            </div>
+        </div>
+
+        <!-- Live Statistics Dashboard -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">📈 Live System Statistics</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="live-stats">
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-blue-600" id="stat-latency">626ms</div>
+                    <div class="text-sm text-gray-600">Avg Latency</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-green-600" id="stat-success">87.5%</div>
+                    <div class="text-sm text-gray-600">Success Rate</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-purple-600" id="stat-requests">0</div>
+                    <div class="text-sm text-gray-600">Total Requests</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-orange-600" id="stat-uptime">0s</div>
+                    <div class="text-sm text-gray-600">Uptime</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Configuration -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">⚙️ System Configuration</h2>
+                <form onsubmit="updateConfig(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            ☁️ Cloud Fallback
+                        </label>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="cloud-enabled" class="mr-2"/>
+                            <span class="text-sm text-gray-600">Enable cloud fallback for complex queries</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            💰 Daily Budget (USD)
+                        </label>
+                        <input type="number" id="budget" value="10" step="1" min="1" max="100" 
+                               class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                    </div>
+                    <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded font-medium">
+                        Update Configuration
+                    </button>
+                </form>
+            </div>
+
+            <!-- Canary Deployment Controls -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">🚀 Canary Deployment</h2>
+                <div id="canary-status" class="mb-4">
+                    <div class="flex items-center">
+                        <span class="status-indicator status-healthy"></span>
+                        <span class="font-medium">Production Only (100%)</span>
+                    </div>
+                    <div class="text-sm text-gray-600 mt-1">No canary deployment active</div>
+                </div>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Image Tag</label>
+                        <input type="text" id="canary-image" placeholder="v2.7.0-canary-abc123" 
+                               class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Traffic Percentage</label>
+                        <input type="range" id="canary-traffic" min="0" max="100" value="5" 
+                               class="w-full" oninput="updateTrafficDisplay(this.value)"/>
+                        <div class="flex justify-between text-xs text-gray-500 mt-1">
+                            <span>0%</span>
+                            <span id="traffic-display">5%</span>
+                            <span>100%</span>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="startCanary()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded font-medium flex-1">
+                            Start Canary
+                        </button>
+                        <button onclick="stopCanary()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded font-medium flex-1">
+                            Emergency Stop
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity Log -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">📝 Recent Activity</h2>
+            <div id="activity-log" class="space-y-2 max-h-64 overflow-auto">
+                <div class="text-sm text-gray-500 p-3 bg-gray-50 rounded">
+                    <span class="font-medium">[System]</span> Admin panel loaded • Click "Refresh Stats" to load live data
+                </div>
+            </div>
+            <button onclick="refreshStats()" class="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded font-medium">
+                Refresh Stats
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Auto-refresh stats every 30 seconds
+        let statsInterval;
+
+        async function refreshStats() {
+            try {
+                const response = await fetch('/stats');
+                const data = await response.json();
+                
+                // Update live stats
+                document.getElementById('stat-latency').textContent = Math.round(data.avg_latency_ms) + 'ms';
+                document.getElementById('stat-success').textContent = Math.round(data.success_rate * 100) + '%';
+                document.getElementById('stat-requests').textContent = data.requests_total;
+                document.getElementById('stat-uptime').textContent = formatUptime(data.uptime_seconds);
+                document.getElementById('uptime').textContent = 'Uptime: ' + formatUptime(data.uptime_seconds);
+                
+                addActivity('Stats refreshed', 'info');
+            } catch (error) {
+                console.error('Failed to refresh stats:', error);
+                addActivity('Failed to refresh stats: ' + error.message, 'error');
+            }
+        }
+
+        function formatUptime(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+        }
+
+        function addActivity(message, type = 'info') {
+            const log = document.getElementById('activity-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const icon = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
+            
+            const entry = document.createElement('div');
+            entry.className = 'text-sm p-3 rounded ' + (type === 'error' ? 'bg-red-50 text-red-700' : 
+                             type === 'success' ? 'bg-green-50 text-green-700' : 'bg-blue-50 text-blue-700');
+            entry.innerHTML = `<span class="font-medium">[${timestamp}]</span> ${icon} ${message}`;
+            
+            log.insertBefore(entry, log.firstChild);
+            if (log.children.length > 10) {
+                log.removeChild(log.lastChild);
+            }
+        }
+
+        async function updateConfig(event) {
+            event.preventDefault();
+            const cloudEnabled = document.getElementById('cloud-enabled').checked;
+            const budget = document.getElementById('budget').value;
+            
+            try {
+                await fetch(`/admin/cloud/${cloudEnabled}`, { method: 'POST' });
+                await fetch(`/admin/cap/${budget}`, { method: 'POST' });
+                addActivity(`Config updated: Cloud=${cloudEnabled}, Budget=$${budget}`, 'success');
+            } catch (error) {
+                addActivity('Failed to update config: ' + error.message, 'error');
+            }
+        }
+
+        function updateTrafficDisplay(value) {
+            document.getElementById('traffic-display').textContent = value + '%';
+        }
+
+        async function startCanary() {
+            const image = document.getElementById('canary-image').value;
+            const traffic = document.getElementById('canary-traffic').value;
+            
+            if (!image) {
+                addActivity('Please enter an image tag', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/admin/canary/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image_tag: image, traffic_percent: parseInt(traffic) })
+                });
+                
+                const data = await response.json();
+                addActivity(`Canary deployment started: ${image} @ ${traffic}%`, 'success');
+            } catch (error) {
+                addActivity('Failed to start canary: ' + error.message, 'error');
+            }
+        }
+
+        async function stopCanary() {
+            try {
+                await fetch('/admin/canary/stop', { method: 'POST' });
+                addActivity('Emergency canary rollback initiated', 'success');
+            } catch (error) {
+                addActivity('Failed to stop canary: ' + error.message, 'error');
+            }
+        }
+
+        // Initialize
+        refreshStats();
+        statsInterval = setInterval(refreshStats, 30000);
+    </script>
+</body>
+</html>

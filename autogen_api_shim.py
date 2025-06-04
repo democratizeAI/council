@@ -97,7 +97,7 @@ class OrchestrateResponse(BaseModel):
 
 class VoteRequest(BaseModel):
     prompt: str
-    candidates: List[str]
+    candidates: List[str] = []  # Make candidates optional with default empty list
     top_k: int = 1
 
 class VoteResponse(BaseModel):
@@ -449,8 +449,8 @@ async def vote_endpoint(request: VoteRequest) -> VoteResponse:
     stats["requests_total"] += 1
     
     try:
-        if not request.candidates:
-            raise HTTPException(status_code=500, detail="No candidates provided")
+        # If no candidates provided, use default models
+        candidates = request.candidates if request.candidates else ["autogen-hybrid", "math", "code", "logic", "knowledge"]
         
         # Use hybrid routing for voting simulation
         result = await router.route_query(request.prompt)
@@ -460,16 +460,24 @@ async def vote_endpoint(request: VoteRequest) -> VoteResponse:
         
         return VoteResponse(
             text=result["text"],
-            model_used=request.candidates[0] if request.candidates else "autogen-hybrid",
+            model_used=result.get("model", candidates[0]),
             latency_ms=latency_ms,
             confidence=result.get("confidence", 0.7),
-            candidates=request.candidates,
+            candidates=candidates,
             total_cost_cents=0.0  # No cost tracking in shim yet
         )
         
     except Exception as e:
         logger.error(f"❌ Vote processing error: {e}")
-        raise HTTPException(status_code=500, detail=f"Vote processing failed: {str(e)}")
+        # Return a structured error response instead of raising exception
+        return VoteResponse(
+            text=f"Error: {str(e)}",
+            model_used="error",
+            latency_ms=(time.time() - start_time) * 1000,
+            confidence=0.0,
+            candidates=request.candidates or ["error"],
+            total_cost_cents=0.0
+        )
 
 @app.get("/budget")
 async def budget_endpoint():
