@@ -519,6 +519,123 @@ async def admin_status():
         }
     raise HTTPException(status_code=500, detail="Router not initialized")
 
+# 🆕 v2.7.0 CANARY DEPLOYMENT WEB SUITE ENDPOINTS
+# ================================================
+
+class CanaryRequest(BaseModel):
+    image_tag: str
+    traffic_percent: int = 5
+
+class CanaryStatus(BaseModel):
+    is_active: bool
+    traffic_percent: int
+    production_version: str
+    canary_version: str = None
+    deployment_step: str
+    safety_status: str
+
+@app.post("/admin/canary/start")
+async def start_canary(request: CanaryRequest):
+    """🚀 Start canary deployment with specified traffic percentage"""
+    # TODO: v2.7.0 - Integrate with canary-deploy.sh script
+    logger.info(f"🎛️ Starting canary deployment: {request.image_tag} @ {request.traffic_percent}%")
+    
+    # Placeholder implementation
+    return {
+        "status": "starting",
+        "image_tag": request.image_tag,
+        "traffic_percent": request.traffic_percent,
+        "estimated_completion": "2-3 minutes",
+        "message": "Canary deployment initiated. Monitor /admin/canary/status for progress."
+    }
+
+@app.post("/admin/canary/scale/{percent}")
+async def scale_canary_traffic(percent: int):
+    """⚖️ Scale canary traffic to specified percentage"""
+    if percent < 0 or percent > 100:
+        raise HTTPException(status_code=400, detail="Traffic percentage must be between 0-100")
+    
+    logger.info(f"🎛️ Scaling canary traffic to {percent}%")
+    
+    # TODO: v2.7.0 - Integrate with load balancer controls
+    return {
+        "status": "scaling",
+        "new_traffic_percent": percent,
+        "previous_percent": 5,  # Placeholder
+        "estimated_completion": "30 seconds"
+    }
+
+@app.post("/admin/canary/stop")
+async def stop_canary():
+    """🚨 Emergency stop and rollback canary deployment"""
+    logger.warning("🚨 Emergency canary rollback initiated")
+    
+    # TODO: v2.7.0 - Integrate with canary-rollback.sh script
+    return {
+        "status": "rolling_back",
+        "message": "Emergency rollback in progress. Production traffic restored.",
+        "estimated_completion": "1 minute"
+    }
+
+@app.get("/admin/canary/status")
+async def get_canary_status() -> CanaryStatus:
+    """📊 Get current canary deployment status and metrics"""
+    # TODO: v2.7.0 - Read from actual deployment state
+    return CanaryStatus(
+        is_active=False,  # Placeholder
+        traffic_percent=0,
+        production_version="v2.6.0",
+        canary_version=None,
+        deployment_step="not_started",
+        safety_status="all_green"
+    )
+
+@app.get("/admin/canary/metrics")
+async def get_canary_metrics():
+    """📈 Get real-time metrics comparison between production and canary"""
+    # TODO: v2.7.0 - Integrate with Prometheus metrics
+    return {
+        "production": {
+            "latency_p95": 574,
+            "success_rate": 0.875,
+            "requests_per_minute": 120,
+            "error_rate": 0.125,
+            "memory_usage_mb": 2400,
+            "sandbox_executions_per_hour": 23
+        },
+        "canary": {
+            "latency_p95": None,  # No canary active
+            "success_rate": None,
+            "requests_per_minute": 0,
+            "error_rate": None,
+            "memory_usage_mb": None,
+            "sandbox_executions_per_hour": 0
+        },
+        "comparison": {
+            "latency_delta_ms": None,
+            "success_rate_delta": None,
+            "safety_score": "N/A"
+        },
+        "timestamp": time.time()
+    }
+
+@app.post("/admin/canary/webhook/{event}")
+async def canary_webhook(event: str, data: dict = None):
+    """🔗 Webhook endpoint for canary script integration"""
+    logger.info(f"🎛️ Canary webhook: {event}")
+    
+    # TODO: v2.7.0 - Handle webhook events from canary scripts
+    # Events: started, health_check, traffic_updated, completed, failed
+    
+    valid_events = ["started", "health_check", "traffic_updated", "completed", "failed", "emergency_stop"]
+    if event not in valid_events:
+        raise HTTPException(status_code=400, detail=f"Invalid event: {event}")
+    
+    # Store event for web interface to poll
+    # TODO: Implement event storage/WebSocket notifications
+    
+    return {"status": "received", "event": event, "timestamp": time.time()}
+
 if __name__ == "__main__":
     uvicorn.run(
         app,

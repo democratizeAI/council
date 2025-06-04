@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  # Canary deployment of the council API
+  api-canary:
+    build: .
+    container_name: autogen-council-canary
+    ports:
+      - "9001:9000"  # Different port to avoid conflicts
+    volumes:
+      - memory-store:/app/memory
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus
+      - AZ_SHELL_TRUSTED=yes
+      - SERVICE_NAME=api-canary
+      - CANARY_DEPLOYMENT=true
+    env_file:
+      - canary.env
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - seccomp:unconfined
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.council-canary.loadbalancer.server.port=9000"
+      - "traefik.http.services.council-canary.loadbalancer.weight=5"
+      - "traefik.http.routers.council-canary.rule=Host(`api.localhost`)"
+      - "traefik.http.routers.council-canary.service=council-canary"
+
+  # Traefik load balancer for traffic splitting
+  traefik:
+    image: traefik:v2.10
+    container_name: traefik-lb
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--metrics.prometheus=true"
+      - "--metrics.prometheus.addrouterslabels=true"
+    ports:
+      - "80:80"
+      - "8080:8080"  # Traefik dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
+
+volumes:
+  memory-store:
+    external: true 
