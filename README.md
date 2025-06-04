@@ -15,6 +15,15 @@
 | No self-improvement | Nightly LoRA fine-tune loop ("Tamagotchi") |
 | Opaque cost drift | Prometheus budget guard + CloudRetry cap |
 
+### ✨ Latest milestone – v2.6.0
+
+* **Memory-powered**: FAISS vector store, 7 ms recalls  
+* **Firejail sandbox**: secure Python exec in 45 ms  
+* **626 ms end-to-end latency** (37% faster than target)  
+* **94% on-device processing** on a single RTX 4070  
+
+[Read the full evolution journey →](docs/evolution/v2.6.0_journey.md)
+
 ---
 
 ## 🔥 Benchmarks (Titanic Gauntlet · 53 requests)
