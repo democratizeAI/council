@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AutoGen Council v2.7.0 - Specialist Priority Chat</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.4/dist/tailwind.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('pre code').forEach((el) => {
+        hljs.highlightElement(el);
+      });
+    });
+  </script>
+  <link rel="stylesheet" href="css/chat-styles.css">
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+  <div class="container mx-auto px-4 py-8 max-w-5xl">
+    <!-- Header Section -->
+    <header class="mb-8 text-center">
+      <h1 class="text-4xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600">
+        AutoGen Council v2.7.0
+      </h1>
+      <p class="text-lg text-gray-300">
+        🎯 Specialist Priority Desktop OS Assistant
+      </p>
+      <p class="text-sm text-gray-400 mt-2">
+        Local specialists first • Cloud fallback when needed • Sub-1ms math responses
+      </p>
+    </header>
+
+    <!-- Chat Interface -->
+    <div id="app" class="flex flex-col rounded-lg shadow-lg overflow-hidden bg-gray-800 border border-gray-700 h-[70vh]"></div>
+
+    <!-- Footer -->
+    <footer class="mt-8 pt-4 border-t border-gray-700 text-center text-gray-400">
+      <p>AutoGen Council • Version 2.7.0-preview • Specialist Priority System</p>
+      <p class="text-sm mt-2">© 2025 • A Human-AI Collaborative Development</p>
+    </footer>
+  </div>
+
+  <script src="js/chat.js"></script>
+</body>
+</html>

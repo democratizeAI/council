@@ -1,4 +1,46 @@
 groups:
+  # =============================================================================
+  # 🧪 TEST ALERTS - Silent alerts for testing escalation paths
+  # =============================================================================
+  - name: test_alerts
+    rules:
+      - alert: TestAlertSilent
+        expr: up{job="swarm-api"} == 1  # Always true when API is up
+        for: 0s
+        labels:
+          severity: test
+          environment: "{{ $labels.environment | default \"production\" }}"
+          team: "swarm-ops"
+        annotations:
+          summary: "🧪 Test alert - Silent escalation test"
+          description: "This is a test alert to validate monitoring pipeline. Should be silenced in production."
+          runbook_url: "https://docs.swarm.ai/runbook/test-alerts"
+
+      - alert: TestAlertWarning
+        expr: vector(0) > 1  # Never fires unless manually triggered
+        for: 0s
+        labels:
+          severity: warning
+          environment: "{{ $labels.environment | default \"production\" }}"
+          team: "swarm-ops"
+        annotations:
+          summary: "🧪 Test Warning - Escalation path validation"
+          description: "Manual test alert for warning-level escalation. Trigger with: curl -X POST localhost:9090/api/v1/alerts"
+
+      - alert: TestAlertCritical
+        expr: vector(0) > 1  # Never fires unless manually triggered
+        for: 0s
+        labels:
+          severity: critical
+          environment: "{{ $labels.environment | default \"production\" }}"
+          team: "swarm-ops"
+        annotations:
+          summary: "🚨 Test Critical - Page escalation validation"
+          description: "Manual test alert for critical-level paging. Should trigger immediate page."
+
+  # =============================================================================
+  # 🐦 CANARY DEPLOYMENT ALERTS
+  # =============================================================================
   - name: canary_alerts
     rules:
       - alert: CanaryHighErrorRate
@@ -6,15 +48,325 @@ groups:
         for: 2m
         labels:
           severity: critical
+          environment: "{{ $labels.environment | default \"production\" }}"
+          team: "swarm-ops"
+          component: "canary"
         annotations:
-          summary: "Canary error rate too high"
-          description: "Error rate is {{ $value }} errors/sec"
+          summary: "🐦 Canary error rate critically high"
+          description: "Canary error rate is {{ $value | humanizePercentage }} (>1%). Automatic rollback may be triggered."
+          runbook_url: "https://docs.swarm.ai/runbook/canary-errors"
 
       - alert: CanaryHighCost
         expr: canary_cloud_cost_total > 1.5
         for: 5m
         labels:
           severity: warning
+          environment: "{{ $labels.environment | default \"production\" }}"
+          team: "swarm-ops"
+          component: "canary"
         annotations:
-          summary: "Canary costs approaching limit"
-          description: "Daily cost is ${{ $value }}" 
+          summary: "🐦 Canary costs approaching limit"
+          description: "Canary daily cost is ${{ $value | printf \"%.2f\" }} (limit: $1.50). Monitor for cost optimization."
+          runbook_url: "https://docs.swarm.ai/runbook/canary-budget"
+
+  # =============================================================================
+  # 🛠️ DAY-2 OPERATIONS ALERTS - Production Tuned
+  # =============================================================================
+  - name: day2_operations
+    rules:
+      # VRAM Monitoring - Multi-level escalation
+      - alert: VRAMWarning
+        expr: swarm_gpu_memory_used_bytes / swarm_gpu_memory_total_bytes * 100 > 75
+        for: 3m
+        labels:
+          severity: warning
+          environment: "{{ $labels.environment | default \"production\" }}"
+          team: "swarm-ops"
+          component: "gpu-memory"
+          runbook: "day2_ops_vram"
+        annotations:
+          summary: "⚠️ VRAM usage elevated"
+          description: "GPU memory usage is {{ $value | printf \"%.1f\" }}% (>75%). Monitor for potential allocation issues."
+          runbook_url: "https://docs.swarm.ai/runbook/vram-warning"
+
+      - alert: VRAMCritical
+        expr: swarm_gpu_memory_used_bytes / swarm_gpu_memory_total_bytes * 100 > 85
+        for: 2m
+        labels:
+          severity: critical
+          environment: "{{ $labels.environment | default \"production\" }}"
+          team: "swarm-ops"
+          component: "gpu-memory"
+          runbook: "day2_ops_vram"
+        annotations:
+          summary: "🚨 VRAM usage critically high"
+          description: "GPU memory usage is {{ $value | printf \"%.1f\" }}% (>85%). Immediate attention required to prevent OOM failures."
+          runbook_url: "https://docs.swarm.ai/runbook/vram-critical"
+
+      - alert: VRAMEmergency
+        expr: swarm_gpu_memory_used_bytes / swarm_gpu_memory_total_bytes * 100 > 95
+        for: 30s
+        labels:
+          severity: page
+          environment: "{{ $labels.environment | default \"production\" }}"
+          team: "swarm-ops"
+          component: "gpu-memory"
+          runbook: "day2_ops_vram"
+          escalation: "immediate"
+        annotations:
+          summary: "🔥 VRAM EMERGENCY - OOM imminent"
+          description: "GPU memory usage is {{ $value | printf \"%.1f\" }}% (>95%). OOM failure imminent. Immediate intervention required."
+          runbook_url: "https://docs.swarm.ai/runbook/vram-emergency"
+
+      # Latency Monitoring - SLA-based escalation
+      - alert: LatencyWarning
+        expr: histogram_quantile(0.95, rate(swarm_router_request_duration_seconds_bucket[5m])) > 0.2
+        for: 5m
+        labels:
+          severity: warning
+          environment: "{{ $labels.environment | default \"production\" }}"
+          team: "swarm-ops"
+          component: "router"
+          runbook: "day2_ops_latency"
+        annotations:
+          summary: "⚠️ Router latency elevated"
+          description: "P95 latency is {{ $value | humanizeDuration }} (>200ms). Performance degrading."
+          runbook_url: "https://docs.swarm.ai/runbook/latency-warning"
+
+      - alert: LatencyCritical
+        expr: histogram_quantile(0.95, rate(swarm_router_request_duration_seconds_bucket[5m])) > 0.5
+        for: 3m
+        labels:
+          severity: critical
+          environment: "{{ $labels.environment | default \"production\" }}"
+          team: "swarm-ops"
+          component: "router"
+          runbook: "day2_ops_latency"
+        annotations:
+          summary: "🚨 Router latency SLA breach"
+          description: "P95 latency is {{ $value | humanizeDuration }} (>500ms). SLA breached. Check for CUDA fragmentation or model loading issues."
+          runbook_url: "https://docs.swarm.ai/runbook/latency-critical"
+
+      - alert: LatencyEmergency
+        expr: histogram_quantile(0.95, rate(swarm_router_request_duration_seconds_bucket[5m])) > 2.0
+        for: 1m
+        labels:
+          severity: page
+          environment: "{{ $labels.environment | default \"production\" }}"
+          team: "swarm-ops"
+          component: "router"
+          runbook: "day2_ops_latency"
+          escalation: "immediate"
+        annotations:
+          summary: "🔥 Router latency EMERGENCY"
+          description: "P95 latency is {{ $value | humanizeDuration }} (>2s). System potentially unresponsive."
+          runbook_url: "https://docs.swarm.ai/runbook/latency-emergency"
+
+      # CUDA Fragmentation - Proactive monitoring
+      - alert: CUDAFragmentationDetected
+        expr: increase(swarm_cuda_fragmentation_events_total[1h]) > 1
+        for: 5m
+        labels:
+          severity: warning
+          environment: "{{ $labels.environment | default \"production\" }}"
+          team: "swarm-ops"
+          component: "cuda-memory"
+          runbook: "day2_ops_fragmentation"
+        annotations:
+          summary: "⚠️ CUDA memory fragmentation detected"
+          description: "{{ $value }} fragmentation events in the last hour. Schedule model reload during next maintenance window."
+          runbook_url: "https://docs.swarm.ai/runbook/cuda-fragmentation"
+
+      - alert: CUDAFragmentationSevere
+        expr: increase(swarm_cuda_fragmentation_events_total[1h]) > 5
+        for: 2m
+        labels:
+          severity: critical
+          environment: "{{ $labels.environment | default \"production\" }}"
+          team: "swarm-ops"
+          component: "cuda-memory"
+          runbook: "day2_ops_fragmentation"
+        annotations:
+          summary: "🚨 Severe CUDA fragmentation"
+          description: "{{ $value }} fragmentation events in the last hour. Memory allocator severely impacted. Consider immediate model reload."
+          runbook_url: "https://docs.swarm.ai/runbook/cuda-fragmentation-severe"
+
+      # Budget Monitoring - Multi-threshold with forecasting
+      - alert: BudgetWarning
+        expr: swarm_cloud_cost_daily_usd > 7.5
+        for: 10m
+        labels:
+          severity: warning
+          environment: "{{ $labels.environment | default \"production\" }}"
+          team: "swarm-ops"
+          component: "cost-control"
+          runbook: "day2_ops_budget"
+        annotations:
+          summary: "💰 Daily budget 75% consumed"
+          description: "Cloud costs are ${{ $value | printf \"%.2f\" }}/day (75% of $10 budget). Monitor for cost optimization opportunities."
+          runbook_url: "https://docs.swarm.ai/runbook/budget-warning"
+
+      - alert: BudgetCritical
+        expr: swarm_cloud_cost_daily_usd > 10.0
+        for: 5m
+        labels:
+          severity: critical
+          environment: "{{ $labels.environment | default \"production\" }}"
+          team: "swarm-ops"
+          component: "cost-control"
+          runbook: "day2_ops_budget"
+        annotations:
+          summary: "🚨 Daily budget exceeded"
+          description: "Cloud costs are ${{ $value | printf \"%.2f\" }}/day (exceeding $10 budget). Auto-scaling or fallback may be misconfigured."
+          runbook_url: "https://docs.swarm.ai/runbook/budget-exceeded"
+
+      - alert: BudgetRunaway
+        expr: swarm_cloud_cost_daily_usd > 15.0
+        for: 2m
+        labels:
+          severity: page
+          environment: "{{ $labels.environment | default \"production\" }}"
+          team: "swarm-ops"
+          component: "cost-control"
+          runbook: "day2_ops_budget"
+          escalation: "immediate"
+        annotations:
+          summary: "🔥 RUNAWAY COSTS DETECTED"
+          description: "Cloud costs are ${{ $value | printf \"%.2f\" }}/day (150% over budget). Potential runaway scaling or cost bomb."
+          runbook_url: "https://docs.swarm.ai/runbook/budget-emergency"
+
+      # Training Pipeline Health
+      - alert: LoRATrainingFailures
+        expr: increase(swarm_lora_training_failures_total[6h]) > 2
+        for: 0m
+        labels:
+          severity: warning
+          environment: "{{ $labels.environment | default \"production\" }}"
+          team: "swarm-ops"
+          component: "training-pipeline"
+          runbook: "day2_ops_training"
+        annotations:
+          summary: "⚠️ LoRA training failures detected"
+          description: "{{ $value }} LoRA training failures in 6 hours. Check trainer container logs and dataset integrity."
+          runbook_url: "https://docs.swarm.ai/runbook/training-failures"
+
+      - alert: LoRATrainingStalled
+        expr: time() - swarm_lora_training_last_completion_timestamp > 86400  # 24 hours
+        for: 30m
+        labels:
+          severity: critical
+          environment: "{{ $labels.environment | default \"production\" }}"
+          team: "swarm-ops"
+          component: "training-pipeline"
+          runbook: "day2_ops_training"
+        annotations:
+          summary: "🚨 LoRA training pipeline stalled"
+          description: "No LoRA training completions in {{ $value | humanizeDuration }}. Training pipeline may be stuck."
+          runbook_url: "https://docs.swarm.ai/runbook/training-stalled"
+
+      # Sandbox Security
+      - alert: SandboxExecutionFailures
+        expr: rate(swarm_exec_fail_total[10m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          environment: "{{ $labels.environment | default \"production\" }}"
+          team: "swarm-ops"
+          component: "sandbox"
+          runbook: "day2_ops_sandbox"
+        annotations:
+          summary: "⚠️ High sandbox execution failure rate"
+          description: "{{ $value | humanizePercentage }} exec failures/sec. Check firejail configuration and resource limits."
+          runbook_url: "https://docs.swarm.ai/runbook/sandbox-failures"
+
+      - alert: SandboxSecurityBreach
+        expr: rate(swarm_sandbox_security_violations_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          environment: "{{ $labels.environment | default \"production\" }}"
+          team: "swarm-ops"
+          component: "sandbox"
+          runbook: "day2_ops_sandbox"
+          escalation: "security-team"
+        annotations:
+          summary: "🚨 SANDBOX SECURITY VIOLATION"
+          description: "{{ $value }} security violations detected in sandbox. Potential compromise attempt."
+          runbook_url: "https://docs.swarm.ai/runbook/security-breach"
+
+      # Memory Health
+      - alert: MemoryLeakSuspected
+        expr: increase(swarm_memory_usage_bytes[1h]) > 1073741824  # 1GB
+        for: 15m
+        labels:
+          severity: warning
+          environment: "{{ $labels.environment | default \"production\" }}"
+          team: "swarm-ops"
+          component: "memory-management"
+          runbook: "day2_ops_memory"
+        annotations:
+          summary: "⚠️ Potential memory leak detected"
+          description: "Memory usage increased by {{ $value | humanize1024 }}B in 1 hour without corresponding workload increase."
+          runbook_url: "https://docs.swarm.ai/runbook/memory-leak"
+
+      - alert: MemoryLeakConfirmed
+        expr: increase(swarm_memory_usage_bytes[3h]) > 3221225472  # 3GB
+        for: 10m
+        labels:
+          severity: critical
+          environment: "{{ $labels.environment | default \"production\" }}"
+          team: "swarm-ops"
+          component: "memory-management"
+          runbook: "day2_ops_memory"
+        annotations:
+          summary: "🚨 Memory leak confirmed"
+          description: "Memory usage increased by {{ $value | humanize1024 }}B in 3 hours. Service restart may be required."
+          runbook_url: "https://docs.swarm.ai/runbook/memory-leak-severe"
+
+  # =============================================================================
+  # 🔧 SYSTEM HEALTH ALERTS
+  # =============================================================================
+  - name: system_health
+    rules:
+      - alert: ServiceDown
+        expr: up{job=~"swarm-.*"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          environment: "{{ $labels.environment | default \"production\" }}"
+          team: "swarm-ops"
+          component: "{{ $labels.job }}"
+          runbook: "service_down"
+        annotations:
+          summary: "🚨 Service {{ $labels.job }} is down"
+          description: "Service {{ $labels.job }} has been unreachable for {{ $value | humanizeDuration }}."
+          runbook_url: "https://docs.swarm.ai/runbook/service-down"
+
+      - alert: HighCPUUsage
+        expr: rate(container_cpu_usage_seconds_total[5m]) * 100 > 80
+        for: 10m
+        labels:
+          severity: warning
+          environment: "{{ $labels.environment | default \"production\" }}"
+          team: "swarm-ops"
+          component: "{{ $labels.name }}"
+          runbook: "high_cpu"
+        annotations:
+          summary: "⚠️ High CPU usage on {{ $labels.name }}"
+          description: "Container {{ $labels.name }} CPU usage is {{ $value | printf \"%.1f\" }}% (>80%) for 10+ minutes."
+          runbook_url: "https://docs.swarm.ai/runbook/high-cpu"
+
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_free_bytes / node_filesystem_size_bytes) * 100 < 15
+        for: 5m
+        labels:
+          severity: warning
+          environment: "{{ $labels.environment | default \"production\" }}"
+          team: "swarm-ops"
+          component: "filesystem"
+          runbook: "disk_space"
+        annotations:
+          summary: "⚠️ Low disk space on {{ $labels.device }}"
+          description: "Filesystem {{ $labels.device }} has only {{ $value | printf \"%.1f\" }}% space remaining."
+          runbook_url: "https://docs.swarm.ai/runbook/disk-space" 
+          description: "Memory usage increased by {{ $value | humanize1024 }}B in 1 hour without corresponding workload increase." 

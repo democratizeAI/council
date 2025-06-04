@@ -78,6 +78,8 @@ services:
       - AZ_MEMORY_PATH=/app/memory_store
       - AZ_SHELL_TRUSTED=yes
       - ENABLE_SANDBOX=true
+      - CLOUD_ENABLED=true
+      - PROVIDER_PRIORITY=mistral,openai
       - SWARM_PROFILE=${SWARM_PROFILE:-production}
       - MEMORY_DIMENSION=${MEMORY_DIMENSION:-384}
       - SWARM_MAX_CONCURRENT=10
@@ -207,9 +209,29 @@ services:
       - monitoring
       - full
 
+  # AlertManager for handling alerts
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:9093'
+      - '--web.listen-address=0.0.0.0:9093'
+    restart: unless-stopped
+    profiles:
+      - monitoring
+      - full
+
 volumes:
   grafana-storage:
   prometheus-data:
+  alertmanager-data:
   memory-store:
     driver: local
   

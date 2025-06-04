@@ -1,11 +1,22 @@
-# API Keys and Secrets
+# API Keys and Secrets (CRITICAL - DO NOT COMMIT)
 .env
 .env.local
 .env.production
 .env.staging
+.envrc
 *.env
 api_keys.txt
 secrets.txt
+config/api_keys.json
+*.key
+*.pem
+*.p12
+*.jks
+
+# Specific AutoGen Council sensitive files
+memory_store/
+*.sqlite
+*.db
 
 # Python
 __pycache__/

@@ -1,0 +1,212 @@
+/* Custom styles for AutoGen Council Journey */
+
+/* Typography enhancements */
+.prose h2 {
+  margin-top: 2.5rem;
+  margin-bottom: 1.5rem;
+  font-weight: 700;
+  font-size: 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 0.5rem;
+}
+
+.prose h3 {
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+  color: #a5b4fc;
+}
+
+/* Section with emoji */
+.section-emoji {
+  font-size: 2rem;
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}
+
+/* Code block enhancements */
+pre {
+  position: relative;
+  border-radius: 0.5rem;
+  margin: 1.5rem 0;
+  background-color: #1e1e1e !important;
+  overflow: hidden;
+}
+
+pre code {
+  padding: 1.5rem !important;
+  font-family: 'Fira Code', 'Courier New', monospace;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.code-header {
+  background-color: rgba(255, 255, 255, 0.05);
+  padding: 0.5rem 1rem;
+  font-family: 'Fira Code', 'Courier New', monospace;
+  font-size: 0.8rem;
+  color: #a5b4fc;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.copy-button {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  color: #a5b4fc;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.copy-button:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Table enhancements */
+.prose table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 2rem 0;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.prose table th {
+  background-color: rgba(255, 255, 255, 0.05);
+  font-weight: 600;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.prose table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.prose table tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.prose table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Breakthrough moments */
+.breakthrough {
+  background: linear-gradient(90deg, rgba(79, 70, 229, 0.2) 0%, rgba(0, 0, 0, 0) 100%);
+  border-left: 4px solid #4f46e5;
+  padding: 1.5rem;
+  margin: 2rem 0;
+  border-radius: 0 0.5rem 0.5rem 0;
+}
+
+/* Status indicators */
+.status {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 600;
+}
+
+.status-dot {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  margin-right: 0.5rem;
+}
+
+.status-success {
+  background-color: #10b981;
+}
+
+.status-warning {
+  background-color: #f59e0b;
+}
+
+.status-error {
+  background-color: #ef4444;
+}
+
+/* Horizontal separators */
+hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0) 100%);
+  margin: 3rem 0;
+}
+
+/* Navigation styles */
+.nav-item {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  transition: background-color 0.2s;
+  cursor: pointer;
+}
+
+.nav-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.nav-item.active {
+  background-color: rgba(79, 70, 229, 0.3);
+  color: #a5b4fc;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .prose h2 {
+    font-size: 1.75rem;
+  }
+  
+  .prose h3 {
+    font-size: 1.25rem;
+  }
+  
+  .section-emoji {
+    font-size: 1.5rem;
+  }
+  
+  pre code {
+    padding: 1rem !important;
+    font-size: 0.8rem;
+  }
+}
+
+/* Animation for content loading */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.content-section {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}

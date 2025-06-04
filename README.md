@@ -75,6 +75,224 @@ print('Sandbox test:', result)
 
 ---
 
+## 🔧 **ENVIRONMENT SETUP & API KEYS**
+
+### **Required Environment Variables**
+
+Create a `.envrc` file (or set environment variables) for proper configuration:
+
+```bash
+# Copy the template and add your API keys
+cp .envrc.template .envrc
+```
+
+**Essential Configuration:**
+```bash
+# Cloud Provider Configuration (Choose your providers)
+export CLOUD_ENABLED=true
+export PROVIDER_PRIORITY=mistral,openai
+
+# Mistral AI API (Recommended - Faster & Cheaper)
+export MISTRAL_API_KEY=your_mistral_api_key_here
+
+# OpenAI API (Fallback)
+export OPENAI_API_KEY=your_openai_api_key_here
+
+# Memory System Configuration
+export AZ_MEMORY_ENABLED=yes
+export AZ_MEMORY_PATH=./memory_store
+
+# Sandbox Security (Enable code execution)
+export AZ_SHELL_TRUSTED=yes
+export ENABLE_SANDBOX=true
+
+# Performance Tuning
+export SWARM_MAX_CONCURRENT=10
+export SWARM_TIMEOUT_MS=5000
+export SWARM_CLOUD_BUDGET_USD=10.0
+```
+
+### **Getting API Keys**
+
+**🔥 Mistral AI (Recommended)**
+1. Visit [https://console.mistral.ai/](https://console.mistral.ai/)
+2. Create account and generate API key
+3. Add to `.envrc`: `export MISTRAL_API_KEY=your_key_here`
+4. **Benefits**: Faster responses, lower cost, excellent performance
+
+**⚡ OpenAI (Fallback)**
+1. Visit [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+2. Create API key with billing setup
+3. Add to `.envrc`: `export OPENAI_API_KEY=sk-your_key_here`
+4. **Benefits**: High quality, good for complex reasoning
+
+### **Provider Priority System**
+
+The system automatically tries providers in order:
+```bash
+# Default priority (recommended)
+export PROVIDER_PRIORITY=mistral,openai
+
+# Alternative priorities
+export PROVIDER_PRIORITY=openai,mistral  # OpenAI first
+export PROVIDER_PRIORITY=mistral        # Mistral only
+export PROVIDER_PRIORITY=openai         # OpenAI only
+```
+
+**How it works:**
+1. **Mistral tried first** (faster, cheaper)
+2. **If Mistral fails** → OpenAI automatically tried
+3. **If both fail** → Local mock response with helpful error
+
+### **Environment File Templates**
+
+**Production (prod.env):**
+```bash
+CLOUD_ENABLED=true
+PROVIDER_PRIORITY=mistral,openai
+SWARM_PROFILE=production
+MEMORY_DIMENSION=768
+SWARM_MAX_CONCURRENT=20
+SWARM_CLOUD_BUDGET_USD=25.0
+```
+
+**Development (dev.env):**
+```bash
+CLOUD_ENABLED=true
+PROVIDER_PRIORITY=mistral,openai
+SWARM_PROFILE=development
+MEMORY_DIMENSION=384
+SWARM_MAX_CONCURRENT=5
+SWARM_CLOUD_BUDGET_USD=5.0
+```
+
+**Canary Testing (canary.env):**
+```bash
+CLOUD_ENABLED=true
+PROVIDER_PRIORITY=mistral,openai
+SWARM_PROFILE=canary
+MEMORY_DIMENSION=384
+SWARM_MAX_CONCURRENT=5
+SWARM_TIMEOUT_MS=3000
+SWARM_CLOUD_BUDGET_USD=5.0
+```
+
+### **Docker Environment Setup**
+
+For Docker deployment, create a `.env` file:
+```bash
+# Docker environment
+MISTRAL_API_KEY=your_mistral_key_here
+OPENAI_API_KEY=your_openai_key_here
+SWARM_PROFILE=production
+```
+
+Then run:
+```bash
+docker-compose --env-file .env up -d
+```
+
+### **Verification & Testing**
+
+**1. Test Configuration:**
+```bash
+# Source environment
+source .envrc  # Linux/Mac
+# or set variables manually on Windows
+
+# Start server
+python autogen_api_shim.py
+```
+
+**2. Test API Keys:**
+```bash
+# Check provider status
+curl localhost:8000/models
+
+# Test Mistral (should use first)
+curl -X POST localhost:8000/hybrid \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Tell me a joke"}'
+
+# Expected: Uses mistral-large-latest model
+```
+
+**3. Test Fallback:**
+```bash
+# Temporarily disable Mistral to test OpenAI fallback
+export MISTRAL_API_KEY=""
+curl -X POST localhost:8000/hybrid \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Hello world"}'
+
+# Expected: Uses openai-gpt-3.5-turbo model
+```
+
+### **Security Best Practices**
+
+**🔒 API Key Protection:**
+```bash
+# Add to .gitignore (already included)
+.envrc
+.env
+*.env
+config/api_keys.yaml
+
+# Never commit API keys to git
+git status  # Verify no .env files staged
+```
+
+**🛡️ Budget Protection:**
+```bash
+# Set spending limits
+export SWARM_CLOUD_BUDGET_USD=10.0  # Daily budget cap
+
+# Monitor usage
+curl localhost:8000/budget
+```
+
+**🔐 Production Security:**
+```bash
+# Use environment-specific configs
+docker-compose --env-file prod.env up -d
+
+# Regular key rotation
+# Update API keys monthly
+```
+
+### **Troubleshooting**
+
+**Issue: "No API key configured"**
+```bash
+# Check environment
+echo $MISTRAL_API_KEY
+echo $OPENAI_API_KEY
+
+# Verify format
+export MISTRAL_API_KEY=your_actual_key_without_quotes
+```
+
+**Issue: "All providers failed"**
+```bash
+# Check API key validity
+curl -H "Authorization: Bearer $MISTRAL_API_KEY" \
+  https://api.mistral.ai/v1/models
+
+# Check quota/billing
+curl localhost:8000/health
+```
+
+**Issue: "Provider priority not working"**
+```bash
+# Check configuration
+curl localhost:8000/models
+
+# Verify priority order in response
+# Should show: "priority": ["mistral", "openai"]
+```
+
+---
+
 ## 🏗️ **ARCHITECTURE OVERVIEW**
 
 ### **Complete Desktop OS Assistant Stack**

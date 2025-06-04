@@ -1,15 +1,15 @@
 #!/bin/bash
 set -euo pipefail
 
-# 🎛️ SwarmAI Canary Scaling Script
+# 🎛️ AutoGen Council v2.6.0 Canary Scaling Script
 # Step 6 of the canary guide: Scale knob without redeploy
 
 PERCENTAGE=${1:-25}
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-echo "🎛️ Scaling canary traffic to ${PERCENTAGE}%"
-echo "================================="
+echo "🎛️ Scaling v2.6.0 canary traffic to ${PERCENTAGE}%"
+echo "==============================================="
 
 # Validate percentage
 if [[ ! "$PERCENTAGE" =~ ^[0-9]+$ ]] || [[ "$PERCENTAGE" -gt 100 ]]; then
@@ -58,18 +58,18 @@ fi
 echo "⏳ Waiting for configuration reload..."
 sleep 3
 
-# Test connectivity to both services
+# Test connectivity to both services (updated ports)
 echo "🧪 Testing service connectivity..."
 
-# Test main service
-if curl -s http://localhost:9000/health >/dev/null; then
+# Test main service (port 8000)
+if curl -s http://localhost:8000/health >/dev/null; then
     echo "✅ Main service responding"
 else
     echo "⚠️ Main service not responding"
 fi
 
-# Test canary service  
-if curl -s http://localhost:9001/health >/dev/null; then
+# Test canary service (port 8001)
+if curl -s http://localhost:8001/health >/dev/null; then
     echo "✅ Canary service responding"
 else
     echo "⚠️ Canary service not responding"
@@ -83,7 +83,7 @@ else
 fi
 
 echo ""
-echo "🎯 Traffic scaling complete!"
+echo "🎯 v2.6.0 Traffic scaling complete!"
 echo ""
 echo "📈 Monitoring checkpoints:"
 
@@ -109,10 +109,12 @@ case $PERCENTAGE in
 esac
 
 echo ""
-echo "🟢 Green criteria (all must stay green):"
-echo "   • p95 latency ≤ 0.7s for 5 minutes"
+echo "🟢 v2.6.0 Green criteria (all must stay green):"
+echo "   • Council total latency ≤ 626ms for 5 minutes"
+echo "   • Memory query latency ≤ 7ms"
+echo "   • Sandbox exec latency ≤ 45ms"
 echo "   • Cost projection < $1/day"  
-echo "   • VRAM usage < 9.8GB"
+echo "   • VRAM usage < 9.8GB (current: ~9.972GB)"
 echo "   • Mistral error rate < 2%"
 echo ""
 echo "🚨 Auto-rollback triggers if any criteria violated"

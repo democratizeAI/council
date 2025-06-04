@@ -1,0 +1,29 @@
+# AutoGen Council v2.7.0 Environment Configuration Template
+# Copy this file to .envrc and add your API keys
+
+# Cloud Provider Configuration
+export CLOUD_ENABLED=true
+export PROVIDER_PRIORITY=mistral,openai
+
+# API Keys (Add your actual keys here)
+export MISTRAL_API_KEY=your_mistral_api_key_here
+export OPENAI_API_KEY=your_openai_api_key_here
+
+# Memory System Configuration
+export AZ_MEMORY_ENABLED=yes
+export AZ_MEMORY_PATH=./memory_store
+
+# Sandbox Security (Enable code execution)
+export AZ_SHELL_TRUSTED=yes
+export ENABLE_SANDBOX=true
+
+# Performance Tuning
+export SWARM_PROFILE=development
+export MEMORY_DIMENSION=384
+export SWARM_MAX_CONCURRENT=10
+export SWARM_TIMEOUT_MS=5000
+export SWARM_CLOUD_BUDGET_USD=10.0
+
+# Optional: Advanced Configuration
+# export MODEL_NAME=mistral-large-latest
+# export LLM_ENDPOINT=https://api.mistral.ai/v1 

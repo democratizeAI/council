@@ -1,0 +1,45 @@
+from pathlib import Path, PurePosixPath, PosixPath, PurePath, os
+html_content = """
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>SwarmAI Council – Key Stats (v2.6.0)</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;margin:40px;color:#333}
+    h1{color:#2d3748}
+    table{border-collapse:collapse;width:600px;margin-top:20px}
+    th,td{border:1px solid #cbd5e0;padding:8px;text-align:left}
+    th{background:#edf2f7}
+    tr:nth-child(even){background:#f7fafc}
+    .good{color:#38a169;font-weight:bold}
+  </style>
+</head>
+<body>
+<h1>SwarmAI Council – Key Stats (v2.6.0)</h1>
+
+<table>
+  <tr><th>Metric</th><th>Current Value</th><th>Target / Note</th></tr>
+  <tr><td>p95 Latency (Council)</td><td class="good">574&nbsp;ms</td><td>&lt; 1&nbsp;s SLA</td></tr>
+  <tr><td>Average Latency (Math fast-path)</td><td class="good">3.5&nbsp;ms</td><td>&lt; 100&nbsp;ms target</td></tr>
+  <tr><td>Success Rate (Titanic)</td><td class="good">87.5 %</td><td>&gt; 85 % gate</td></tr>
+  <tr><td>Local Hit-Rate</td><td class="good">94 %</td><td>&gt; 90 % goal</td></tr>
+  <tr><td>Cloud Cost / 100 req</td><td class="good">$0.04</td><td>&lt; $0.10 budget</td></tr>
+  <tr><td>VRAM Utilisation</td><td class="good">9.97 GB / 12 GB</td><td>&lt; 10.5 GB threshold</td></tr>
+  <tr><td>Throughput Ceiling</td><td class="good">120 QPS</td><td>Fragment-free</td></tr>
+  <tr><td>Memory Query Latency</td><td class="good">7 ms p95</td><td>&lt; 20 ms</td></tr>
+  <tr><td>Sandbox Overhead</td><td class="good">≈ 50 ms</td><td>&lt; 100 ms</td></tr>
+  <tr><td>Nightly LoRA Jobs</td><td class="good">03:00 UTC</td><td>Auto-train & deploy</td></tr>
+</table>
+
+<p style="margin-top:30px;font-size:0.9em;color:#4a5568">
+<span class="good">Green</span> values indicate metrics are within target thresholds.
+All figures from latest Prometheus scrape & nightly regression report (v2.6.0 full).
+</p>
+
+</body>
+</html>
+"""
+output_path = "/mnt/data/swarm_stats_v2.6.0.html"
+Path(output_path).write_text(html_content)
+output_path

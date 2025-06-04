@@ -10,6 +10,109 @@ from loader.deterministic_loader import get_loaded_models, generate_response
 from router.voting import vote, smart_select
 from router.cost_tracking import debit
 import os
+import yaml
+import logging
+from providers import mistral_llm, openai_llm, CloudRetry
+
+logger = logging.getLogger(__name__)
+
+# One-time parse of priority list
+PROVIDER_PRIORITY = os.getenv("PROVIDER_PRIORITY", "mistral,openai").split(",")
+
+PROVIDER_MAP = {
+    "mistral": mistral_llm.call,
+    "openai": openai_llm.call,
+}
+
+# Track loaded models for /models endpoint
+LOADED_MODELS = {}
+
+def load_provider_config():
+    """Load provider configuration from YAML"""
+    global LOADED_MODELS
+    
+    try:
+        with open("config/providers.yaml", "r") as f:
+            config = yaml.safe_load(f)
+            
+        # Update priority from config if available
+        if "priority" in config:
+            global PROVIDER_PRIORITY
+            PROVIDER_PRIORITY = config["priority"]
+            
+        # Load model information
+        for provider_name, provider_config in config.get("providers", {}).items():
+            for model in provider_config.get("models", []):
+                LOADED_MODELS[f"{provider_name}-{model}"] = {
+                    "provider": provider_name,
+                    "name": provider_config.get("name", provider_name),
+                    "model": model,
+                    "endpoint": provider_config.get("endpoint", ""),
+                    "pricing": provider_config.get("pricing", {})
+                }
+                
+        logger.info(f"📋 Loaded {len(LOADED_MODELS)} models from {len(config.get('providers', {}))} providers")
+        logger.info(f"🎯 Provider priority: {' → '.join(PROVIDER_PRIORITY)}")
+        
+    except Exception as e:
+        logger.warning(f"⚠️ Could not load provider config: {e}")
+        # Use defaults
+        LOADED_MODELS = {
+            "mistral-large-latest": {"provider": "mistral", "name": "Mistral Large"},
+            "openai-gpt-3.5-turbo": {"provider": "openai", "name": "OpenAI GPT-3.5"}
+        }
+
+# Load config on module import
+load_provider_config()
+
+async def call_llm(prompt: str, **kwargs) -> Dict[str, Any]:
+    """
+    Call LLM with automatic provider fallback.
+    
+    Tries providers in priority order. If a provider raises CloudRetry,
+    automatically tries the next provider in the list.
+    """
+    tried = []
+    
+    for provider_name in PROVIDER_PRIORITY:
+        if provider_name not in PROVIDER_MAP:
+            logger.warning(f"⚠️ Unknown provider: {provider_name}")
+            continue
+            
+        llm_fn = PROVIDER_MAP[provider_name]
+        
+        try:
+            logger.info(f"🎯 Trying provider: {provider_name}")
+            result = await llm_fn(prompt, **kwargs)
+            
+            # Add provider metadata
+            result["routing_provider"] = provider_name
+            result["routing_tried"] = [name for name, _ in tried] + [provider_name]
+            
+            return result
+            
+        except CloudRetry as e:
+            logger.warning(f"🔄 {provider_name} failed: {e.reason}")
+            tried.append((provider_name, str(e)))
+            continue  # Try next provider
+        except Exception as e:
+            logger.error(f"❌ {provider_name} unexpected error: {e}")
+            tried.append((provider_name, f"Unexpected error: {e}"))
+            continue  # Try next provider
+    
+    # If everything failed
+    error_summary = "; ".join([f"{name}: {error}" for name, error in tried])
+    raise RuntimeError(f"All providers failed: {error_summary}")
+
+def get_loaded_models() -> Dict[str, Any]:
+    """Get currently loaded models for /models endpoint"""
+    return {
+        "count": len(LOADED_MODELS),
+        "models": list(LOADED_MODELS.keys()),
+        "providers": list(set(model["provider"] for model in LOADED_MODELS.values())),
+        "priority": PROVIDER_PRIORITY,
+        "details": LOADED_MODELS
+    }
 
 async def hybrid_route(prompt: str, preferred_models: List[str] = None, enable_council: bool = None) -> Dict[str, Any]:
     """

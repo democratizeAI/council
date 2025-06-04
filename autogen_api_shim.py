@@ -12,9 +12,10 @@ import asyncio
 import time
 import logging
 from typing import Dict, Any, Optional, List
-from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import StreamingResponse
+from fastapi import FastAPI, HTTPException, Query, Response
+from fastapi.responses import StreamingResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
 import sys
@@ -60,18 +61,29 @@ app = FastAPI(
     version="2.7.0-preview"
 )
 
-# Mount static files for web interface
-if os.path.exists("webchat"):
-    app.mount("/chat", StaticFiles(directory="webchat", html=True), name="webchat")
-    logger.info("📱 Web chat interface available at /chat")
+# Add CORS middleware for web interface
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-if os.path.exists("admin"):
-    app.mount("/admin", StaticFiles(directory="admin", html=True), name="admin")
-    logger.info("⚙️ Admin panel available at /admin")
+# Custom StaticFiles class with cache-busting headers
+class NoCacheStaticFiles(StaticFiles):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+    
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        # Add cache-busting headers
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
 
-if os.path.exists("monitor"):
-    app.mount("/monitor", StaticFiles(directory="monitor", html=True), name="monitor")
-    logger.info("📊 Monitoring dashboard available at /monitor")
+# Note: Static file mounts are configured in startup_event() after API routes are defined
 
 class QueryRequest(BaseModel):
     prompt: str
@@ -175,18 +187,34 @@ async def startup_event():
     logger.info("  GET  /stats  - Service statistics")
     logger.info("  GET  /metrics - Prometheus metrics")
     
+    logger.info("🌐 Web Interfaces:")
+    logger.info("  GET  / - Evolution Journey (Main Page)")
+    logger.info("  GET  /chat - Chat Interface")
+    logger.info("  GET  /admin - Admin Panel")
+    logger.info("  GET  /monitor - Monitoring Dashboard")
+    
     # Mount static files for web interface
-    if os.path.exists("webchat"):
-        app.mount("/chat", StaticFiles(directory="webchat", html=True), name="webchat")
-        logger.info("📱 Web chat interface available at /chat")
+    if os.path.exists("autogen_chat"):
+        app.mount("/chat", NoCacheStaticFiles(directory="autogen_chat", html=True), name="autogen_chat")
+        logger.info("🎯 Enhanced Specialist Priority Chat interface available at /chat")
+    elif os.path.exists("webchat"):
+        app.mount("/chat", NoCacheStaticFiles(directory="webchat", html=True), name="webchat")
+        logger.info("📱 Legacy Web chat interface available at /chat")
     
     if os.path.exists("admin"):
-        app.mount("/admin", StaticFiles(directory="admin", html=True), name="admin")
+        app.mount("/admin", NoCacheStaticFiles(directory="admin", html=True), name="admin")
         logger.info("⚙️ Admin panel available at /admin")
     
     if os.path.exists("monitor"):
-        app.mount("/monitor", StaticFiles(directory="monitor", html=True), name="monitor")
+        app.mount("/monitor", NoCacheStaticFiles(directory="monitor", html=True), name="monitor")
         logger.info("📊 Monitoring dashboard available at /monitor")
+    
+    # Mount Evolution Journey frontend as main page LAST (so it doesn't override API routes)
+    if os.path.exists("index.html") and os.path.exists("js") and os.path.exists("css"):
+        app.mount("/journey", NoCacheStaticFiles(directory=".", html=True), name="evolution_journey")
+        logger.info("📚 Evolution Journey frontend available at /journey")
+    else:
+        logger.warning("⚠️ Evolution Journey frontend files not found")
     
     logger.info("=" * 50)
     logger.info("🌐 Server starting on http://localhost:8000")
@@ -434,17 +462,53 @@ autogen_uptime_seconds {uptime_seconds}
 
 @app.get("/models")
 async def models_endpoint():
-    """List available models"""
-    return {
-        "loaded_models": ["autogen-hybrid", "math", "code", "logic", "knowledge"],
-        "count": 5,
-        "backend": "autogen_shim",
-        "status": "ready"
-    }
+    """List available models with provider information"""
+    try:
+        from router.hybrid import get_loaded_models
+        models_info = get_loaded_models()
+        
+        return {
+            "object": "list",
+            "data": [
+                {
+                    "id": model_name,
+                    "object": "model",
+                    "created": int(time.time()),
+                    "owned_by": details.get("provider", "local"),
+                    "provider": details.get("provider", "local"),
+                    "name": details.get("name", model_name),
+                    "endpoint": details.get("endpoint", ""),
+                    "pricing": details.get("pricing", {})
+                }
+                for model_name, details in models_info["details"].items()
+            ],
+            "count": models_info["count"],
+            "providers": models_info["providers"],
+            "priority": models_info["priority"],
+            "backend": "autogen_hybrid_router",
+            "status": "ready"
+        }
+    except Exception as e:
+        logger.error(f"Error loading models: {e}")
+        # Fallback to basic model list
+        return {
+            "object": "list",
+            "data": [
+                {
+                    "id": "autogen-hybrid",
+                    "object": "model",
+                    "created": int(time.time()),
+                    "owned_by": "local"
+                }
+            ],
+            "count": 1,
+            "backend": "autogen_shim",
+            "status": "fallback"
+        }
 
 @app.post("/vote", response_model=VoteResponse)
 async def vote_endpoint(request: VoteRequest) -> VoteResponse:
-    """Voting endpoint - uses hybrid functionality for now"""
+    """Voting endpoint - enhanced with memory context and confidence weighting"""
     start_time = time.time()
     stats["requests_total"] += 1
     
@@ -452,17 +516,27 @@ async def vote_endpoint(request: VoteRequest) -> VoteResponse:
         # If no candidates provided, use default models
         candidates = request.candidates if request.candidates else ["autogen-hybrid", "math", "code", "logic", "knowledge"]
         
-        # Use hybrid routing for voting simulation
-        result = await router.route_query(request.prompt)
+        # 🧠 Use memory-enhanced voting instead of hybrid routing
+        from router.voting import vote
+        result = await vote(
+            prompt=request.prompt,
+            model_names=candidates,
+            top_k=request.top_k,
+            use_context=True  # Enable memory context injection
+        )
         
         stats["requests_success"] += 1
         latency_ms = (time.time() - start_time) * 1000
         
+        # Extract response data from voting result
+        winner = result.get("winner", {})
+        voting_stats = result.get("voting_stats", {})
+        
         return VoteResponse(
-            text=result["text"],
-            model_used=result.get("model", candidates[0]),
+            text=result.get("text", winner.get("text", "No response")),
+            model_used=winner.get("model", "unknown"),
             latency_ms=latency_ms,
-            confidence=result.get("confidence", 0.7),
+            confidence=winner.get("confidence", voting_stats.get("winner_confidence", 0.7)),
             candidates=candidates,
             total_cost_cents=0.0  # No cost tracking in shim yet
         )
@@ -651,6 +725,52 @@ async def canary_webhook(event: str, data: dict = None):
     # TODO: Implement event storage/WebSocket notifications
     
     return {"status": "received", "event": event, "timestamp": time.time()}
+
+@app.post("/api/chat")
+async def chat_endpoint(request: QueryRequest):
+    """Chat alias - always uses Council vote for all conversations"""
+    start_time = time.time()
+    stats["requests_total"] += 1
+    
+    try:
+        # 🧠 Always use memory-enhanced voting for chat
+        from router.voting import vote
+        result = await vote(
+            prompt=request.prompt,
+            model_names=["autogen-hybrid", "math", "code", "logic", "knowledge"],
+            top_k=1,
+            use_context=True  # Enable memory context injection
+        )
+        
+        stats["requests_success"] += 1
+        winner = result.get("winner", {})
+        
+        return {
+            "text": result.get("text", winner.get("text", "No response")),
+            "model": winner.get("model", "council"),
+            "latency_ms": (time.time() - start_time) * 1000,
+            "skill_type": "council",
+            "confidence": winner.get("confidence", 0.7),
+            "timestamp": time.time(),
+            "council_used": True,
+            "memory_context": True
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Chat processing error: {e}")
+        return {
+            "text": f"Error: {str(e)}",
+            "model": "error",
+            "latency_ms": (time.time() - start_time) * 1000,
+            "skill_type": "error",
+            "confidence": 0.0,
+            "timestamp": time.time()
+        }
+
+@app.get("/")
+async def root():
+    """Redirect to the Evolution Journey frontend"""
+    return RedirectResponse("/journey")
 
 if __name__ == "__main__":
     uvicorn.run(

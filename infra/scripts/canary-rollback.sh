@@ -1,14 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
-# 🚨 SwarmAI Canary Emergency Rollback
+# 🚨 AutoGen Council v2.6.0 Canary Emergency Rollback
 # Instantly drops canary weight to 0% and routes all traffic to main service
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-echo "🚨 EMERGENCY CANARY ROLLBACK"
-echo "============================"
+echo "🚨 EMERGENCY v2.6.0 CANARY ROLLBACK"
+echo "===================================="
 echo "⚡ Dropping canary traffic to 0%..."
 
 # Set main service to 100% weight
@@ -62,19 +62,22 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 fi
 
 echo ""
-echo "🎯 Rollback complete!"
+echo "🎯 v2.6.0 Rollback complete!"
 echo ""
 echo "📊 Current status:"
-echo "   • Main service: 100% traffic"
+echo "   • Main service: 100% traffic (port 8000)"
 echo "   • Canary service: 0% traffic ($(docker ps --format 'table {{.Status}}' -f name=autogen-council-canary | tail -1))"
 echo ""
 echo "🔍 Investigation commands:"
 echo "   docker logs autogen-council-canary --since 1h"
-echo "   curl http://localhost:9001/health  # Direct canary health"
-echo "   curl http://localhost:9000/health  # Direct main health"
+echo "   curl http://localhost:8001/health  # Direct canary health"
+echo "   curl http://localhost:8000/health  # Direct main health"
+echo "   curl http://localhost:8000/stats   # v2.6.0 enhanced stats"
 echo ""
 echo "🚨 Alert triggers that caused rollback:"
-echo "   • p95 latency > 0.7s for 5+ minutes"
+echo "   • Council total latency > 626ms for 5+ minutes"
+echo "   • Memory query latency > 7ms"
+echo "   • Sandbox exec latency > 45ms"
 echo "   • swarm_council_cost_dollars_total > \$1/day"
 echo "   • VRAM usage > 9.8GB"
 echo "   • mistral_errors_total / mistral_tokens_total > 2%"

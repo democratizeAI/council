@@ -1,0 +1,117 @@
+/* Custom styles for AutoGen Council Admin */
+
+/* Toggle switch */
+.toggle-bg {
+  position: relative;
+  transition: background-color 0.2s;
+}
+
+input:checked ~ .toggle-bg {
+  background-color: #4f46e5;
+  border-color: #4f46e5;
+}
+
+.dot {
+  transition: transform 0.2s;
+}
+
+input:checked ~ .toggle-bg .dot,
+input:checked + .toggle-bg + .dot {
+  transform: translateX(100%);
+  background-color: white;
+}
+
+/* Status cards */
+.status-card {
+  background-color: rgba(31, 41, 55, 0.5);
+  border: 1px solid rgba(75, 85, 99, 0.5);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.status-dot {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  margin-right: 0.5rem;
+}
+
+.status-success {
+  background-color: #10b981;
+}
+
+.status-warning {
+  background-color: #f59e0b;
+}
+
+.status-error {
+  background-color: #ef4444;
+}
+
+/* Apply button */
+.apply-button {
+  background: linear-gradient(135deg, #60a5fa 0%, #7c3aed 100%);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.apply-button:hover {
+  opacity: 0.9;
+}
+
+.apply-button:disabled {
+  background: #4b5563;
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Animation for notifications */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.notification {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  background-color: rgba(31, 41, 55, 0.9);
+  border-left: 4px solid #10b981;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 0.3s ease-out;
+  z-index: 50;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .status-card {
+    padding: 0.75rem;
+  }
+}

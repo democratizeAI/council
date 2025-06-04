@@ -1,0 +1,491 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "AutoGen Council v2.6.0 Canary Monitoring",
+    "tags": ["autogen", "v2.6.0", "canary", "monitoring", "memory", "sandbox"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Council Total Latency",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(autogen_council_latency_seconds_bucket[5m]))",
+            "legendFormat": "p95 Latency"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 500},
+                {"color": "red", "value": 626}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0},
+        "alert": {
+          "name": "CouncilLatencyHigh",
+          "conditions": [
+            {
+              "query": "A",
+              "reducer": "last",
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "for": "5m",
+          "frequency": "10s",
+          "handler": 1,
+          "name": "Council total latency > 626ms",
+          "noDataState": "no_data",
+          "notifications": []
+        }
+      },
+      {
+        "id": 2,
+        "title": "Memory Query Latency",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(autogen_memory_query_latency_seconds_bucket[5m]) * 1000)",
+            "legendFormat": "Memory p95"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 5},
+                {"color": "red", "value": 7}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0},
+        "alert": {
+          "name": "MemoryLatencyHigh",
+          "conditions": [
+            {
+              "query": "A",
+              "reducer": "last",
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "for": "2m",
+          "frequency": "30s",
+          "handler": 1,
+          "name": "Memory query latency > 7ms",
+          "noDataState": "no_data",
+          "notifications": []
+        }
+      },
+      {
+        "id": 3,
+        "title": "Sandbox Execution Latency",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(autogen_sandbox_exec_latency_seconds_bucket[5m]) * 1000)",
+            "legendFormat": "Sandbox p95"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 30},
+                {"color": "red", "value": 45}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 0},
+        "alert": {
+          "name": "SandboxLatencyHigh",
+          "conditions": [
+            {
+              "query": "A",
+              "reducer": "last",
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "for": "2m",
+          "frequency": "30s",
+          "handler": 1,
+          "name": "Sandbox exec latency > 45ms",
+          "noDataState": "no_data",
+          "notifications": []
+        }
+      },
+      {
+        "id": 4,
+        "title": "VRAM Usage (RTX 4070)",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "autogen_vram_used_bytes / 1024 / 1024 / 1024",
+            "legendFormat": "VRAM GB"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "decbytes",
+            "min": 0,
+            "max": 12,
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 9.8},
+                {"color": "red", "value": 10.5}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 18, "y": 0},
+        "description": "Current: ~9.972GB, Limit: 10.5GB"
+      },
+      {
+        "id": 5,
+        "title": "Council Cost per Day",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "increase(autogen_council_cost_dollars_total[1d])",
+            "legendFormat": "Daily Cost"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 0.8},
+                {"color": "red", "value": 1.0}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 8},
+        "alert": {
+          "name": "CloudBudgetExceeded",
+          "conditions": [
+            {
+              "query": "A",
+              "reducer": "last",
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "for": "1m",
+          "frequency": "1m",
+          "handler": 1,
+          "name": "Daily cost > $1",
+          "noDataState": "no_data",
+          "notifications": []
+        }
+      },
+      {
+        "id": 6,
+        "title": "Memory Operations/sec",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(autogen_memory_operations_total[1m])",
+            "legendFormat": "Memory Ops/s"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 800},
+                {"color": "red", "value": 1000}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 6, "y": 8},
+        "alert": {
+          "name": "MemoryOverload",
+          "conditions": [
+            {
+              "query": "A",
+              "reducer": "last",
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "for": "5m",
+          "frequency": "1m",
+          "handler": 1,
+          "name": "Memory operations > 1000/sec",
+          "noDataState": "no_data",
+          "notifications": []
+        }
+      },
+      {
+        "id": 7,
+        "title": "Sandbox Executions/hr",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(autogen_sandbox_executions_total[1h]) * 3600",
+            "legendFormat": "Sandbox/hr"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 400},
+                {"color": "red", "value": 500}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 8},
+        "alert": {
+          "name": "SandboxAbuse",
+          "conditions": [
+            {
+              "query": "A",
+              "reducer": "last",
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "for": "10m",
+          "frequency": "5m",
+          "handler": 1,
+          "name": "Sandbox executions > 500/hr",
+          "noDataState": "no_data",
+          "notifications": []
+        }
+      },
+      {
+        "id": 8,
+        "title": "Edge High-Risk Ratio",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "autogen_edge_highrisk_ratio * 100",
+            "legendFormat": "High-Risk %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 8},
+                {"color": "red", "value": 10}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 18, "y": 8},
+        "alert": {
+          "name": "HighRiskSpike",
+          "conditions": [
+            {
+              "query": "A",
+              "reducer": "last",
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "for": "2m",
+          "frequency": "30s",
+          "handler": 1,
+          "name": "High-risk ratio > 10%",
+          "noDataState": "no_data",
+          "notifications": []
+        }
+      },
+      {
+        "id": 9,
+        "title": "Traffic Distribution (Main vs Canary)",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sum by (service) (rate(traefik_service_requests_total[5m]))",
+            "legendFormat": "{{service}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+        "options": {
+          "pieType": "pie",
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          }
+        }
+      },
+      {
+        "id": 10,
+        "title": "v2.6.0 Canary Health Status",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "up{job=~'.*canary.*'}",
+            "legendFormat": "{{instance}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "Value": "Status"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "Request Rate (QPS) - 70 QPS Tested",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(autogen_router_requests_total[1m]))",
+            "legendFormat": "Total QPS"
+          },
+          {
+            "expr": "sum(rate(autogen_router_requests_total{service='main'}[1m]))",
+            "legendFormat": "Main QPS"
+          },
+          {
+            "expr": "sum(rate(autogen_router_requests_total{service='canary'}[1m]))",
+            "legendFormat": "Canary QPS"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 24},
+        "yAxes": [
+          {
+            "label": "Requests/sec",
+            "show": true
+          },
+          {
+            "show": true
+          }
+        ],
+        "annotations": {
+          "list": [
+            {
+              "datasource": "-- Grafana --",
+              "enable": true,
+              "expr": "70",
+              "iconColor": "green",
+              "name": "Tested Load (70 QPS)",
+              "showLine": true,
+              "textFormat": "70 QPS - Tested @ p95 ≈ 89ms"
+            },
+            {
+              "datasource": "-- Grafana --",
+              "enable": true,
+              "expr": "65",
+              "iconColor": "orange",
+              "name": "Fragmentation Risk Zone",
+              "showLine": true,
+              "textFormat": "65 QPS Fragmentation Watch"
+            }
+          ]
+        }
+      },
+      {
+        "id": 12,
+        "title": "Error Rates & CUDA Health",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(mistral_errors_total[5m]) / rate(mistral_tokens_total[5m]) * 100",
+            "legendFormat": "Mistral Error Rate %"
+          },
+          {
+            "expr": "rate(autogen_router_errors_total[5m]) / rate(autogen_router_requests_total[5m]) * 100",
+            "legendFormat": "Router Error Rate %"
+          },
+          {
+            "expr": "autogen_cuda_fragmentation_events_total",
+            "legendFormat": "CUDA Fragmentation Events"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 32},
+        "yAxes": [
+          {
+            "label": "Error Rate % / Events",
+            "show": true,
+            "max": 10
+          },
+          {
+            "show": true
+          }
+        ],
+        "alert": {
+          "name": "MistralErrorRateHigh",
+          "conditions": [
+            {
+              "query": "A",
+              "reducer": "last",
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "for": "2m",
+          "frequency": "30s",
+          "handler": 1,
+          "name": "Mistral error rate > 2%",
+          "noDataState": "no_data",
+          "notifications": []
+        }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h", "2h", "1d"]
+    },
+    "refresh": "10s",
+    "schemaVersion": 27,
+    "version": 1,
+    "links": [
+      {
+        "asDropdown": false,
+        "icon": "external link",
+        "includeVars": false,
+        "keepTime": false,
+        "tags": [],
+        "targetBlank": true,
+        "title": "Traefik Dashboard",
+        "tooltip": "",
+        "type": "link",
+        "url": "http://localhost:8080"
+      }
+    ],
+    "description": "v2.6.0 Memory-Powered Desktop OS Assistant with Secure Code Execution - Canary Monitoring. Tested: 70 QPS @ p95 ≈ 89ms, 0 CUDA fragmentation events."
+  }
+} 

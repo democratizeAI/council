@@ -64,9 +64,13 @@ class RouterCascade:
     def __init__(self):
         """Initialize router with skill configurations"""
         self.llm_endpoint = os.getenv('LLM_ENDPOINT', 'http://localhost:8000/v1')
-        self.model_name = os.getenv('MODEL_NAME', 'mistral-13b-gptq')
-        self.cloud_enabled = os.getenv('SWARM_CLOUD_ENABLED', 'false').lower() == 'true'
+        self.model_name = os.getenv('MODEL_NAME', 'gpt-3.5-turbo')  # Default to OpenAI model
+        self.cloud_enabled = os.getenv('CLOUD_ENABLED', 'false').lower() == 'true'
         self.budget_usd = float(os.getenv('SWARM_CLOUD_BUDGET_USD', '10.0'))
+        
+        # API Keys for cloud providers
+        self.openai_api_key = os.getenv('OPENAI_API_KEY')
+        self.mistral_api_key = os.getenv('MISTRAL_API_KEY')
         
         # Template stub detection patterns
         self.stub_markers = [
@@ -135,10 +139,21 @@ class RouterCascade:
         """Check if LLM endpoint is healthy"""
         if self._health_check_done:
             return True
+        
+        # If cloud is enabled and we have API keys, skip local health check
+        if self.cloud_enabled and self.openai_api_key:
+            logger.info("✅ Cloud API configured, skipping local health check")
+            self._health_check_done = True
+            return True
             
         try:
+            headers = {}
+            # Add auth headers for cloud endpoints
+            if "openai.com" in self.llm_endpoint and self.openai_api_key:
+                headers["Authorization"] = f"Bearer {self.openai_api_key}"
+            
             async with aiohttp.ClientSession() as session:
-                async with session.get(f"{self.llm_endpoint}/models", timeout=5) as response:
+                async with session.get(f"{self.llm_endpoint}/models", headers=headers, timeout=5) as response:
                     if response.status == 200:
                         logger.info("✅ LLM endpoint health check passed")
                         self._health_check_done = True
@@ -150,50 +165,135 @@ class RouterCascade:
             logger.warning(f"⚠️ LLM endpoint health check failed: {e}")
             return False
 
-    def _calculate_confidence(self, query: str, skill: str) -> float:
-        """Calculate routing confidence for a skill"""
-        skill_config = self.skills.get(skill)
-        if not skill_config or not skill_config.enabled:
-            return 0.0
+    def _calculate_math_confidence(self, query: str) -> float:
+        """Calculate confidence for math specialist routing"""
+        import re
         
-        confidence = 0.0
+        # Math patterns with high confidence scoring
+        high_confidence_patterns = [
+            r'\d+\s*[\+\-\*/\^%]\s*\d+',          # 2+2, 5*7, 3^2
+            r'\d+\.\d+\s*[\+\-\*/\^%]\s*\d+',     # 2.5*3, 1.2+4.8
+            r'\bsqrt\s*\(|\bsin\s*\(|\bcos\s*\(|\btan\s*\(',  # sqrt(16), sin(30)
+            r'\blog\s*\(|\bexp\s*\(|\babs\s*\(',  # log(10), exp(2), abs(-5)
+            r'\d+\s*\*\*\s*\d+',                  # 2**3 (power)
+            r'\d+\s*//\s*\d+',                   # 15//4 (floor division)
+            r'\d+\s*%\s*\d+',                    # 10%3 (modulo)
+        ]
+        
+        medium_confidence_patterns = [
+            r'\bcalculate\b|\bcompute\b|\bsolve\b',     # calculate, compute, solve
+            r'\bequation\b|\bformula\b|\bmathematics\b', # equation, formula
+            r'\bderivative\b|\bintegral\b|\blimit\b',    # calculus terms
+            r'\bfactorial\b|\bpermutation\b|\bcombination\b', # combinatorics
+            r'\bmatrix\b|\bvector\b|\bdeterminant\b',    # linear algebra
+            r'what\s+is\s+\d+.*[\+\-\*/\^].*\d+',      # "what is 2+2"
+            r'how\s+much\s+is\s+\d+.*[\+\-\*/\^].*\d+', # "how much is 5*7"
+        ]
+        
         query_lower = query.lower()
         
-        # Pattern matching
-        for pattern in skill_config.patterns:
+        # Check high confidence patterns first
+        for pattern in high_confidence_patterns:
+            if re.search(pattern, query):
+                return 0.95  # Very high confidence for clear math expressions
+        
+        # Check medium confidence patterns
+        for pattern in medium_confidence_patterns:
             if re.search(pattern, query_lower):
-                confidence += 0.3
+                return 0.85  # High confidence for math-related language
         
-        # Apply confidence boost
-        confidence += skill_config.confidence_boost
+        # Check for numbers in general
+        if re.search(r'\d+', query):
+            return 0.4   # Medium-low confidence if numbers are present
         
-        # Cap at 1.0
-        return min(confidence, 1.0)
+        return 0.1       # Very low confidence for non-math queries
+
+    def _calculate_confidence(self, query: str, skill: str) -> float:
+        """Calculate routing confidence for a skill"""
+        if skill == "math":
+            return self._calculate_math_confidence(query)
+        
+        # Enhanced confidence calculation for other skills
+        query_lower = query.lower()
+        
+        if skill == "code":
+            code_patterns = [
+                r'write.*code|write.*function|write.*script',
+                r'python|javascript|java|cpp|rust|go\s+code',
+                r'def |class |import |function|algorithm',
+                r'debug|fix.*code|code.*review',
+                r'run.*code|execute.*code'
+            ]
+            for pattern in code_patterns:
+                if re.search(pattern, query_lower):
+                    return 0.85
+            return 0.1
+        
+        elif skill == "logic":
+            logic_patterns = [
+                r'if.*then|logical|logic|reasoning',
+                r'true|false|and|or|not\s+',
+                r'proof|theorem|premise|conclusion'
+            ]
+            for pattern in logic_patterns:
+                if re.search(pattern, query_lower):
+                    return 0.75
+            return 0.1
+        
+        elif skill == "knowledge":
+            knowledge_patterns = [
+                r'what\s+is|who\s+is|where\s+is|when\s+is',
+                r'explain|describe|tell.*about',
+                r'definition|meaning|concept'
+            ]
+            for pattern in knowledge_patterns:
+                if re.search(pattern, query_lower):
+                    return 0.65
+            return 0.1
+        
+        # Default confidence for agent0/cloud fallback
+        return 0.3
 
     def _route_query(self, query: str) -> tuple[str, float]:
-        """Enhanced routing with sandbox execution detection"""
+        """Enhanced routing with specialist priority"""
+        # Define skills in priority order (specialists first, cloud last)
+        skills_priority = ["math", "code", "logic", "knowledge", "agent0"]
+        
         confidences = {}
+        for skill in skills_priority:
+            confidences[skill] = self._calculate_confidence(query, skill)
         
-        for skill_name in self.skills:
-            confidences[skill_name] = self._calculate_confidence(query, skill_name)
+        # Log all confidence scores for debugging
+        logger.info(f"🎯 Confidence scores: {confidences}")
         
-        # Find highest confidence skill
-        best_skill = max(confidences, key=confidences.get)
-        best_confidence = confidences[best_skill]
+        # Find the skill with highest confidence that meets threshold
+        for skill in skills_priority:
+            confidence = confidences[skill]
+            
+            # Set different thresholds for different skills
+            if skill == "math" and confidence >= 0.8:
+                return skill, confidence
+            elif skill == "code" and confidence >= 0.7:
+                return skill, confidence
+            elif skill == "logic" and confidence >= 0.6:
+                return skill, confidence
+            elif skill == "knowledge" and confidence >= 0.5:
+                return skill, confidence
         
-        # If no skill has good confidence, use agent-0 (LLM backend)
-        if best_confidence < 0.3:
-            return 'agent0', 0.5
-        
-        # Check for code execution requests
+        # Check for code execution requests (sandbox)
         if self.sandbox_enabled and SANDBOX_AVAILABLE:
             code_indicators = ["run", "execute", "python", "code", "script", "calculate", "compute"]
             if any(indicator in query.lower() for indicator in code_indicators):
                 # Look for actual code blocks or expressions
                 if any(char in query for char in ["print(", "import ", "def ", "=", "+"]):
-                    return "exec_safe", EXEC_CONFIDENCE_THRESHOLD
+                    return "exec_safe", 0.8
         
-        return best_skill, best_confidence
+        # Only fall back to agent0 if no specialist is confident
+        if confidences["agent0"] >= 0.3:
+            return "agent0", confidences["agent0"]
+        
+        # Emergency fallback
+        return "agent0", 0.3
 
     async def _call_math_skill(self, query: str) -> Dict[str, Any]:
         """Lightning Math skill using SymPy"""
@@ -330,62 +430,76 @@ class RouterCascade:
             raise CloudRetry(f"Knowledge skill failed: {e}")
 
     async def _call_agent0_llm(self, query: str) -> Dict[str, Any]:
-        """Agent-0 LLM backend for general reasoning"""
-        # Check if LLM endpoint is available
-        llm_healthy = await self._health_check_llm()
+        """Agent-0 LLM backend using new hybrid provider system"""
+        # Use new hybrid router with automatic provider fallback
+        if self.cloud_enabled:
+            try:
+                from router.hybrid import call_llm
+                
+                result = await call_llm(query, 
+                                      max_tokens=150, 
+                                      temperature=0.7)
+                
+                # Convert to expected format
+                return {
+                    "text": result["text"],
+                    "model": result["model"],
+                    "skill_type": "agent0",
+                    "confidence": result.get("confidence", 0.9),
+                    "timestamp": result.get("timestamp", time.time()),
+                    "provider": result.get("provider", "unknown"),
+                    "latency_ms": result.get("latency_ms", 0)
+                }
+                
+            except Exception as e:
+                logger.error(f"❌ Hybrid provider system failed: {e}")
+                # Fall through to mock response
         
-        if not llm_healthy:
-            logger.warning("🔄 LLM endpoint unavailable, using mock response")
-            return {
-                "text": f"[LLM_ENDPOINT_UNAVAILABLE] Mock response for: {query[:50]}...",
-                "model": "mock-agent0",
-                "skill_type": "agent0",
-                "confidence": 0.3,
-                "timestamp": time.time()
-            }
-        
-        try:
-            # Make request to LLM endpoint
-            payload = {
-                "model": self.model_name,
-                "messages": [
-                    {"role": "user", "content": query}
-                ],
-                "max_tokens": 150,
-                "temperature": 0.7
-            }
-            
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    f"{self.llm_endpoint}/chat/completions",
-                    json=payload,
-                    timeout=30
-                ) as response:
-                    if response.status == 200:
-                        result = await response.json()
-                        text = result['choices'][0]['message']['content']
-                        
-                        return {
-                            "text": text,
-                            "model": f"agent0-{self.model_name}",
-                            "skill_type": "agent0",
-                            "confidence": 0.8,
-                            "timestamp": time.time()
-                        }
-                    else:
-                        error_text = await response.text()
-                        logger.error(f"LLM endpoint error {response.status}: {error_text}")
-                        raise CloudRetry(f"LLM endpoint error: {response.status}")
-                        
-        except asyncio.TimeoutError:
-            logger.error("LLM endpoint timeout")
-            raise CloudRetry("LLM endpoint timeout")
-        except Exception as e:
-            logger.error(f"Agent-0 LLM error: {e}")
-            raise CloudRetry(f"Agent-0 LLM failed: {e}")
+        # Fallback to mock response if cloud disabled or all providers failed
+        logger.warning("🔄 Using mock response - configure cloud providers for real AI")
+        return {
+            "text": f"This is a mock response to: {query[:50]}... Please configure cloud providers for real AI responses.",
+            "model": "mock-agent0",
+            "skill_type": "agent0",
+            "confidence": 0.3,
+            "timestamp": time.time()
+        }
 
-    async def route_query(self, query: str, **kwargs) -> Dict[str, Any]:
-        """Enhanced query routing with sandbox execution"""
+    async def route_query(self, query: str, force_skill: str = None) -> Dict[str, Any]:
+        """
+        Enhanced route query with forced skill routing option
+        
+        Args:
+            query: User query
+            force_skill: Force routing to specific skill (bypasses confidence checks)
+        """
+        if force_skill:
+            logger.info(f"🎯 Forced routing to {force_skill}")
+            return await self._route_to_skill(force_skill, query)
+        
+        # Original routing logic
+        return await self._route_query_original(query)
+    
+    async def _route_to_skill(self, skill: str, query: str) -> Dict[str, Any]:
+        """Route directly to specified skill"""
+        try:
+            if skill == "math":
+                return await self._call_math_specialist(query)
+            elif skill == "code":
+                return await self._call_code_specialist(query) 
+            elif skill == "logic":
+                return await self._call_logic_specialist(query)
+            elif skill == "knowledge":
+                return await self._call_knowledge_specialist(query)
+            elif skill == "agent0":
+                return await self._call_agent0_llm(query)
+            else:
+                raise ValueError(f"Unknown skill: {skill}")
+        except Exception as e:
+            logger.error(f"❌ Direct skill routing failed for {skill}: {e}")
+            raise
+    
+    async def _route_query_original(self, query: str) -> Dict[str, Any]:
         start_time = time.time()
         
         try:
@@ -428,7 +542,8 @@ class RouterCascade:
             elif skill == 'agent0':
                 result = await self._call_agent0_llm(query)
             else:
-                raise CloudRetry(f"Unknown skill: {skill}")
+                logger.warning(f"⚠️ Unknown skill: {skill}, falling back to agent0")
+                result = await self._call_agent0_llm(query)
             
             # Add routing metadata
             result['routing_skill'] = skill
@@ -445,7 +560,7 @@ class RouterCascade:
             if "sandbox" in str(e).lower() or "firejail" in str(e).lower():
                 logger.warning(f"🚨 Sandbox execution failed: {e}")
                 # Fallback to regular routing
-                return await self._route_to_fallback(query, **kwargs)
+                return await self._route_to_fallback(query)
             else:
                 raise
         except Exception as e:
@@ -480,11 +595,27 @@ class RouterCascade:
         # Default simple math expression
         return f"print({query})"
 
-    async def _route_to_fallback(self, query: str, **kwargs) -> Dict[str, Any]:
+    async def _route_to_fallback(self, query: str) -> Dict[str, Any]:
         """Fallback routing when sandbox fails"""
         # Route to existing skills as fallback
         skill, confidence = self._route_query(query.replace("run", "").replace("execute", ""))
         # ... existing routing logic ...
+
+    async def _call_math_specialist(self, query: str) -> Dict[str, Any]:
+        """Alias for math specialist"""
+        return await self._call_math_skill(query)
+    
+    async def _call_code_specialist(self, query: str) -> Dict[str, Any]:
+        """Alias for code specialist"""
+        return await self._call_code_skill(query)
+    
+    async def _call_logic_specialist(self, query: str) -> Dict[str, Any]:
+        """Alias for logic specialist"""
+        return await self._call_logic_skill(query)
+    
+    async def _call_knowledge_specialist(self, query: str) -> Dict[str, Any]:
+        """Alias for knowledge specialist"""
+        return await self._call_knowledge_skill(query)
 
 # Factory function for easy instantiation
 def create_autogen_council(config: Optional[Dict[str, Any]] = None):

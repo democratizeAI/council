@@ -5,11 +5,11 @@ function render() {
   m.innerHTML = `
   <div class="bg-gradient-to-br from-blue-50 to-indigo-100 h-full flex flex-col">
     <div class="bg-white shadow-lg border-b border-gray-200 p-4">
-      <h1 class="text-2xl font-bold text-gray-800">🚀 AutoGen Council v2.7.0</h1>
-      <p class="text-gray-600">Memory-Powered Desktop OS Assistant with Secure Sandbox Execution</p>
+      <h1 class="text-2xl font-bold text-gray-800">🗳️ AutoGen Council v2.7.0</h1>
+      <p class="text-gray-600">Memory-Powered 5-Head Council with Secure Sandbox Execution</p>
       <div class="mt-2 flex space-x-4 text-sm">
-        <span class="px-2 py-1 bg-green-100 text-green-700 rounded">✅ Memory: 7ms avg</span>
-        <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded">🧮 Math: 1.5ms avg</span>
+        <span class="px-2 py-1 bg-green-100 text-green-700 rounded">🧠 Memory: 7ms avg</span>
+        <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded">🗳️ Council: 5 heads</span>
         <span class="px-2 py-1 bg-purple-100 text-purple-700 rounded">🛡️ Sandbox: 45ms avg</span>
         <span class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded">📊 Success: 87.5%</span>
       </div>
@@ -106,7 +106,7 @@ async function sendMessage() {
   
   try {
     const t0 = performance.now();
-    const res = await fetch('/hybrid', {
+    const res = await fetch('/vote', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({prompt: text})
@@ -123,7 +123,7 @@ async function sendMessage() {
       q: text, 
       a: data.text || 'No response received',
       ms: Math.round(data.latency_ms || latency),
-      skill: data.skill_type || 'unknown',
+      skill: data.model_used || 'council',
       confidence: data.confidence || 0.5,
       timestamp: data.timestamp || Date.now() / 1000
     });
@@ -156,3 +156,51 @@ function askExample(question) {
 
 // Initial render
 render();
+
+// Add model loading display on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Update page title and status with loaded models
+    fetch('/models')
+        .then(r => r.json())
+        .then(m => {
+            const modelCount = m.count || 0;
+            const providers = m.providers || [];
+            const priority = m.priority || [];
+            
+            // Update page title
+            document.title = `AutoGen Council (${modelCount} models)`;
+            
+            // Update header with provider info
+            const headerStats = document.querySelector('.performance-stats');
+            if (headerStats) {
+                const providerInfo = document.createElement('div');
+                providerInfo.className = 'provider-info';
+                providerInfo.innerHTML = `
+                    🤖 ${modelCount} models | 
+                    🔗 ${providers.join(' → ')} | 
+                    🎯 Priority: ${priority.join(' → ')}
+                `;
+                providerInfo.style.cssText = `
+                    color: #64748b;
+                    font-size: 12px;
+                    margin-top: 5px;
+                    font-family: 'JetBrains Mono', monospace;
+                `;
+                headerStats.appendChild(providerInfo);
+            }
+            
+            // Log provider details for debugging
+            console.log('🔧 AutoGen Council Provider Status:', {
+                models: modelCount,
+                providers: providers,
+                priority: priority,
+                backend: m.backend || 'unknown'
+            });
+        })
+        .catch(e => {
+            console.warn('⚠️ Could not load model information:', e);
+            document.title = 'AutoGen Council (loading...)';
+        });
+    
+    // ... rest of existing DOMContentLoaded code ...
+});

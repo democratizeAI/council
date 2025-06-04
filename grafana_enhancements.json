@@ -89,5 +89,230 @@
       "titleFormat": "Fragmentation Risk Zone",
       "textFormat": "QPS exceeded 65 - monitor for memory fragmentation"
     }
-  ]
+  ],
+  "dashboard": {
+    "id": null,
+    "title": "SwarmAI Day-2 Operations Dashboard",
+    "tags": ["swarm", "day2", "operations"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "VRAM Usage %",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "swarm_gpu_memory_used_bytes / swarm_gpu_memory_total_bytes * 100",
+            "legendFormat": "VRAM %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 70},
+                {"color": "red", "value": 90}
+              ]
+            },
+            "unit": "percent"
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Router P95 Latency",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(swarm_router_request_duration_seconds_bucket[5m])) * 1000",
+            "legendFormat": "P95 Latency (ms)"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 200},
+                {"color": "red", "value": 500}
+              ]
+            },
+            "unit": "ms"
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "CUDA Fragmentation Events",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "increase(swarm_cuda_fragmentation_events_total[1h])",
+            "legendFormat": "Frag Events/hr"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 1},
+                {"color": "red", "value": 5}
+              ]
+            },
+            "unit": "short"
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 0}
+      },
+      {
+        "id": 4,
+        "title": "Daily Cloud Cost",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "swarm_cloud_cost_daily_usd",
+            "legendFormat": "Cost/Day ($)"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 8},
+                {"color": "red", "value": 10}
+              ]
+            },
+            "unit": "currencyUSD"
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 18, "y": 0}
+      },
+      {
+        "id": 5,
+        "title": "VRAM Usage Over Time",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "swarm_gpu_memory_used_bytes / swarm_gpu_memory_total_bytes * 100",
+            "legendFormat": "VRAM %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "unit": "percent"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+      },
+      {
+        "id": 6,
+        "title": "Request Latency Distribution",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(swarm_router_request_duration_seconds_bucket[5m])) * 1000",
+            "legendFormat": "P50"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(swarm_router_request_duration_seconds_bucket[5m])) * 1000",
+            "legendFormat": "P95"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(swarm_router_request_duration_seconds_bucket[5m])) * 1000",
+            "legendFormat": "P99"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "unit": "ms"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+      },
+      {
+        "id": 7,
+        "title": "LoRA Training Status",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "swarm_lora_training_active",
+            "legendFormat": "Active Training Jobs"
+          },
+          {
+            "expr": "rate(swarm_lora_training_completions_total[5m]) * 300",
+            "legendFormat": "Completions/5min"
+          },
+          {
+            "expr": "rate(swarm_lora_training_failures_total[5m]) * 300",
+            "legendFormat": "Failures/5min"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "unit": "short"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+      },
+      {
+        "id": 8,
+        "title": "System Health Overview",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "up{job=\"swarm-api\"}",
+            "legendFormat": "API Server"
+          },
+          {
+            "expr": "up{job=\"trainer\"}",
+            "legendFormat": "Trainer"
+          },
+          {
+            "expr": "up{job=\"scheduler\"}",
+            "legendFormat": "Scheduler"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "unit": "short"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+      }
+    ],
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "refresh": "30s"
+  }
 } 

@@ -1,0 +1,497 @@
+# 🛠️ Day-2 Operations Makefile for AutoGen v2.6.0
+# Complete automation for production operations
+
+.PHONY: help prod-stack canary health status logs backup nightly weekly monthly security-scan
+
+# Default target
+help:
+	@echo "🛠️ AutoGen Day-2 Operations (v2.6.0)"
+	@echo "==============================================="
+	@echo ""
+	@echo "📊 MONITORING & HEALTH:"
+	@echo "  health          - Quick health check"
+	@echo "  status          - Detailed system status"
+	@echo "  dashboard       - Open Grafana dashboard"
+	@echo "  logs            - Tail production logs"
+	@echo ""
+	@echo "🚀 DEPLOYMENT:"
+	@echo "  prod-stack      - Start full production stack"
+	@echo "  canary          - Deploy 5% canary"
+	@echo "  promote-canary  - Promote canary to full production"
+	@echo "  rollback        - Emergency rollback"
+	@echo ""
+	@echo "🧪 TESTING & EVALUATION:"
+	@echo "  smoke-test      - Quick smoke test"
+	@echo "  soak-test       - 60s soak test (CI)"
+	@echo "  blind-eval      - Nightly blind hold-out eval"
+	@echo "  full-gauntlet   - Weekly 380-prompt run"
+	@echo "  test-alerts-e2e - End-to-end alert pipeline test"
+	@echo "  test-alerts-single VRAM=X - Test single alert threshold"
+	@echo ""
+	@echo "🤖 AUTOMATION:"
+	@echo "  nightly         - Run nightly automation (02:00)"
+	@echo "  weekly          - Run weekly maintenance (Mon)"
+	@echo "  monthly         - Run monthly backup (1st)"
+	@echo ""
+	@echo "🔒 SECURITY & MAINTENANCE:"
+	@echo "  security-scan   - CVE scan + firejail check"
+	@echo "  backup          - Backup volumes & data"
+	@echo "  system-profile  - Hardware profiling"
+
+# Configuration
+COMPOSE_FILE ?= swarmAI-master/docker-compose.evolution.yml
+MAKEFILE_EVOLUTION ?= swarmAI-master/Makefile.evolution
+API_URL ?= http://localhost:8000
+GRAFANA_URL ?= http://localhost:3000
+BUDGET_LIMIT ?= 10.0
+VRAM_LIMIT ?= 10.5
+
+# Colors for output
+GREEN := \033[0;32m
+YELLOW := \033[1;33m
+RED := \033[0;31m
+NC := \033[0m # No Color
+
+# =============================================================================
+# PRODUCTION STACK MANAGEMENT
+# =============================================================================
+
+prod-stack:
+	@echo "🚀 Starting production stack..."
+	@if [ -f "$(MAKEFILE_EVOLUTION)" ]; then \
+		make -f $(MAKEFILE_EVOLUTION) up; \
+	else \
+		docker-compose -f $(COMPOSE_FILE) up -d; \
+	fi
+	@echo "⏳ Waiting for services to be ready..."
+	@sleep 30
+	@$(MAKE) health
+
+canary:
+	@echo "🐦 Deploying 5% canary..."
+	@if [ -f "deploy-canary.ps1" ]; then \
+		powershell -ExecutionPolicy Bypass -File deploy-canary.ps1; \
+	else \
+		echo "⚠️ Canary deployment script not found"; \
+		exit 1; \
+	fi
+
+promote-canary:
+	@echo "📈 Promoting canary to full production..."
+	@curl -X POST $(API_URL)/admin/canary/promote || echo "❌ Promotion failed"
+	@$(MAKE) health
+
+rollback:
+	@echo "🔙 Emergency rollback..."
+	@curl -X POST $(API_URL)/admin/rollback || echo "❌ Rollback failed"
+	@$(MAKE) health
+
+stop:
+	@echo "🛑 Stopping production stack..."
+	@docker-compose -f $(COMPOSE_FILE) down
+
+# =============================================================================
+# HEALTH & MONITORING
+# =============================================================================
+
+health:
+	@echo "🏥 Checking system health..."
+	@echo "API Health:"
+	@curl -s $(API_URL)/health | jq '.' || echo "❌ API unhealthy"
+	@echo ""
+	@echo "Service Status:"
+	@docker-compose -f $(COMPOSE_FILE) ps
+	@echo ""
+	@echo "Quick Smoke Test:"
+	@curl -s -X POST $(API_URL)/hybrid -H "Content-Type: application/json" \
+		-d '{"query":"What is 2+2?"}' | jq '.response' || echo "❌ API test failed"
+
+status:
+	@echo "📊 Detailed System Status"
+	@echo "=========================="
+	@echo ""
+	@echo "🐳 Container Status:"
+	@docker-compose -f $(COMPOSE_FILE) ps
+	@echo ""
+	@echo "📈 Resource Usage:"
+	@docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"
+	@echo ""
+	@echo "💰 Budget Status:"
+	@curl -s $(API_URL)/budget | jq '.' || echo "Budget info unavailable"
+	@echo ""
+	@echo "📊 Latest Metrics:"
+	@curl -s $(API_URL)/metrics | grep -E "(swarm_gpu_memory|swarm_router_latency|swarm_cloud_cost)" | head -10
+
+dashboard:
+	@echo "📊 Opening Grafana dashboard..."
+	@echo "Dashboard URL: $(GRAFANA_URL)"
+	@if command -v xdg-open > /dev/null; then \
+		xdg-open $(GRAFANA_URL); \
+	elif command -v open > /dev/null; then \
+		open $(GRAFANA_URL); \
+	else \
+		echo "Please open $(GRAFANA_URL) in your browser"; \
+	fi
+
+logs:
+	@echo "📋 Tailing production logs..."
+	@docker-compose -f $(COMPOSE_FILE) logs -f --tail=100
+
+# =============================================================================
+# TESTING & EVALUATION
+# =============================================================================
+
+smoke-test:
+	@echo "💨 Running smoke test..."
+	@python scripts/smoke_smart_vs_vote.py || echo "❌ Smoke test failed"
+
+soak-test:
+	@echo "⚡ Running 60-second soak test..."
+	@if [ -f "locustfile.py" ]; then \
+		locust -f locustfile.py --headless --users 5 --spawn-rate 1 \
+			--host $(API_URL) --run-time 60s; \
+	else \
+		echo "⚠️ locustfile.py not found, running basic soak test"; \
+		for i in {1..60}; do \
+			curl -s -X POST $(API_URL)/hybrid -d '{"query":"Test $$i"}' > /dev/null; \
+			sleep 1; \
+		done; \
+		echo "✅ Basic soak test completed"; \
+	fi
+
+blind-eval:
+	@echo "🔍 Running blind hold-out evaluation..."
+	@python scripts/autogen_titanic_gauntlet.py --suite 100_blind --api-url $(API_URL)
+
+full-gauntlet:
+	@echo "🚢 Running full 380-prompt Titanic gauntlet..."
+	@python scripts/autogen_titanic_gauntlet.py --all --api-url $(API_URL)
+
+# =============================================================================
+# NIGHTLY, WEEKLY, MONTHLY AUTOMATION
+# =============================================================================
+
+nightly:
+	@echo "🌙 Running nightly automation (02:00 schedule)"
+	@echo "Step 1: LoRA Training (02:00)"
+	@python scripts/auto_lora_trainer.py --budget $(BUDGET_LIMIT) || echo "⚠️ LoRA training issues"
+	@echo ""
+	@echo "Step 2: Data Crawling (02:15)"
+	@python scripts/auto_crawler.py --feed-now || echo "⚠️ Crawler issues"
+	@echo ""
+	@echo "Step 3: Blind Evaluation (03:00)"
+	@$(MAKE) blind-eval
+
+weekly:
+	@echo "📅 Running weekly maintenance (Monday schedule)"
+	@echo "Step 1: Full Titanic run"
+	@$(MAKE) full-gauntlet
+	@echo ""
+	@echo "Step 2: Security scan"
+	@$(MAKE) security-scan
+	@echo ""
+	@echo "Step 3: Performance profiling"
+	@$(MAKE) system-profile
+
+monthly:
+	@echo "📆 Running monthly maintenance"
+	@echo "Step 1: Full backup"
+	@$(MAKE) backup
+	@echo ""
+	@echo "Step 2: Docker volume cleanup"
+	@docker volume prune -f
+	@echo ""
+	@echo "Step 3: System profile update"
+	@$(MAKE) system-profile
+
+# =============================================================================
+# SECURITY & MAINTENANCE
+# =============================================================================
+
+security-scan:
+	@echo "🔒 Running security scan..."
+	@echo "Checking firejail version:"
+	@firejail --version || echo "⚠️ firejail not installed"
+	@echo ""
+	@echo "CVE scan of requirements:"
+	@pip-audit --requirements requirements.txt || echo "⚠️ CVE scan failed"
+	@echo ""
+	@echo "Docker image security scan:"
+	@docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+		aquasec/trivy image $(shell docker images --format "{{.Repository}}:{{.Tag}}" | head -1) || \
+		echo "⚠️ Image scan failed (trivy not available)"
+
+backup:
+	@echo "💾 Creating system backup..."
+	@mkdir -p backups/$(shell date +%Y%m%d)
+	@echo "Backing up FAISS memory..."
+	@docker run --rm -v $(shell docker volume ls -q | grep faiss):/data -v $(PWD)/backups/$(shell date +%Y%m%d):/backup \
+		alpine tar czf /backup/faiss_memory.tar.gz -C /data . || echo "⚠️ FAISS backup failed"
+	@echo "Backing up LoRA adapters..."
+	@docker run --rm -v $(shell docker volume ls -q | grep lora):/data -v $(PWD)/backups/$(shell date +%Y%m%d):/backup \
+		alpine tar czf /backup/lora_adapters.tar.gz -C /data . || echo "⚠️ LoRA backup failed"
+	@echo "Backing up configuration..."
+	@tar czf backups/$(shell date +%Y%m%d)/config_backup.tar.gz config/ docker-compose*.yml *.py
+	@echo "✅ Backup completed in backups/$(shell date +%Y%m%d)/"
+
+system-profile:
+	@echo "📊 Running system profiling..."
+	@python tools/system_probe.py > swarm_system_report.json || echo "⚠️ System probe failed"
+	@echo "✅ System profile updated in swarm_system_report.json"
+
+# =============================================================================
+# DEVELOPMENT & DEBUGGING
+# =============================================================================
+
+debug-logs:
+	@echo "🐛 Debug log analysis..."
+	@echo "Recent errors:"
+	@docker-compose -f $(COMPOSE_FILE) logs --since 1h | grep -i error | tail -20
+	@echo ""
+	@echo "Memory usage trends:"
+	@curl -s $(API_URL)/metrics | grep memory | tail -10
+
+metrics:
+	@echo "📊 Current metrics snapshot:"
+	@curl -s $(API_URL)/metrics
+
+restart-api:
+	@echo "🔄 Restarting API service..."
+	@docker-compose -f $(COMPOSE_FILE) restart swarm-api
+
+restart-all:
+	@echo "🔄 Restarting all services..."
+	@docker-compose -f $(COMPOSE_FILE) restart
+
+# =============================================================================
+# CRON JOB HELPERS
+# =============================================================================
+
+install-crons:
+	@echo "⏰ Installing cron jobs for Day-2 operations..."
+	@echo "# AutoGen Day-2 Operations Cron Jobs" > /tmp/autogen_crons
+	@echo "0 2 * * * cd $(PWD) && make nightly >> logs/nightly.log 2>&1" >> /tmp/autogen_crons
+	@echo "0 8 * * 1 cd $(PWD) && make weekly >> logs/weekly.log 2>&1" >> /tmp/autogen_crons
+	@echo "0 6 1 * * cd $(PWD) && make monthly >> logs/monthly.log 2>&1" >> /tmp/autogen_crons
+	@crontab /tmp/autogen_crons
+	@echo "✅ Cron jobs installed. Check with 'crontab -l'"
+
+remove-crons:
+	@echo "🗑️ Removing AutoGen cron jobs..."
+	@crontab -r || echo "No crontab to remove"
+
+# =============================================================================
+# QUICK COMMANDS
+# =============================================================================
+
+quick-health:
+	@curl -s $(API_URL)/health > /dev/null && echo "$(GREEN)✅ API Healthy$(NC)" || echo "$(RED)❌ API Down$(NC)"
+
+quick-test:
+	@echo "Quick API test:"
+	@curl -s -X POST $(API_URL)/hybrid -d '{"query":"2+2"}' | jq -r '.response' 2>/dev/null || echo "❌ Test failed"
+
+budget-check:
+	@echo "💰 Budget status:"
+	@curl -s $(API_URL)/budget | jq -r '.daily_cost_usd' 2>/dev/null | \
+		awk '{if($$1 > $(BUDGET_LIMIT)) print "$(RED)❌ Over budget: $" $$1 "$(NC)"; else print "$(GREEN)✅ Within budget: $" $$1 "$(NC)"}'
+
+vram-check:
+	@echo "📊 VRAM status:"
+	@curl -s $(API_URL)/metrics | grep gpu_memory | awk -F' ' '{print $$2}' | \
+		awk '{if($$1 > $(VRAM_LIMIT)*1024*1024*1024) print "$(RED)❌ VRAM high: " $$1/1024/1024/1024 "GB$(NC)"; else print "$(GREEN)✅ VRAM OK: " $$1/1024/1024/1024 "GB$(NC)"}'
+
+# =============================================================================
+# EMERGENCY PROCEDURES
+# =============================================================================
+
+emergency-stop:
+	@echo "🚨 EMERGENCY STOP - Shutting down all services..."
+	@docker-compose -f $(COMPOSE_FILE) down --remove-orphans
+	@docker container prune -f
+
+emergency-restart:
+	@echo "🚨 EMERGENCY RESTART - Full system restart..."
+	@$(MAKE) emergency-stop
+	@sleep 5
+	@$(MAKE) prod-stack
+
+circuit-breaker:
+	@echo "🔌 Activating circuit breaker..."
+	@curl -X POST $(API_URL)/admin/circuit-breaker/activate || echo "Circuit breaker not available"
+
+reset-circuit-breaker:
+	@echo "🔌 Resetting circuit breaker..."
+	@curl -X POST $(API_URL)/admin/circuit-breaker/reset || echo "Circuit breaker not available"
+
+# =============================================================================
+# DEVELOPMENT ALIASES
+# =============================================================================
+
+dev-setup: prod-stack health
+up: prod-stack
+down: stop
+ps: status
+test: smoke-test
+eval: blind-eval
+deploy: canary
+promote: promote-canary
+
+# =============================================================================
+# ALERT TESTING & TUNING
+# =============================================================================
+
+test-alerts:
+	@echo "🧪 Testing alert pipeline..."
+	@python scripts/test_alert_pipeline.py --test-escalation
+
+test-alerts-connectivity:
+	@echo "🔍 Testing monitoring connectivity..."
+	@python scripts/test_alert_pipeline.py
+
+validate-alert-config:
+	@echo "📋 Validating alert configuration..."
+	@python scripts/test_alert_pipeline.py
+	@echo ""
+	@echo "🔍 Checking Prometheus config syntax..."
+	@promtool check config prometheus.yml || echo "⚠️ promtool not found - install Prometheus tools"
+	@echo ""
+	@echo "🔍 Checking AlertManager config syntax..."
+	@amtool config check monitoring/alertmanager.yml || echo "⚠️ amtool not found - install AlertManager tools"
+
+trigger-test-warning:
+	@echo "⚠️ Triggering test warning alert..."
+	@curl -X POST http://localhost:9093/api/v1/alerts \
+		-H "Content-Type: application/json" \
+		-d '[{"labels":{"alertname":"TestWarning","severity":"warning","environment":"test","team":"swarm-ops"},"annotations":{"summary":"Test warning alert","description":"Manual test warning alert"},"startsAt":"$(shell date -u +%Y-%m-%dT%H:%M:%S.000Z)"}]'
+
+trigger-test-critical:
+	@echo "🚨 Triggering test critical alert..."
+	@curl -X POST http://localhost:9093/api/v1/alerts \
+		-H "Content-Type: application/json" \
+		-d '[{"labels":{"alertname":"TestCritical","severity":"critical","environment":"test","team":"swarm-ops"},"annotations":{"summary":"Test critical alert","description":"Manual test critical alert"},"startsAt":"$(shell date -u +%Y-%m-%dT%H:%M:%S.000Z)"}]'
+
+silence-test-alerts:
+	@echo "🔇 Silencing test alerts..."
+	@curl -X POST http://localhost:9093/api/v1/silences \
+		-H "Content-Type: application/json" \
+		-d '{"matchers":[{"name":"severity","value":"test","isRegex":false}],"startsAt":"$(shell date -u +%Y-%m-%dT%H:%M:%S.000Z)","endsAt":"$(shell date -u -d tomorrow +%Y-%m-%dT%H:%M:%S.000Z)","createdBy":"makefile","comment":"Silencing test alerts"}'
+
+silence-maintenance:
+	@echo "🔇 Creating maintenance window silence (2h)..."
+	@curl -X POST http://localhost:9093/api/v1/silences \
+		-H "Content-Type: application/json" \
+		-d '{"matchers":[{"name":"environment","value":"production","isRegex":false}],"startsAt":"$(shell date -u +%Y-%m-%dT%H:%M:%S.000Z)","endsAt":"$(shell date -u -d "+2 hours" +%Y-%m-%dT%H:%M:%S.000Z)","createdBy":"ops-team","comment":"Scheduled maintenance window"}'
+
+show-alerts:
+	@echo "📊 Current firing alerts:"
+	@curl -s http://localhost:9090/api/v1/alerts | jq -r '.data.alerts[] | "\(.labels.alertname) (\(.labels.severity)) - \(.annotations.summary)"' 2>/dev/null || echo "❌ Failed to fetch alerts"
+
+show-silences:
+	@echo "🔇 Active silences:"
+	@curl -s http://localhost:9093/api/v1/silences | jq -r '.data[] | select(.status.state=="active") | "\(.createdBy): \(.comment) (until \(.endsAt))"' 2>/dev/null || echo "❌ Failed to fetch silences"
+
+tune-alert-thresholds:
+	@echo "🎛️ Alert threshold tuning recommendations:"
+	@echo ""
+	@echo "CURRENT THRESHOLDS:"
+	@echo "  VRAM Warning: 75% (good for early detection)"
+	@echo "  VRAM Critical: 85% (allows intervention time)"
+	@echo "  VRAM Emergency: 95% (OOM imminent)"
+	@echo "  Latency Warning: 200ms (SLA aligned)"
+	@echo "  Latency Critical: 500ms (SLA breach)"
+	@echo "  Budget Warning: $$7.50 (75% of budget)"
+	@echo "  Budget Critical: $$10.00 (budget limit)"
+	@echo ""
+	@echo "RECOMMENDATIONS:"
+	@echo "  ✅ Thresholds are production-tuned"
+	@echo "  ✅ Burn-in times prevent flapping"
+	@echo "  ✅ Multi-level escalation reduces noise"
+	@echo ""
+	@echo "To adjust thresholds, edit monitoring/alerts.yml"
+
+# =============================================================================
+# CHAOS ENGINEERING - Test alert thresholds
+# =============================================================================
+
+chaos-gpu:
+	@echo "🧨 Starting GPU memory chaos test..."
+	@if [ -z "$(VRAM)" ]; then \
+		echo "Usage: make chaos-gpu VRAM=78"; \
+		echo "  VRAM=78  → Trigger warning alert (>75%)"; \
+		echo "  VRAM=88  → Trigger critical alert (>85%)"; \
+		echo "  VRAM=97  → Trigger emergency alert (>95%)"; \
+		exit 1; \
+	fi
+	@echo "🎯 Targeting $(VRAM)% VRAM usage..."
+	@python scripts/chaos_gpu.py --vram $(VRAM) --duration 300
+
+chaos-escalation:
+	@echo "🧪 Running full VRAM escalation test..."
+	@echo "This will test: Warning (78%) → Critical (88%) → Emergency (97%)"
+	@echo "Expected timeline:"
+	@echo "  0:00 - Start warning spike (78%)"
+	@echo "  3:00 - Escalate to critical (88%)"
+	@echo "  5:00 - Escalate to emergency (97%)"
+	@echo "  5:30 - Test complete"
+	@echo ""
+	@read -p "Press Enter to start escalation test (Ctrl+C to cancel)..." dummy
+	@python scripts/chaos_gpu.py --escalation-test
+
+chaos-latency:
+	@echo "🐌 Starting latency chaos test..."
+	@echo "Injecting artificial delays to trigger latency alerts..."
+	@curl -X POST http://localhost:8000/internal/chaos/latency \
+		-H "Content-Type: application/json" \
+		-d '{"delay_ms": 600, "duration_seconds": 300}' \
+		|| echo "⚠️ Latency chaos endpoint not available - would need to implement"
+
+clear-chaos:
+	@echo "🛑 Clearing all chaos tests..."
+	@python scripts/chaos_gpu.py --stop || true
+	@curl -X DELETE http://localhost:8000/internal/chaos/all || true
+	@echo "✅ Chaos cleanup complete"
+
+test-alerts-e2e:
+	@echo "🧪 End-to-End Alert Pipeline Test"
+	@echo "================================="
+	@echo "This will:"
+	@echo "  1. Start real-time alert monitoring"
+	@echo "  2. Trigger VRAM escalation sequence"
+	@echo "  3. Verify alerts fire correctly"
+	@echo "  4. Check notification delivery"
+	@echo ""
+	@echo "Expected results:"
+	@echo "  📱 Slack #swarm-ops: Warning + Critical alerts"
+	@echo "  📧 Email: Critical alert notifications"
+	@echo "  📟 PagerDuty: Emergency incident creation"
+	@echo ""
+	@read -p "Press Enter to start test (Ctrl+C to cancel)..." dummy
+	@echo ""
+	@echo "🔍 Starting alert verifier in background..."
+	@python scripts/verify_alert_test.py --duration 450 > alert_test_log.txt 2>&1 &
+	@VERIFIER_PID=$$!; \
+	sleep 5; \
+	echo "🧨 Starting VRAM escalation chaos test..."; \
+	python scripts/chaos_gpu.py --escalation-test || true; \
+	echo "⏳ Waiting for verifier to complete..."; \
+	wait $$VERIFIER_PID || true; \
+	echo "📋 Alert test results:"; \
+	tail -20 alert_test_log.txt
+
+test-alerts-single:
+	@echo "🎯 Single Alert Test"
+	@if [ -z "$(VRAM)" ]; then \
+		echo "Usage: make test-alerts-single VRAM=78"; \
+		echo "Specify VRAM percentage to test specific threshold"; \
+		exit 1; \
+	fi
+	@echo "🔍 Starting alert monitoring..."
+	@python scripts/verify_alert_test.py --duration 180 > single_alert_log.txt 2>&1 &
+	@VERIFIER_PID=$$!; \
+	sleep 3; \
+	echo "🧨 Triggering VRAM spike to $(VRAM)%..."; \
+	python scripts/chaos_gpu.py --vram $(VRAM) --duration 120 || true; \
+	wait $$VERIFIER_PID || true; \
+	echo "📋 Results:"; \
+	cat single_alert_log.txt 

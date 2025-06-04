@@ -6,15 +6,19 @@ services:
     build: .
     container_name: autogen-council-canary
     ports:
-      - "9001:9000"  # Different port to avoid conflicts
+      - "8001:8000"  # Port 8001 externally, 8000 internally 
     volumes:
-      - memory-store:/app/memory
+      - memory-store:/app/memory_store
+      - ./logs:/app/logs
     environment:
       - PYTHONUNBUFFERED=1
       - PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus
+      - AZ_MEMORY_ENABLED=yes
+      - AZ_MEMORY_PATH=/app/memory_store
       - AZ_SHELL_TRUSTED=yes
       - SERVICE_NAME=api-canary
       - CANARY_DEPLOYMENT=true
+      - ENABLE_SANDBOX=true
     env_file:
       - canary.env
     cap_add:
@@ -22,16 +26,18 @@ services:
     security_opt:
       - seccomp:unconfined
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 30s
     labels:
       - "traefik.enable=true"
-      - "traefik.http.services.council-canary.loadbalancer.server.port=9000"
+      - "traefik.http.services.council-canary.loadbalancer.server.port=8000"
       - "traefik.http.services.council-canary.loadbalancer.weight=5"
       - "traefik.http.routers.council-canary.rule=Host(`api.localhost`)"
       - "traefik.http.routers.council-canary.service=council-canary"
+    restart: unless-stopped
 
   # Traefik load balancer for traffic splitting
   traefik:

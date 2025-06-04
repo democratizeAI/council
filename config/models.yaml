@@ -209,3 +209,28 @@ profiles:
       - safety_guard_0.3b # 200 MB - tiny guard model
     enable_council: false
     max_concurrent: 1
+
+fallback_head: mistral_general
+specialists_order:
+  - math_specialist      # Lightning fast SymPy, <1ms
+  - code_specialist      # DeepSeek Coder, 30-100ms  
+  - logic_specialist     # SWI-Prolog, <1ms
+  - knowledge_specialist # FAISS RAG, 30ms
+  - mistral_general      # ← LAST in list, cloud fallback only
+
+confidence_thresholds:
+  math_specialist: 0.8      # High confidence for math expressions
+  code_specialist: 0.7      # High confidence for code tasks
+  logic_specialist: 0.6     # Medium confidence for logic
+  knowledge_specialist: 0.5 # Lower threshold for general knowledge
+  mistral_general: 0.3      # Fallback for everything else
+
+local_providers:
+  - math_specialist
+  - code_specialist  
+  - logic_specialist
+  - knowledge_specialist
+
+cloud_providers:
+  - mistral_general
+  - openai_fallback

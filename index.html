@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AutoGen Council Evolution Journey</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.4/dist/tailwind.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('pre code').forEach((el) => {
+        hljs.highlightElement(el);
+      });
+    });
+  </script>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+  <div id="app" class="container mx-auto px-4 py-8 max-w-5xl">
+    <!-- Header Section -->
+    <header class="mb-12 text-center">
+      <h1 id="main-title" class="text-5xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600">
+        THE AUTOGEN COUNCIL EVOLUTION JOURNEY
+      </h1>
+      <p id="subtitle" class="text-xl text-gray-300 mb-2">
+        From Production API to Complete Desktop OS Assistant
+      </p>
+      <p id="timeline" class="text-lg text-gray-400 italic">
+        <span class="font-medium">A 45-Hour Human-AI Collaborative Development Sprint</span><br>
+        <span>(Built on 90 Days of Architectural Blueprinting)</span>
+      </p>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="hidden md:block sticky top-4 z-50 mb-8">
+      <div class="bg-gray-800 bg-opacity-90 backdrop-blur-sm rounded-lg p-4 shadow-lg">
+        <div class="flex flex-wrap gap-2" id="toc">
+          <!-- Table of Contents will be populated by JavaScript -->
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main id="content" class="prose prose-invert prose-lg max-w-none">
+      <!-- Content will be injected here -->
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-16 pt-8 border-t border-gray-700 text-center text-gray-400">
+      <p>AutoGen Council Evolution Journey • Version 2.7.0</p>
+      <p class="text-sm mt-2">© 2025 • A Human-AI Collaborative Development</p>
+    </footer>
+  </div>
+
+  <script src="js/content-loader.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

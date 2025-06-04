@@ -1,4 +1,4 @@
-# 🎛️ SwarmAI Canary Deployment (PowerShell)
+# 🎛️ AutoGen Council v2.6.0 Canary Deployment (PowerShell)
 # Windows wrapper for the canary deployment system
 
 param(
@@ -10,8 +10,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "🎛️ SwarmAI Canary Deployment (Windows)" -ForegroundColor Cyan
-Write-Host "======================================" -ForegroundColor Cyan
+Write-Host "🎛️ AutoGen Council v2.6.0 Canary Deployment (Windows)" -ForegroundColor Cyan
+Write-Host "======================================================" -ForegroundColor Cyan
 
 # Check if Docker is available
 try {
@@ -34,33 +34,33 @@ try {
 
 switch ($Action) {
     "deploy" {
-        Write-Host "🚀 Starting canary deployment..." -ForegroundColor Yellow
+        Write-Host "🚀 Starting v2.6.0 canary deployment..." -ForegroundColor Yellow
         
         if ($bashAvailable) {
             bash -c "./infra/scripts/canary-deploy.sh"
         } else {
             # PowerShell implementation of canary deployment
-            Write-Host "📦 Building Docker image..." -ForegroundColor Blue
+            Write-Host "📦 Building v2.6.0 Docker image..." -ForegroundColor Blue
             Set-Location "infra/deploy"
             docker compose build council
             
-            Write-Host "⚙️ Checking configuration..." -ForegroundColor Blue
+            Write-Host "⚙️ Checking v2.6.0 configuration..." -ForegroundColor Blue
             if (-not (Test-Path "canary.env")) {
                 Write-Host "❌ canary.env not found!" -ForegroundColor Red
                 Write-Host "   Copy from canary.env and update API keys" -ForegroundColor Gray
                 exit 1
             }
             
-            Write-Host "🚀 Starting canary service..." -ForegroundColor Blue
+            Write-Host "🚀 Starting v2.6.0 canary service..." -ForegroundColor Blue
             docker compose --env-file canary.env -f ../docker-compose.yml -f docker-compose.canary.yml up -d api-canary
             
-            Write-Host "⏳ Waiting for health check..." -ForegroundColor Blue
+            Write-Host "⏳ Waiting for v2.6.0 health check..." -ForegroundColor Blue
             Start-Sleep 10
             
             $healthCheck = $false
             for ($i = 1; $i -le 30; $i++) {
                 try {
-                    $response = Invoke-RestMethod -Uri "http://localhost:9001/health" -TimeoutSec 2
+                    $response = Invoke-RestMethod -Uri "http://localhost:8001/health" -TimeoutSec 2
                     $healthCheck = $true
                     break
                 } catch {
@@ -69,19 +69,19 @@ switch ($Action) {
             }
             
             if ($healthCheck) {
-                Write-Host "✅ Canary service healthy" -ForegroundColor Green
+                Write-Host "✅ v2.6.0 Canary service healthy" -ForegroundColor Green
             } else {
-                Write-Host "❌ Canary service failed health check" -ForegroundColor Red
+                Write-Host "❌ v2.6.0 Canary service failed health check" -ForegroundColor Red
                 exit 1
             }
             
-            Write-Host "🎯 Canary deployment complete!" -ForegroundColor Green
+            Write-Host "🎯 v2.6.0 Canary deployment complete!" -ForegroundColor Green
             Set-Location "../.."
         }
     }
     
     "scale" {
-        Write-Host "📊 Scaling canary to $Percentage%..." -ForegroundColor Yellow
+        Write-Host "📊 Scaling v2.6.0 canary to $Percentage%..." -ForegroundColor Yellow
         
         if ($bashAvailable) {
             bash -c "./infra/scripts/canary-scale.sh $Percentage"
@@ -94,7 +94,7 @@ switch ($Action) {
             # Update environment in running container
             try {
                 docker exec autogen-council-canary powershell -c "(Get-Content /app/.env) -replace 'COUNCIL_TRAFFIC_PERCENT=.*', 'COUNCIL_TRAFFIC_PERCENT=$Percentage' | Set-Content /app/.env"
-                Write-Host "✅ Traffic scaling complete" -ForegroundColor Green
+                Write-Host "✅ v2.6.0 Traffic scaling complete" -ForegroundColor Green
             } catch {
                 Write-Host "❌ Failed to update canary configuration" -ForegroundColor Red
                 exit 1
@@ -103,7 +103,7 @@ switch ($Action) {
     }
     
     "rollback" {
-        Write-Host "🚨 Emergency canary rollback..." -ForegroundColor Red
+        Write-Host "🚨 Emergency v2.6.0 canary rollback..." -ForegroundColor Red
         
         if ($bashAvailable) {
             bash -c "./infra/scripts/canary-rollback.sh"
@@ -117,7 +117,7 @@ switch ($Action) {
                 
                 Write-Host "⏸️ Pausing canary container..." -ForegroundColor Yellow
                 docker pause autogen-council-canary
-                Write-Host "✅ Rollback complete" -ForegroundColor Green
+                Write-Host "✅ v2.6.0 Rollback complete" -ForegroundColor Green
             } catch {
                 Write-Host "❌ Rollback failed" -ForegroundColor Red
                 exit 1
@@ -126,7 +126,7 @@ switch ($Action) {
     }
     
     "test" {
-        Write-Host "🧪 Running canary tests..." -ForegroundColor Yellow
+        Write-Host "🧪 Running v2.6.0 canary tests..." -ForegroundColor Yellow
         
         if ($bashAvailable) {
             bash -c "./infra/scripts/test_smoke.sh"
@@ -135,18 +135,18 @@ switch ($Action) {
             }
         } else {
             # PowerShell implementation of basic tests
-            Write-Host "🏥 Testing health endpoints..." -ForegroundColor Blue
+            Write-Host "🏥 Testing v2.6.0 health endpoints..." -ForegroundColor Blue
             
             try {
-                $mainHealth = Invoke-RestMethod -Uri "http://localhost:9000/health" -TimeoutSec 5
-                Write-Host "✅ Main service healthy" -ForegroundColor Green
+                $mainHealth = Invoke-RestMethod -Uri "http://localhost:8000/health" -TimeoutSec 5
+                Write-Host "✅ Main service healthy (port 8000)" -ForegroundColor Green
             } catch {
                 Write-Host "❌ Main service unhealthy" -ForegroundColor Red
             }
             
             try {
-                $canaryHealth = Invoke-RestMethod -Uri "http://localhost:9001/health" -TimeoutSec 5  
-                Write-Host "✅ Canary service healthy" -ForegroundColor Green
+                $canaryHealth = Invoke-RestMethod -Uri "http://localhost:8001/health" -TimeoutSec 5  
+                Write-Host "✅ Canary service healthy (port 8001)" -ForegroundColor Green
             } catch {
                 Write-Host "❌ Canary service unhealthy" -ForegroundColor Red
             }
@@ -155,8 +155,9 @@ switch ($Action) {
 }
 
 Write-Host ""
-Write-Host "📊 Dashboard URLs:" -ForegroundColor Cyan
+Write-Host "📊 v2.6.0 Dashboard URLs:" -ForegroundColor Cyan
 Write-Host "   Grafana: http://localhost:3000" -ForegroundColor Gray
 Write-Host "   Traefik: http://localhost:8080" -ForegroundColor Gray
-Write-Host "   Main API: http://localhost:9000/health" -ForegroundColor Gray
-Write-Host "   Canary API: http://localhost:9001/health" -ForegroundColor Gray 
+Write-Host "   Main API: http://localhost:8000/health" -ForegroundColor Gray
+Write-Host "   Canary API: http://localhost:8001/health" -ForegroundColor Gray
+Write-Host "   Enhanced Stats: http://localhost:8000/stats" -ForegroundColor Gray 

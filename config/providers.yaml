@@ -1,0 +1,25 @@
+priority:
+  - mistral         # first choice - faster, cheaper
+  - openai          # second choice - fallback for complex queries
+
+providers:
+  mistral:
+    name: "Mistral Large Latest"
+    endpoint: "https://api.mistral.ai/v1/chat/completions"
+    models:
+      - "mistral-large-latest"
+      - "mistral-medium-latest"
+    pricing:
+      input_per_1k: 0.004
+      output_per_1k: 0.012
+    
+  openai:
+    name: "OpenAI GPT"
+    endpoint: "https://api.openai.com/v1/chat/completions" 
+    models:
+      - "gpt-3.5-turbo"
+      - "gpt-4"
+      - "gpt-4-turbo"
+    pricing:
+      input_per_1k: 0.001
+      output_per_1k: 0.002 
