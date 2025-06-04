@@ -14,7 +14,7 @@
       "passed": true,
       "confidence": 1.0,
       "details": "Exact match",
-      "generation_time_ms": 19552.502393722534,
+      "generation_time_ms": 4000.9820461273193,
       "task_type": "math"
     },
     {
@@ -24,7 +24,7 @@
       "passed": true,
       "confidence": 1.0,
       "details": "Exact match",
-      "generation_time_ms": 321.99883460998535,
+      "generation_time_ms": 175.49991607666016,
       "task_type": "math"
     },
     {
@@ -34,7 +34,7 @@
       "passed": true,
       "confidence": 1.0,
       "details": "Compiles successfully",
-      "generation_time_ms": 10840.999841690063,
+      "generation_time_ms": 8463.000297546387,
       "task_type": "code"
     },
     {
@@ -44,7 +44,7 @@
       "passed": true,
       "confidence": 1.0,
       "details": "Contains explicit yes/no",
-      "generation_time_ms": 3433.002233505249,
+      "generation_time_ms": 2134.997844696045,
       "task_type": "logic"
     }
   ]
