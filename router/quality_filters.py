@@ -127,9 +127,16 @@ def filter_semantic_duplicates(new_text: str, existing_chunks: List[str],
     Returns:
         True if text should be filtered out (too similar to existing)
     """
+    # Fix for single semantic-similarity edge: adjust threshold for short prompts
+    # Very short prompts need a higher threshold to avoid false positives
+    if len(new_text.split()) < 15:
+        dup_thresh = 0.93
+    else:
+        dup_thresh = similarity_threshold
+    
     for existing in existing_chunks:
         similarity = calculate_semantic_similarity(new_text, existing)
-        if similarity > similarity_threshold:
+        if similarity > dup_thresh:
             return True  # Filter out - too similar
     
     return False  # Keep - sufficiently different

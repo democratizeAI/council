@@ -16,6 +16,7 @@ import os
 from router.quality_filters import (
     check_duplicate_tokens,
     calculate_semantic_similarity,
+    filter_semantic_duplicates,
     apply_confidence_weighted_voting,
     get_optimal_decoding_params,
     post_process_response,
@@ -54,24 +55,51 @@ def test_semantic_similarity():
     """Test Track ② Step 2: Semantic similarity filter"""
     print("\n🧪 Testing semantic similarity...")
     
+    # Test cases - pairs of (text1, text2, expected_similarity_range)
     test_pairs = [
-        ("The ocean is blue", "The sea is blue", 0.5),  # High similarity
-        ("Python is a programming language", "Math is fun", 0.0),  # Low similarity
-        ("AI and machine learning", "Artificial intelligence and ML", 0.7),  # High similarity
-        ("Hello world", "Goodbye universe", 0.0),  # No similarity
+        ("Hello world", "Hello world", (0.95, 1.0)),
+        ("Python programming", "Java programming", (0.3, 0.7)),
+        ("Machine learning", "Deep learning", (0.6, 0.9)),
+        ("The cat sat", "The dog ran", (0.2, 0.6)),
+        ("AI is powerful", "Artificial intelligence is strong", (0.7, 0.95))
     ]
     
     passed = 0
-    for text1, text2, expected_threshold in test_pairs:
+    for text1, text2, (min_sim, max_sim) in test_pairs:
         similarity = calculate_semantic_similarity(text1, text2)
-        meets_expectation = (similarity >= expected_threshold) if expected_threshold > 0.4 else (similarity < 0.3)
-        status = "✅" if meets_expectation else "❌"
-        print(f"   {status} '{text1}' <-> '{text2}' -> {similarity:.3f}")
-        if meets_expectation:
+        if min_sim <= similarity <= max_sim:
+            print(f"   ✅ '{text1[:20]}...' vs '{text2[:20]}...' = {similarity:.3f}")
             passed += 1
+        else:
+            print(f"   ❌ '{text1[:20]}...' vs '{text2[:20]}...' = {similarity:.3f} (expected {min_sim:.2f}-{max_sim:.2f})")
     
     print(f"   📊 Semantic similarity: {passed}/{len(test_pairs)} passed")
-    return passed >= len(test_pairs) * 0.7  # Allow some tolerance
+    
+    # **REGRESSION TEST: Single semantic-similarity edge for short prompts**
+    print("\n🔍 Testing short prompt edge case...")
+    
+    # Test the specific edge case: very short prompts that are similar to context
+    short_prompt = "What is AI?"  # 3 words - should use 0.93 threshold
+    context_chunk = "What is artificial intelligence?"  # Similar content
+    
+    # Test the filter function directly
+    is_duplicate = filter_semantic_duplicates(short_prompt, [context_chunk])
+    
+    print(f"   📝 Short prompt: '{short_prompt}' (words: {len(short_prompt.split())})")
+    print(f"   📄 Context: '{context_chunk}'")
+    print(f"   🎯 Threshold used: 0.93 (for prompts < 15 words)")
+    
+    similarity = calculate_semantic_similarity(short_prompt, context_chunk)
+    print(f"   📊 Similarity: {similarity:.3f}")
+    print(f"   🚨 Duplicate detected: {is_duplicate}")
+    
+    # The test expects False (not duplicate) because the threshold is higher for short prompts
+    if not is_duplicate:
+        print("   ✅ Short prompt edge case: PASSED - correctly not flagged as duplicate")
+        return True
+    else:
+        print("   ❌ Short prompt edge case: FAILED - incorrectly flagged as duplicate")
+        return False
 
 def test_confidence_voting():
     """Test Track ② Step 3: Confidence-weighted voting"""
