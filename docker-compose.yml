@@ -31,7 +31,7 @@ services:
       timeout: 10s
       retries: 3
 
-  # AutoGen Council API
+  # AutoGen Council API with Memory
   council:
     build: .
     container_name: autogen-council
@@ -46,12 +46,18 @@ services:
       - HEALTH_CHECK_RETRIES=3
       - MAX_TOKENS=150
       - TEMPERATURE=0.7
+      # Memory system configuration
+      - MEMORY_PATH=/app/memory
+      - MEM_EMB_MODEL=all-MiniLM-L6-v2
+      - MEMORY_MAX_CONTEXT_ITEMS=10
+      - MEMORY_PERSISTENCE_INTERVAL=100
     depends_on:
       llm:
         condition: service_healthy
     restart: unless-stopped
     volumes:
       - ./logs:/app/logs
+      - ./memory:/app/memory  # Persistent memory storage
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
       interval: 15s
