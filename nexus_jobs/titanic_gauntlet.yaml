@@ -12,11 +12,11 @@ runners:
     cost_tracking: detailed
     chunk_parallel: false                # Sequential for VRAM safety
     
-  mistral_medium_3:
-    route: ["mistral_medium_3"]          # 13B cloud monolith
-    cost_tracking: detailed
-    retry_on_rate_limit: true
-    rate_limit_delay: 15                 # Mistral rate limits
+  # mistral_medium_3:                   # ← DISABLED for AutoGen testing
+  #   route: ["mistral_medium_3"]        # 13B cloud monolith
+  #   cost_tracking: detailed
+  #   retry_on_rate_limit: true
+  #   rate_limit_delay: 15               # Mistral rate limits
 
 domains:
   math:
