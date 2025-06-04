@@ -22,7 +22,7 @@
 * **626 ms end-to-end latency** (37% faster than target)  
 * **94% on-device processing** on a single RTX 4070  
 
-[Read the full evolution journey →](docs/evolution/v2.6.0_journey.md)
+[Read the full evolution journey →](docs/evolution/v2.6.0_full.md)
 
 ---
 
