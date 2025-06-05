@@ -2,9 +2,9 @@ name: SwarmAI CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, master, develop ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, master ]
 
 env:
   SWARM_GPU_PROFILE: quick_test

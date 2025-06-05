@@ -48,4 +48,10 @@ scrape_configs:
   - job_name: 'trainer'
     static_configs:
       - targets: ['trainer:8080']
-    scrape_interval: 60s 
+    scrape_interval: 60s
+
+  - job_name: 'patchctl'
+    static_configs:
+      - targets: ['patchctl:9000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s 

@@ -357,6 +357,16 @@ services:
       - /var/lib/node_exporter/textfile_collector:/var/lib/node_exporter/textfile_collector:ro
     restart: unless-stopped
 
+  # Patchctl microservice for automated patching
+  patchctl:
+    build: ./patchctl
+    ports:
+      - "9001:9000"
+    volumes:
+      - ./:/app
+      - ./config:/config
+    restart: unless-stopped
+
 volumes:
   models:        # Static GGUF/Q4_K_M files
   loras:         # Nightly adapter outputs  
