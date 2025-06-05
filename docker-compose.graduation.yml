@@ -1,0 +1,200 @@
+version: '3.8'
+
+services:
+  # AutoGen Council main service
+  autogen-council:
+    build: .
+    ports:
+      - "9000:9000"
+    environment:
+      - NODE_ENV=production
+      - REDIS_URL=redis://redis:6379
+      - QDRANT_URL=http://qdrant:6333
+      - METRICS_ENABLED=true
+      - PROMETHEUS_PORT=9090
+    depends_on:
+      - redis
+      - qdrant
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - graduation
+
+  # Redis for caching and session management
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - graduation
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Qdrant for vector storage
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - graduation
+    environment:
+      - QDRANT__SERVICE__HTTP_PORT=6333
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Prometheus for metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - graduation
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+
+  # Grafana for monitoring dashboards
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=graduation
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+    networks:
+      - graduation
+    depends_on:
+      - prometheus
+
+  # Alertmanager for alert handling
+  alertmanager:
+    image: prom/alertmanager:latest
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    networks:
+      - graduation
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+
+  # Loki for log aggregation
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./monitoring/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    networks:
+      - graduation
+    command: -config.file=/etc/loki/local-config.yaml
+
+  # Promtail for log shipping
+  promtail:
+    image: grafana/promtail:latest
+    volumes:
+      - ./logs:/var/log:ro
+      - ./monitoring/promtail-config.yml:/etc/promtail/config.yml:ro
+    networks:
+      - graduation
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+
+  # Load testing service
+  locust:
+    image: locustio/locust:latest
+    ports:
+      - "8089:8089"
+    volumes:
+      - ./tests:/mnt/locust:ro
+    networks:
+      - graduation
+    environment:
+      - LOCUST_HOST=http://autogen-council:9000
+      - LOCUST_LOCUSTFILE=/mnt/locust/locust_suite.py
+    depends_on:
+      - autogen-council
+
+  # Test runner service
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    volumes:
+      - ./tests:/app/tests:ro
+      - ./reports:/app/reports
+      - ./eval:/app/eval:ro
+      - ./bench:/app/bench:ro
+      - ./scripts:/app/scripts:ro
+    networks:
+      - graduation
+    environment:
+      - COUNCIL_URL=http://autogen-council:9000
+      - PYTHONPATH=/app
+    depends_on:
+      - autogen-council
+      - prometheus
+      - grafana
+    profiles:
+      - testing  # Only start when explicitly requested
+
+  # Nginx for reverse proxy and load balancing
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./monitoring/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    networks:
+      - graduation
+    depends_on:
+      - autogen-council
+      - grafana
+
+volumes:
+  redis_data:
+  qdrant_data:
+  prometheus_data:
+  grafana_data:
+  alertmanager_data:
+  loki_data:
+
+networks:
+  graduation:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16 

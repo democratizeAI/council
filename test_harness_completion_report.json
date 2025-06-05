@@ -1,0 +1,87 @@
+{
+  "timestamp": 1749079244.2712152,
+  "overall_score": 54.0,
+  "completion_level": "\u274c INCOMPLETE",
+  "status": "needs_major_work",
+  "layers": {
+    "unit_tests": {
+      "layer": 1,
+      "name": "Unit Tests",
+      "passed": 0,
+      "skipped": 3,
+      "failed": 0,
+      "success_rate": 0.0,
+      "components": {
+        "router_ladder": true,
+        "scratchpad": true,
+        "prompts": true,
+        "critical_performance": true
+      },
+      "score": 10.0,
+      "status": "needs_work"
+    },
+    "service_tests": {
+      "layer": 2,
+      "name": "Service Tests",
+      "files": [
+        "tests/service/test_chat_route.py"
+      ],
+      "success": false,
+      "score": 60,
+      "status": "needs_work"
+    },
+    "e2e_tests": {
+      "layer": 3,
+      "name": "End-to-End Tests",
+      "files": [
+        "tests/e2e/test_stack.sh",
+        "tests/e2e/performance.spec.ts"
+      ],
+      "docker_ready": true,
+      "coverage": 1.0,
+      "score": 100.0,
+      "status": "good"
+    },
+    "ui_tests": {
+      "layer": 4,
+      "name": "UI Tests & Performance",
+      "ui_files": [
+        "tests/ui/council.spec.ts",
+        "tests/ui/frontend_performance.spec.ts",
+        "tests/playwright.config.ts"
+      ],
+      "performance_files": [
+        "frontend_performance_triage.py",
+        "websocket_backend.py",
+        "websocket_frontend.js",
+        "debug_endpoint.py",
+        "debug_frontend.js",
+        "webpack.optimization.js"
+      ],
+      "playwright_ready": true,
+      "ui_coverage": 1.0,
+      "performance_coverage": 1.0,
+      "score": 100.0,
+      "status": "excellent"
+    }
+  },
+  "critical_fixes": {
+    "name": "Critical Performance Fixes",
+    "tests_passed": 0,
+    "total_tests": 0,
+    "success_rate": 0,
+    "fixes": {
+      "math_unsure_penalty": false,
+      "token_limits": false,
+      "confidence_gates": false,
+      "tiny_summarizer": false
+    },
+    "score": 0.0,
+    "status": "critical"
+  },
+  "recommendations": [
+    "\ud83d\udd27 Improve unit test coverage and fix failing tests",
+    "\ud83d\udd0c Add comprehensive service/API testing",
+    "\ud83d\udea8 Fix critical performance regression issues"
+  ]
+}

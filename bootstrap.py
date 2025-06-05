@@ -148,6 +148,18 @@ def get_memory() -> object:
 
 # Initialize on import for direct usage
 if MEMORY is None:
-    MEMORY = initialize_memory()
+    # 🚀 PHASE 2: Re-enable memory initialization with lazy loading
+    logger.info("🧠 Re-initializing FAISS memory system for Phase 2...")
+    try:
+        MEMORY = FaissMemory()
+        logger.info("✅ FAISS memory system initialized successfully")
+    except Exception as e:
+        logger.warning(f"⚠️ FAISS initialization failed, using dummy: {e}")
+        class DummyMemory:
+            def query(self, text, k=3):
+                return []
+            def add(self, text, metadata=None):
+                pass
+        MEMORY = DummyMemory()
 
 logger.info(f"🧠 Global memory initialized at: {type(MEMORY).__name__}") 

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Hybrid routing: Smart orchestration between local and cloud models
+🚀 ENHANCED: Integrated with ModelCache for <1s cold-start
 """
 
 import asyncio
@@ -9,6 +10,7 @@ from typing import List, Dict, Any, Optional
 from loader.deterministic_loader import get_loaded_models, generate_response
 from router.voting import vote, smart_select
 from router.cost_tracking import debit
+from router.model_cache import MODEL_CACHE, load_model_fast, get_cached_model  # 🚀 NEW: Model acceleration
 import os
 import yaml
 import logging
@@ -17,42 +19,207 @@ from providers import mistral_llm, openai_llm, CloudRetry
 logger = logging.getLogger(__name__)
 
 # One-time parse of priority list
-PROVIDER_PRIORITY = os.getenv("PROVIDER_PRIORITY", "mistral,openai").split(",")
+PROVIDER_PRIORITY = os.getenv("PROVIDER_PRIORITY", "local_mixtral,local_tinyllama,mistral,openai").split(",")
 
-PROVIDER_MAP = {
-    "mistral": mistral_llm.call,
-    "openai": openai_llm.call,
-}
+# 🔧 TRANSFORMERS PROVIDER FACTORY: Create local transformers instances with cache
+def create_transformers_provider(config: Dict[str, Any]):
+    """Create a transformers provider callable from config with model caching"""
+    async def transformers_call(prompt: str, **kwargs) -> Dict[str, Any]:
+        """Call transformers model with config parameters and caching"""
+        try:
+            import torch
+            from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+            
+            model_name = config.get('name', 'transformers_model')
+            
+            # 🚀 NEW: Try to get cached model first
+            cached_pipeline = get_cached_model(model_name)
+            
+            if cached_pipeline is None:
+                # Load model with caching
+                logger.info(f"🚀 Loading {model_name} with acceleration...")
+                
+                def create_pipeline():
+                    model_path = config['model_path']
+                    device = config.get('device', 'auto')
+                    
+                    if device == "auto":
+                        device = "cuda" if torch.cuda.is_available() else "cpu"
+                    
+                    return pipeline(
+                        "text-generation",
+                        model=model_path,
+                        device=device,
+                        torch_dtype=torch.float16 if device != "cpu" else torch.float32,
+                        trust_remote_code=True,
+                        max_new_tokens=config.get('max_tokens', 150),
+                        temperature=0.7,
+                        do_sample=True,
+                        return_full_text=False
+                    )
+                
+                # Load with all acceleration techniques
+                cached_pipeline = await load_model_fast(model_name, create_pipeline)
+            
+            # Generate response
+            start_time = time.time()
+            
+            # 🚀 PHASE A PATCH #1: Hard 160-token output cap in server, not YAML
+            max_new_tokens = min(kwargs.get('max_tokens', 160), 160)  # Hard limit
+            
+            # 🚀 FIX: Handle temperature from kwargs properly to avoid 0.0 error
+            temp = kwargs.get('temperature', 0.7)
+            if temp <= 0.0:
+                temp = 0.1  # Minimum positive temperature for transformers
+                use_sampling = False  # Use greedy decoding
+            else:
+                use_sampling = True
+            
+            # Filter out parameters that transformers doesn't accept
+            pipeline_kwargs = {
+                'max_new_tokens': max_new_tokens,
+                'temperature': temp,
+                'do_sample': use_sampling,
+                'return_full_text': False
+            }
+            
+            # Add other valid parameters
+            if 'top_p' in kwargs:
+                pipeline_kwargs['top_p'] = kwargs['top_p']
+            if 'repetition_penalty' in kwargs:
+                pipeline_kwargs['repetition_penalty'] = kwargs['repetition_penalty']
+            
+            outputs = cached_pipeline(prompt, **pipeline_kwargs)
+            latency_ms = (time.time() - start_time) * 1000
+            
+            # Extract response text
+            if isinstance(outputs, list) and len(outputs) > 0:
+                response_text = outputs[0]['generated_text'].strip()
+            else:
+                response_text = str(outputs).strip()
+            
+            # 🚀 PHASE A PATCH #1: Additional safety truncation
+            if len(response_text) > 640:  # ~160 tokens at 4 chars/token
+                response_text = response_text[:640] + "..."
+                logger.debug(f"🔧 Truncated response to 160 tokens for safety")
+            
+            return {
+                "text": response_text,
+                "model": config.get('name', 'transformers_model'),
+                "latency_ms": latency_ms,
+                "provider": "transformers",
+                "confidence": 0.8,
+                "tokens_used": len(prompt.split()) + len(response_text.split()),
+                "cached_model_used": cached_pipeline is not None  # 🚀 NEW: Cache hit indicator
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ Transformers provider error: {e}")
+            raise CloudRetry(f"Transformers provider failed: {e}")
+    
+    return transformers_call
+
+PROVIDER_MAP = {}
 
 # Track loaded models for /models endpoint
 LOADED_MODELS = {}
 
 def load_provider_config():
-    """Load provider configuration from YAML"""
-    global LOADED_MODELS
+    """Load provider configuration from YAML with transformers support and model caching"""
+    global LOADED_MODELS, PROVIDER_MAP
+    
+    # Initialize with empty map
+    PROVIDER_MAP.clear()
     
     try:
-        with open("config/providers.yaml", "r") as f:
-            config = yaml.safe_load(f)
+        # Use UTF-8 safe loading
+        try:
+            from config.utils import load_yaml
+            config = load_yaml("config/providers.yaml")
+        except ImportError:
+            with open("config/providers.yaml", "r", encoding="utf-8") as f:
+                config = yaml.safe_load(f)
             
         # Update priority from config if available
         if "priority" in config:
             global PROVIDER_PRIORITY
             PROVIDER_PRIORITY = config["priority"]
             
-        # Load model information
+        # 🚀 NEW: Collect model factories for preloading
+        model_factories = {}
+        
+        # Load provider configurations and create transformers providers
         for provider_name, provider_config in config.get("providers", {}).items():
-            for model in provider_config.get("models", []):
+            # Skip disabled providers completely
+            if provider_config.get("enabled", True) is False:
+                logger.info(f"🚫 Provider {provider_name} disabled, skipping completely")
+                continue
+                
+            # Create transformers provider if needed
+            if provider_config.get("type") == "transformers":
+                logger.info(f"🔧 Creating transformers provider: {provider_name}")
+                PROVIDER_MAP[provider_name] = create_transformers_provider(provider_config)
+                
+                # 🚀 NEW: Add to model factories for preloading
+                def create_factory(config):
+                    def factory():
+                        from transformers import pipeline
+                        import torch
+                        device = config.get('device', 'auto')
+                        if device == "auto":
+                            device = "cuda" if torch.cuda.is_available() else "cpu"
+                        
+                        return pipeline(
+                            "text-generation",
+                            model=config['model_path'],
+                            device=device,
+                            torch_dtype=torch.float16 if device != "cpu" else torch.float32,
+                            trust_remote_code=True,
+                            return_full_text=False
+                        )
+                    return factory
+                
+                model_factories[provider_name] = create_factory(provider_config)
+            
+            # Add cloud providers only if enabled
+            elif provider_name in ["mistral", "openai"] and provider_config.get("enabled", True) is not False:
+                # Import and add cloud providers
+                if provider_name == "mistral":
+                    try:
+                        from providers import mistral_llm
+                        PROVIDER_MAP[provider_name] = mistral_llm.call
+                        logger.info(f"✅ Cloud provider enabled: {provider_name}")
+                    except ImportError:
+                        logger.warning(f"⚠️ Could not import {provider_name} provider")
+                elif provider_name == "openai":
+                    try:
+                        from providers import openai_llm
+                        PROVIDER_MAP[provider_name] = openai_llm.call
+                        logger.info(f"✅ Cloud provider enabled: {provider_name}")
+                    except ImportError:
+                        logger.warning(f"⚠️ Could not import {provider_name} provider")
+            
+            # Load model information
+            models = provider_config.get("models", [provider_name])  # Use provider name if no models specified
+            for model in models:
                 LOADED_MODELS[f"{provider_name}-{model}"] = {
                     "provider": provider_name,
                     "name": provider_config.get("name", provider_name),
                     "model": model,
-                    "endpoint": provider_config.get("endpoint", ""),
-                    "pricing": provider_config.get("pricing", {})
+                    "endpoint": provider_config.get("endpoint", "local"),
+                    "pricing": provider_config.get("pricing", {}),
+                    "type": provider_config.get("type", "api")
                 }
+        
+        # 🚀 NEW: Preload essential models with caching
+        if model_factories:
+            logger.info(f"🚀 Preloading {len(model_factories)} models with acceleration...")
+            MODEL_CACHE.preload_priority_models(model_factories)
                 
         logger.info(f"📋 Loaded {len(LOADED_MODELS)} models from {len(config.get('providers', {}))} providers")
         logger.info(f"🎯 Provider priority: {' → '.join(PROVIDER_PRIORITY)}")
+        logger.info(f"🔧 Available providers: {list(PROVIDER_MAP.keys())}")
+        logger.info(f"🚀 Model cache stats: {MODEL_CACHE.get_cache_stats()}")
         
     except Exception as e:
         logger.warning(f"⚠️ Could not load provider config: {e}")

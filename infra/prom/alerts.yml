@@ -1,0 +1,74 @@
+groups:
+- name: swarm.rules
+  rules:
+  - alert: HighGPUMemoryUsage
+    expr: gpu_memory_usage > 0.9
+    for: 2m
+    labels:
+      severity: critical
+    annotations:
+      title: "High GPU Memory Usage"
+      description: "GPU memory usage is above 90% for more than 2 minutes"
+
+  - alert: HighGPUTemperature
+    expr: gpu_temperature > 80
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      title: "High GPU Temperature"
+      description: "GPU temperature is above 80°C for more than 5 minutes"
+
+  - alert: APIDown
+    expr: up{job="api-main"} == 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      title: "API Main Service Down"
+      description: "Main API service has been down for more than 1 minute"
+
+  - alert: CanaryAPIDown
+    expr: up{job="api-canary"} == 0
+    for: 2m
+    labels:
+      severity: warning
+    annotations:
+      title: "Canary API Service Down"
+      description: "Canary API service has been down for more than 2 minutes"
+
+  - alert: RedisDown
+    expr: up{job="redis"} == 0
+    for: 30s
+    labels:
+      severity: critical
+    annotations:
+      title: "Redis Service Down"
+      description: "Redis service has been down for more than 30 seconds"
+
+  - alert: HighMemoryUsage
+    expr: (container_memory_usage_bytes / container_spec_memory_limit_bytes) > 0.9
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      title: "High Container Memory Usage"
+      description: "Container {{ $labels.name }} memory usage is above 90%"
+
+  - alert: TrainingFailed
+    expr: increase(training_job_failures_total[1h]) > 3
+    for: 0m
+    labels:
+      severity: warning
+    annotations:
+      title: "Training Job Failures"
+      description: "More than 3 training job failures in the last hour"
+
+  - alert: HighAPILatency
+    expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+    for: 3m
+    labels:
+      severity: warning
+    annotations:
+      title: "High API Latency"
+      description: "95th percentile latency is above 2 seconds for more than 3 minutes" 

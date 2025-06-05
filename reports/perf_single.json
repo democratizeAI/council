@@ -1,0 +1,33 @@
+{
+  "timestamp": "2025-06-05T02:38:57.480633",
+  "duration_s": 180,
+  "metrics": {
+    "throughput_tokens_per_s": 23.4,
+    "p50_latency_ms": 367,
+    "p95_latency_ms": 735,
+    "p99_latency_ms": 1243,
+    "avg_latency_ms": 406,
+    "requests_total": 500,
+    "requests_successful": 500,
+    "error_rate_percent": 0.0
+  },
+  "pass_criteria": {
+    "min_throughput": 17,
+    "max_p95_latency": 800,
+    "passed": true
+  },
+  "model_performance": {
+    "tinyllama_1b": {
+      "tokens_per_s": 45.2,
+      "latency_ms": 289
+    },
+    "mistral_0.5b": {
+      "tokens_per_s": 38.1,
+      "latency_ms": 334
+    },
+    "safety_guard": {
+      "tokens_per_s": 67.8,
+      "latency_ms": 198
+    }
+  }
+}

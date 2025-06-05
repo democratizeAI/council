@@ -1,25 +1,74 @@
+confidence_gate: 0.55
 priority:
-  - mistral         # first choice - faster, cheaper
-  - openai          # second choice - fallback for complex queries
+- local_mixtral
+- local_tinyllama
+- mistral
+- openai
 
 providers:
-  mistral:
-    name: "Mistral Large Latest"
-    endpoint: "https://api.mistral.ai/v1/chat/completions"
+  # 🔧 LOCAL TRANSFORMERS PROVIDERS: Disabled until models are downloaded
+  local_mixtral:
+    type: transformers
+    model_path: microsoft/phi-2  # Use working model for RTX 4070
+    dtype: int4
+    device: auto  # cuda if available, cpu fallback
+    name: Local Mixtral (Transformers)
+    latency_target_ms: 500
+    pricing:
+      input_per_1k: 0.0001
+      output_per_1k: 0.0001
+    max_tokens: 512
+    temperature: 0.7
+    enabled: false  # Disabled until model downloaded
+    
+  local_tinyllama:
+    type: transformers
+    model_path: microsoft/phi-1_5  # Use smaller model for fallback
+    dtype: int4  
+    device: auto  # cuda if available, cpu fallback
+    name: Local TinyLlama (Transformers)
+    latency_target_ms: 300
+    pricing:
+      input_per_1k: 0.0001
+      output_per_1k: 0.0001
+    max_tokens: 256
+    temperature: 0.7
+    enabled: false  # Disabled until model downloaded
+    
+  # LEGACY: Keep old local for backwards compatibility
+  local:
+    endpoint: local
+    latency_target_ms: 500
     models:
-      - "mistral-large-latest"
-      - "mistral-medium-latest"
+    - mixtral_8x7b_local
+    - mistral_7b_instruct
+    - codellama_0.7b
+    - phi2_2.7b
+    name: Local GPU Models (Legacy)
+    pricing:
+      input_per_1k: 0.0001
+      output_per_1k: 0.0001
+      
+  # CLOUD PROVIDERS: Disabled by default for local-only mode  
+  mistral:
+    endpoint: https://api.mistral.ai/v1/chat/completions
+    models:
+    - mistral-large-latest
+    - mistral-medium-latest
+    name: Mistral Large Latest
     pricing:
       input_per_1k: 0.004
       output_per_1k: 0.012
+    enabled: false  # Disabled for local-only mode
     
   openai:
-    name: "OpenAI GPT"
-    endpoint: "https://api.openai.com/v1/chat/completions" 
+    endpoint: https://api.openai.com/v1/chat/completions
     models:
-      - "gpt-3.5-turbo"
-      - "gpt-4"
-      - "gpt-4-turbo"
+    - gpt-3.5-turbo
+    - gpt-4
+    - gpt-4-turbo
+    name: OpenAI GPT
     pricing:
       input_per_1k: 0.001
-      output_per_1k: 0.002 
+      output_per_1k: 0.002
+    enabled: false  # Disabled for local-only mode

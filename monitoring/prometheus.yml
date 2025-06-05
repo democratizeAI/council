@@ -23,14 +23,14 @@ scrape_configs:
   # Main Council API metrics - VRAM, latency, request counts
   - job_name: 'council-api'
     static_configs:
-      - targets: ['council-api:8000']
+      - targets: ['council-api:9000']
     scrape_interval: 5s
     metrics_path: '/metrics'
 
   # Canary Council API metrics - for A/B testing
   - job_name: 'council-api-canary'
     static_configs:
-      - targets: ['council-api-canary:8000']
+      - targets: ['council-api-canary:9000']
     scrape_interval: 5s
     metrics_path: '/metrics'
     relabel_configs:

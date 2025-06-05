@@ -27,53 +27,53 @@ services:
 
   # Main Council API - Stable traffic
   council-api:
-    build: .
-    container_name: council-api
+    build: 
+      context: .
+      dockerfile: Dockerfile
     ports:
-      - "8000:8000"
-    volumes:
-      - models:/app/models
-      - memory:/app/memory
-      - loras:/app/loras
-      - ./logs:/app/logs
+      - "9000:9000"
     environment:
-      - PYTHONUNBUFFERED=1
-      - AZ_MEMORY_ENABLED=yes
-      - AZ_MEMORY_PATH=/app/memory
-      - AZ_SHELL_TRUSTED=yes
-      - ENABLE_SANDBOX=true
-      - CLOUD_ENABLED=true
-      - PROVIDER_PRIORITY=mistral,openai
-      - SWARM_PROFILE=production
-      - SWARM_CLOUD_BUDGET_USD=10.0
-      - MEM_EMB_MODEL=all-MiniLM-L6-v2
-      - EXEC_TIMEOUT_SEC=5
-      - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
-      - COUNCIL_TRAFFIC_PERCENT=95
-      - REDIS_URL=redis://redis:6379
-      - MISTRAL_API_KEY=${MISTRAL_API_KEY:-}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-    runtime: nvidia
+      - SWARM_COUNCIL_ENABLED=true
+      - COUNCIL_POCKET_MODE=true
+      - GPU_MEMORY_FRACTION=0.8
+      - CUDA_VISIBLE_DEVICES=0
+    volumes:
+      - ./memory:/app/memory
+      - ./logs:/app/logs
+    
+    # 🚀 HARDENING: Restart & Health Check
+    restart: on-failure:5  # Restart on failure, max 5 attempts
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 30s        # Check every 30 seconds
+      timeout: 5s          # 5 second timeout
+      retries: 3           # Fail after 3 consecutive failures
+      start_period: 60s    # Wait 60s for initial startup
+    
+    # 🚀 HARDENING: GPU Resource Management
     deploy:
       resources:
-        limits:
-          memory: 6g     # Leave 2-3GB headroom for OS + other containers
-          cpus: "6.0"
         reservations:
           devices:
-            - capabilities: ["gpu"]
-    depends_on:
-      - redis
-    restart: on-failure:3
-    healthcheck:
-      test: ["CMD", "curl", "-fs", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+        limits:
+          memory: 10g      # Prevent OOM that kills nvidia-driver
+          cpus: '4.0'      # Reasonable CPU limit
+    
+    # 🚀 HARDENING: Security & Stability
+    security_opt:
+      - no-new-privileges:true
+    read_only: false  # Allow writes to /tmp and /app/logs
+    tmpfs:
+      - /tmp:size=1g
+    
+    # 🚀 HARDENING: Logging
     logging:
       driver: "json-file"
       options:
-        max-size: "50m"
+        max-size: "100m"
         max-file: "3"
 
   # Canary Council API - New LoRA testing
@@ -239,68 +239,28 @@ services:
   # Prometheus monitoring with enhanced config
   prometheus:
     image: prom/prometheus:latest
-    container_name: prometheus
     ports:
       - "9090:9090"
     volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./monitoring/alerts_simple.yml:/etc/prometheus/alerts.yml:ro
-      - prometheus-data:/prometheus
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--web.console.libraries=/etc/prometheus/console_libraries'
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--web.enable-lifecycle'
-      - '--storage.tsdb.retention.time=7d'
-      - '--web.enable-admin-api'
-    deploy:
-      resources:
-        limits:
-          memory: 2g
-          cpus: "2.0"
-    restart: on-failure:3
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "50m"
-        max-file: "3"
+    restart: unless-stopped
 
   # Grafana dashboard
   grafana:
     image: grafana/grafana:latest
-    container_name: grafana
     ports:
       - "3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=autogen123
-      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+      - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
       - grafana-storage:/var/lib/grafana
-      - ./monitoring/grafana:/etc/grafana/provisioning:ro
-    deploy:
-      resources:
-        limits:
-          memory: 1g
-          cpus: "1.0"
-    restart: on-failure:3
-    depends_on:
-      - prometheus
-    healthcheck:
-      test: ["CMD", "curl", "-fs", "http://localhost:3000/api/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "50m"
-        max-file: "3"
+    restart: unless-stopped
 
   # AlertManager for handling alerts
   alertmanager:

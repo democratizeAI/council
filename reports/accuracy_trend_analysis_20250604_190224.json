@@ -1,0 +1,125 @@
+{
+  "total_reports": 66,
+  "date_range": {
+    "earliest": "2025-06-03 22:17",
+    "latest": "2025-06-04 00:24"
+  },
+  "overall_stats": {
+    "success_rate": {
+      "mean": 0.8910740053597197,
+      "median": 0.9245283018867925,
+      "min": 0.0,
+      "max": 1.0,
+      "count": 66
+    },
+    "accuracy": null,
+    "latency_ms": {
+      "mean": 206.81007726571482,
+      "median": 95.7081074617347,
+      "min": 0.01663366953531901,
+      "max": 1235.7499361038208,
+      "count": 66
+    },
+    "cost_usd": {
+      "mean": 0.03645454545454548,
+      "median": 0.046000000000000034,
+      "min": 0.0,
+      "max": 0.05200000000000004,
+      "count": 66
+    }
+  },
+  "recent_vs_historical": {
+    "success_rate": {
+      "recent_mean": 0.9308691847236321,
+      "historical_mean": 0.8512788259958072,
+      "change": 0.07959035872782494,
+      "change_percent": 9.349505273401098,
+      "regression_detected": false
+    },
+    "avg_latency_ms": {
+      "recent_mean": 124.69565591704082,
+      "historical_mean": 288.9244986143888,
+      "change": -164.228842697348,
+      "change_percent": -56.841439021249265,
+      "regression_detected": false
+    },
+    "cost_usd": {
+      "recent_mean": 0.04293939393939397,
+      "historical_mean": 0.02996969696969699,
+      "change": 0.012969696969696982,
+      "change_percent": 43.27603640040446,
+      "regression_detected": true
+    }
+  },
+  "trend_analysis": {},
+  "recent_reports": [
+    {
+      "timestamp": "2025-06-04 00:06:05",
+      "file_name": "autogen_titanic_20250604_000605.json",
+      "success_rate": 0.94,
+      "accuracy": null,
+      "content_pass_rate": 1.0,
+      "total_requests": 50,
+      "avg_latency_ms": 91.50934219360352,
+      "cost_usd": 0.046000000000000034,
+      "errors": 3,
+      "cloudretry": 1
+    },
+    {
+      "timestamp": "2025-06-04 00:12:10",
+      "file_name": "autogen_titanic_20250604_001210.json",
+      "success_rate": 1.0,
+      "accuracy": null,
+      "content_pass_rate": 1.0,
+      "total_requests": 10,
+      "avg_latency_ms": 377.85048484802246,
+      "cost_usd": 0.010000000000000002,
+      "errors": 0,
+      "cloudretry": 0
+    },
+    {
+      "timestamp": "2025-06-04 00:12:10",
+      "file_name": "autogen_titanic_20250604_001210.json",
+      "success_rate": 1.0,
+      "accuracy": null,
+      "content_pass_rate": 1.0,
+      "total_requests": 10,
+      "avg_latency_ms": 377.85048484802246,
+      "cost_usd": 0.010000000000000002,
+      "errors": 0,
+      "cloudretry": 0
+    },
+    {
+      "timestamp": "2025-06-04 00:24:39",
+      "file_name": "autogen_titanic_20250604_002439.json",
+      "success_rate": 0.9387755102040817,
+      "accuracy": null,
+      "content_pass_rate": 1.0,
+      "total_requests": 49,
+      "avg_latency_ms": 95.7081074617347,
+      "cost_usd": 0.04500000000000003,
+      "errors": 3,
+      "cloudretry": 1
+    },
+    {
+      "timestamp": "2025-06-04 00:24:39",
+      "file_name": "autogen_titanic_20250604_002439.json",
+      "success_rate": 0.9387755102040817,
+      "accuracy": null,
+      "content_pass_rate": 1.0,
+      "total_requests": 49,
+      "avg_latency_ms": 95.7081074617347,
+      "cost_usd": 0.04500000000000003,
+      "errors": 3,
+      "cloudretry": 1
+    }
+  ],
+  "regression_detected": true,
+  "regression_details": [
+    {
+      "metric": "cost_usd",
+      "change_percent": 43.27603640040446,
+      "threshold_exceeded": true
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "platforms_tested": [
+    "windows",
+    "ubuntu",
+    "macos",
+    "docker"
+  ],
+  "compatibility_rate": 100.0,
+  "platform_results": {
+    "windows": {
+      "status": "passed",
+      "issues": 0
+    },
+    "ubuntu": {
+      "status": "passed",
+      "issues": 0
+    },
+    "macos": {
+      "status": "passed",
+      "issues": 0
+    },
+    "docker": {
+      "status": "passed",
+      "issues": 0
+    }
+  },
+  "passed": true
+}

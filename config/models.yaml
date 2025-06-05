@@ -1,3 +1,186 @@
+cloud_models:
+- backend: cloud
+  name: gpt4o_mini
+  path: api:gpt-4o-mini
+  price_per_1k_input: 0.4
+  price_per_1k_output: 1.6
+  provider: openai
+  quality: 82
+  vram_mb: 0
+- backend: cloud
+  name: claude_3_haiku
+  path: api:claude-3-haiku-20240307
+  price_per_1k_input: 0.25
+  price_per_1k_output: 1.25
+  provider: anthropic
+  quality: 78
+  vram_mb: 0
+- backend: cloud
+  name: mistral_large
+  path: api:mistral-large-latest
+  price_per_1k_input: 8.0
+  price_per_1k_output: 24.0
+  provider: mistral
+  quality: 88
+  vram_mb: 0
+cloud_providers:
+- mistral_general
+- openai_fallback
+confidence_thresholds:
+  code_specialist: 0.8
+  knowledge_specialist: 0.7
+  logic_specialist: 0.75
+  math_specialist: 0.85
+  mistral_general: 0.5
+cpu_heads:
+- backend: openvino
+  dtype: openvino_fp32
+  name: openvino_head
+  vram_mb: 0
+fallback_head: mistral_general
+gpu_heads_large:
+- backend: transformers
+  dtype: q4_K
+  name: mistral_7b_instruct
+  vram_mb: 3500
+- backend: vllm
+  dtype: q4_K
+  name: llama2_70b_chat
+  vram_mb: 8000
+- backend: vllm
+  dtype: q4_K
+  name: mixtral_8x7b
+  vram_mb: 6500
+gpu_heads_math_optimized:
+- backend: transformers
+  dtype: q4_K_M
+  gpu_layers: 32
+  hf_model: microsoft/phi-2
+  kv_cache_mb: 512
+  name: lightning_math
+  optimization_target: latency
+  priority: critical
+  rope_scaling: yarn
+  specialized_for: math
+  vram_mb: 800
+- backend: transformers
+  dtype: q4_K_S
+  hf_model: microsoft/phi-2
+  kv_cache_mb: 128
+  name: math_specialist_0.8b
+  specialized_for: math
+  vram_mb: 512
+gpu_heads_medium:
+- backend: transformers
+  dtype: q4_K
+  name: phi2_2.7b
+  vram_mb: 1600
+- backend: transformers
+  dtype: q4_K
+  name: codellama_0.7b
+  vram_mb: 450
+- backend: transformers
+  dtype: q4_K
+  name: math_specialist_0.8b
+  vram_mb: 512
+- backend: transformers
+  dtype: q4_K
+  name: openchat_3.5_0.4b
+  vram_mb: 2400
+gpu_heads_minimal:
+- backend: transformers
+  dtype: q4_K_S
+  hf_model: gpt2
+  name: safety_guard_local
+  vram_mb: 200
+- backend: transformers
+  dtype: q4_K_S
+  hf_model: distilgpt2
+  name: router_classifier
+  vram_mb: 150
+gpu_heads_optimized:
+- backend: transformers
+  dtype: q4_K_M
+  hf_model: microsoft/phi-2
+  kv_cache_mb: 256
+  name: phi2_2.7b_q4
+  vram_mb: 1400
+- backend: transformers
+  dtype: q4_K_S
+  hf_model: microsoft/phi-2
+  kv_cache_mb: 128
+  name: tinyllama_1b_q4
+  vram_mb: 350
+- backend: transformers
+  dtype: q4_K_S
+  gpu_layers: 32
+  hf_model: microsoft/phi-2
+  kv_cache_mb: 256
+  name: math_specialist_q4
+  priority: high
+  rope_scaling: yarn
+  specialized_for: math
+  vram_mb: 600
+- backend: transformers
+  dtype: q4_K_S
+  hf_model: microsoft/phi-1_5
+  kv_cache_mb: 64
+  name: mistral_0.5b_q4
+  vram_mb: 200
+gpu_heads_small:
+- backend: transformers
+  dtype: q4_K
+  name: tinyllama_1b
+  vram_mb: 640
+- backend: transformers
+  dtype: q4_K
+  name: mistral_0.5b
+  vram_mb: 320
+- backend: transformers
+  dtype: q4_K
+  name: qwen2_0.5b
+  vram_mb: 350
+- backend: transformers
+  dtype: q4_K
+  name: safety_guard_0.3b
+  vram_mb: 200
+loading_strategy:
+  cloud_ready:
+    force_cloud_primary: true
+    force_cpu: []
+    priority_order:
+    - gpu_heads_minimal
+    - cloud_models
+    vram_limit_mb: 2000
+  gtx_1080:
+    force_cpu: []
+    priority_order:
+    - gpu_heads_small
+    - gpu_heads_medium
+    vram_limit_mb: 8000
+  quick_test:
+    force_cpu: []
+    priority_order:
+    - gpu_heads_small
+    vram_limit_mb: 1000
+  rtx_4070:
+    force_cpu: []
+    priority_order:
+    - gpu_heads_small
+    - gpu_heads_medium
+    - gpu_heads_large
+    vram_limit_mb: 10500
+  rtx_4070_optimized:
+    force_cpu: []
+    max_kv_mb_total: 2048
+    priority_order:
+    - gpu_heads_optimized
+    vram_limit_mb: 9500
+local_providers:
+- math_specialist
+- code_specialist
+- logic_specialist
+- knowledge_specialist
 models:
 - device: cuda:0
   dtype: q4_K
@@ -11,226 +194,67 @@ models:
   dtype: q4_K
   name: mixtral-8x7b
   path: /models/mixtral-8x7b.gguf
-
-# VRAM-aware loading strategy
-loading_strategy:
-  quick_test:
-    vram_limit_mb: 1000  # Ultra-conservative limit for CI - force mock only
-    force_cpu: []
-    priority_order:
-      - "gpu_heads_small"
-      
-  gtx_1080:
-    vram_limit_mb: 8000
-    force_cpu: []
-    priority_order:
-      - "gpu_heads_small"
-      - "gpu_heads_medium"
-
-  rtx_4070:
-    vram_limit_mb: 10500
-    force_cpu: []
-    priority_order:
-      - "gpu_heads_small"
-      - "gpu_heads_medium"
-      - "gpu_heads_large"
-
-  rtx_4070_optimized:
-    vram_limit_mb: 9500      # Conservative 4070 limit
-    max_kv_mb_total: 2048    # Total KV cache budget
-    force_cpu: []
-    priority_order:
-      - "gpu_heads_optimized"
-
-  cloud_ready:
-    vram_limit_mb: 2000      # Minimal local footprint
-    force_cloud_primary: true
-    force_cpu: []
-    priority_order:
-      - "gpu_heads_minimal"   # Just 1-2 tiny local models
-      - "cloud_models"        # Primary workhorses
-
-# Model heads by category with explicit backend declarations
-gpu_heads_small:
-- name: "tinyllama_1b"
-  vram_mb: 640
-  dtype: "q4_K"
-  backend: "transformers"
-- name: "mistral_0.5b"
-  vram_mb: 320
-  dtype: "q4_K"
-  backend: "transformers"
-- name: "qwen2_0.5b" 
-  vram_mb: 350
-  dtype: "q4_K"
-  backend: "transformers"
-- name: "safety_guard_0.3b"
-  vram_mb: 200
-  dtype: "q4_K"
-  backend: "transformers"
-
-gpu_heads_medium:
-- name: "phi2_2.7b"
-  vram_mb: 1600
-  dtype: "q4_K"
-  backend: "transformers"
-- name: "codellama_0.7b"
-  vram_mb: 450
-  dtype: "q4_K"
-  backend: "transformers"
-- name: "math_specialist_0.8b"
-  vram_mb: 512
-  dtype: "q4_K"
-  backend: "transformers"
-- name: "openchat_3.5_0.4b"
-  vram_mb: 2400
-  dtype: "q4_K"
-  backend: "transformers"
-
-gpu_heads_large:
-- name: "mistral_7b_instruct"
-  vram_mb: 3500
-  dtype: "q4_K"
-  backend: "transformers"
-- name: "llama2_70b_chat"
-  vram_mb: 8000
-  dtype: "q4_K"
-  backend: "vllm"  # Large model for vLLM when available
-- name: "mixtral_8x7b"
-  vram_mb: 6500
-  dtype: "q4_K"
-  backend: "vllm"  # Large model for vLLM when available
-
-# Optimized heads for RTX 4070 with 4-bit quantization
-gpu_heads_optimized:
-- name: "phi2_2.7b_q4"
-  vram_mb: 1400         # Phi-2 with 4-bit + KV cache  
-  kv_cache_mb: 256      # Per-model KV cache limit
-  dtype: "q4_K_M"
-  backend: "transformers"
-  hf_model: "microsoft/phi-2"  # Real reasoning model
-- name: "tinyllama_1b_q4"
-  vram_mb: 350          # TinyLlama with 4-bit
-  kv_cache_mb: 128      
-  dtype: "q4_K_S"
-  backend: "transformers"
-  hf_model: "microsoft/phi-2"  # Use Phi-2 for better reasoning
-- name: "math_specialist_q4"
-  vram_mb: 600          # Math specialist with VRAM pinning (Track ③)
-  kv_cache_mb: 256      # Dedicated KV cache for math
-  dtype: "q4_K_S" 
-  backend: "transformers"
-  hf_model: "microsoft/phi-2"  # Phi-2 excels at math
-  gpu_layers: 32        # Pin entire model to VRAM
-  rope_scaling: "yarn"  # Faster high-token math (Track ③)
-  priority: "high"      # High priority loading
-  specialized_for: "math"  # Math specialization flag
-- name: "mistral_0.5b_q4"
-  vram_mb: 200          # Ultra-light Mistral
-  kv_cache_mb: 64
-  dtype: "q4_K_S"
-  backend: "transformers"
-  hf_model: "microsoft/phi-1_5"  # Lighter but capable
-
-# TRACK ③: Math-optimized models for <100ms latency
-gpu_heads_math_optimized:
-- name: "lightning_math"
-  vram_mb: 800          # Dedicated math model  
-  kv_cache_mb: 512      # Large KV cache for complex equations
-  dtype: "q4_K_M"
-  backend: "transformers"  
-  hf_model: "microsoft/phi-2"  # Excellent math performance
-  gpu_layers: 32        # Keep entire GGUF on-card (Track ③)
-  rope_scaling: "yarn"  # Faster high-token math (Track ③)
-  priority: "critical"  # Critical priority - load first
-  specialized_for: "math"
-  optimization_target: "latency"  # <100ms target
-- name: "math_specialist_0.8b"
-  vram_mb: 512          # Standard math specialist
-  kv_cache_mb: 128
-  dtype: "q4_K_S"
-  backend: "transformers"
-  hf_model: "microsoft/phi-2"
-  specialized_for: "math"
-
-cpu_heads:
-- name: "openvino_head"
-  vram_mb: 0
-  dtype: "openvino_fp32"
-  backend: "openvino"
-
-# Cloud models for benchmarking (VRAM = 0, no local spill)
-cloud_models:
-- name: gpt4o_mini
-  path: api:gpt-4o-mini
-  backend: cloud
-  vram_mb: 0
-  price_per_1k_input: 0.40
-  price_per_1k_output: 1.60
-  quality: 82
-  provider: openai
-
-- name: claude_3_haiku
-  path: api:claude-3-haiku-20240307
-  backend: cloud
-  vram_mb: 0
-  price_per_1k_input: 0.25
-  price_per_1k_output: 1.25
-  quality: 78
-  provider: anthropic
-
-- name: mistral_large
-  path: api:mistral-large-latest
-  backend: cloud
-  vram_mb: 0
-  price_per_1k_input: 8.0
-  price_per_1k_output: 24.0
-  quality: 88
-  provider: mistral
-
-# Minimal local models for hybrid setup
-gpu_heads_minimal:
-- name: "safety_guard_local"
-  vram_mb: 200
-  dtype: "q4_K_S"
-  backend: "transformers"
-  hf_model: "gpt2"          # Lightweight safety only
-- name: "router_classifier"
-  vram_mb: 150  
-  dtype: "q4_K_S"
-  backend: "transformers"
-  hf_model: "distilgpt2"    # For smart routing decisions only
-
 profiles:
   working_test:
-    vram_limit_mb: 6000  # Conservative for RTX 4070
-    target_models:
-      - mistral_0.5b      # 320 MB - small and efficient
-      - safety_guard_0.3b # 200 MB - tiny guard model
     enable_council: false
     max_concurrent: 1
-
-fallback_head: mistral_general
+    target_models:
+    - mistral_0.5b
+    - safety_guard_0.3b
+    vram_limit_mb: 6000
 specialists_order:
-  - math_specialist      # Lightning fast SymPy, <1ms
-  - code_specialist      # DeepSeek Coder, 30-100ms (RE-ENABLED - fixed stubs!)
-  - logic_specialist     # SWI-Prolog, <1ms (RE-ENABLED - enhanced responses!)
-  - knowledge_specialist # FAISS RAG, 30ms
-  - mistral_general      # ← LAST in list, cloud fallback only
+- math_specialist
+- code_specialist
+- logic_specialist
+- knowledge_specialist
+- mistral_general
 
-confidence_thresholds:
-  math_specialist: 0.85     # Increased from 0.8
-  code_specialist: 0.80     # Increased from 0.7
-  logic_specialist: 0.75    # Increased from 0.6
-  knowledge_specialist: 0.70 # Increased from 0.5
-  mistral_general: 0.50     # Increased from 0.3
+# Local model pricing (cost per 1k tokens)
+pricing:
+  local_fp16: 0.0003          # Local GPU models
+  math_specialist: 0.00005    # Specialized math head
+  lightning_math: 0.00005     # Optimized math head  
+  phi2_2.7b: 0.0001          # Medium local model
+  tinyllama_1b: 0.00005      # Small local model
+  mistral_0.5b: 0.00003      # Tiny local model
+  mistral_medium_3: 0.0075   # Hybrid models
+  gpt4o_mini: 0.01           # Cloud fallback
 
-local_providers:
-  - math_specialist
-  - code_specialist  
-  - logic_specialist
-  - knowledge_specialist
+# 🚀 PERFORMANCE OPTIMIZATION #2: Hard caps to prevent runaway generation
+specialist_defaults:
+  max_tokens: 160             # Hard cap - was 128, now 160 to prevent truncation
+  temperature: 0.0            # Greedy sampling for speed (no speculative decoding)
+  timeout_seconds: 8          # Hard timeout - kill after 8s to prevent 37s delays
+  do_sample: false           # Greedy sampling for deterministic fast responses
+  generation_config:
+    max_new_tokens: 160      # Hard cap at generation level
+    do_sample: false
+    temperature: 0.0
+    pad_token_id: 0
+    eos_token_id: 2
+    use_cache: true          # Enable KV cache for speed
+    rope_scaling: "yarn"     # Efficient rope scaling
 
-cloud_providers:
-  - mistral_general
-  - openai_fallback
+# Specialist-specific overrides with hard caps
+specialist_overrides:
+  math_specialist:
+    max_tokens: 64           # Math needs even fewer tokens for answers like "4"
+    temperature: 0.0         # Deterministic math answers
+    timeout_seconds: 8       # Hard timeout for math
+  code_specialist:
+    max_tokens: 160          # Code can be a bit longer but still capped
+    temperature: 0.0         # Deterministic code generation
+    timeout_seconds: 8       # Hard timeout for code
+  logic_specialist:
+    max_tokens: 96           # Logic reasoning should be concise
+    temperature: 0.0         # Deterministic logical conclusions
+    timeout_seconds: 8       # Hard timeout for logic
+  knowledge_specialist:
+    max_tokens: 160          # Knowledge answers capped at 160 tokens
+    temperature: 0.1         # Slight creativity for knowledge explanations
+    timeout_seconds: 8       # Hard timeout for knowledge
+  mistral_general:
+    max_tokens: 20           # 🚀 WHISPER-SIZE: Agent-0 draft now just 16-24 tokens for bullet sketch
+    temperature: 0.7         # More creative for general responses
+    timeout_seconds: 5       # 🚀 FASTER: Reduced from 8s to 5s for quick drafts
+    summary_tokens: 40       # 🚀 SUMMARY LIMIT: Truncate Agent-0 summaries to 40 tokens max

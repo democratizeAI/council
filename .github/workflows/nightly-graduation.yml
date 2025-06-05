@@ -1,0 +1,323 @@
+name: Nightly Graduation Suite
+
+on:
+  schedule:
+    # Run every night at 3 AM UTC
+    - cron: "0 3 * * *"
+  workflow_dispatch:  # Allow manual triggering
+    inputs:
+      suite_type:
+        description: 'Test suite to run'
+        required: false
+        default: 'full'
+        type: choice
+        options:
+          - 'full'
+          - 'quick'
+          - 'soak-only'
+          - 'performance-only'
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '18'
+
+jobs:
+  # Quick validation suite
+  quick-validation:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.suite_type == 'quick' || github.event.inputs.suite_type == 'full' || github.event_name == 'schedule'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-cov requests
+          
+      - name: Start services
+        run: |
+          docker compose -f docker-compose.graduation.yml up -d autogen-council redis qdrant
+          
+      - name: Wait for services
+        run: |
+          timeout 120 bash -c 'until curl -f http://localhost:9000/health; do sleep 5; done'
+          
+      - name: Run smoke tests
+        run: |
+          make smoke
+          
+      - name: Run unit tests
+        run: |
+          make unit
+          
+      - name: Run performance benchmark
+        run: |
+          make perf
+          
+      - name: Upload quick test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: quick-test-results
+          path: reports/
+          retention-days: 30
+
+  # Full graduation suite
+  full-graduation:
+    runs-on: self-hosted  # Requires GPU runner for full suite
+    if: github.event.inputs.suite_type == 'full' || github.event_name == 'schedule'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y make curl jq bandit
+          
+      - name: Install Python dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-cov requests locust bandit
+          
+      - name: Start full graduation environment
+        run: |
+          docker compose -f docker-compose.graduation.yml up -d
+          
+      - name: Wait for all services
+        run: |
+          timeout 300 bash -c 'until curl -f http://localhost:9000/health && curl -f http://localhost:9090/-/ready && curl -f http://localhost:3000/api/health; do sleep 10; done'
+          
+      - name: Run complete graduation suite
+        run: |
+          make ci-all
+          
+      - name: Validate ship criteria
+        run: |
+          make ship-check
+          
+      - name: Export Grafana snapshot
+        run: |
+          make grafana-snapshot
+          
+      - name: Upload graduation results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: graduation-suite-results
+          path: |
+            reports/
+            docs/perf_snapshot_v2.7.0.png
+          retention-days: 30
+          
+      - name: Upload logs
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: graduation-logs
+          path: logs/
+          retention-days: 7
+
+  # Soak testing (1-hour endurance)
+  soak-testing:
+    runs-on: self-hosted  # Requires GPU runner
+    if: github.event.inputs.suite_type == 'soak-only' || github.event.inputs.suite_type == 'full' || github.event_name == 'schedule'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install locust
+          
+      - name: Start monitoring stack
+        run: |
+          docker compose -f docker-compose.graduation.yml up -d autogen-council redis qdrant prometheus grafana loki promtail
+          
+      - name: Wait for services
+        run: |
+          timeout 300 bash -c 'until curl -f http://localhost:9000/health && curl -f http://localhost:9090/-/ready; do sleep 10; done'
+          
+      - name: Run 1-hour soak test
+        run: |
+          make soak-1h
+          
+      - name: Collect soak test metrics
+        run: |
+          python scripts/collect_soak_metrics.py --duration 3600 --output reports/soak_metrics.json
+          
+      - name: Upload soak test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: soak-test-results
+          path: |
+            reports/soak*
+            logs/
+          retention-days: 30
+
+  # Performance regression detection
+  performance-regression:
+    runs-on: self-hosted  # Requires GPU runner
+    if: github.event.inputs.suite_type == 'performance-only' || github.event.inputs.suite_type == 'full' || github.event_name == 'schedule'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          
+      - name: Download baseline performance data
+        uses: actions/download-artifact@v3
+        with:
+          name: performance-baseline
+          path: baseline/
+        continue-on-error: true  # First run won't have baseline
+        
+      - name: Start services
+        run: |
+          docker compose -f docker-compose.graduation.yml up -d autogen-council redis qdrant
+          
+      - name: Wait for services
+        run: |
+          timeout 120 bash -c 'until curl -f http://localhost:9000/health; do sleep 5; done'
+          
+      - name: Run performance regression check
+        run: |
+          make perf-regression
+          
+      - name: Update performance baseline
+        if: success()
+        run: |
+          make baseline
+          
+      - name: Upload new baseline
+        uses: actions/upload-artifact@v3
+        if: success()
+        with:
+          name: performance-baseline
+          path: baseline/
+          retention-days: 90
+
+  # Security and compliance
+  security-scan:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.suite_type == 'full' || github.event_name == 'schedule'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          
+      - name: Install security tools
+        run: |
+          pip install bandit safety
+          
+      - name: Run security scans
+        run: |
+          make security
+          
+      - name: Upload security results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: security-scan-results
+          path: reports/bandit.json
+          retention-days: 30
+
+  # Generate final report
+  generate-report:
+    runs-on: ubuntu-latest
+    needs: [quick-validation, full-graduation, soak-testing, performance-regression, security-scan]
+    if: always() && (github.event.inputs.suite_type == 'full' || github.event_name == 'schedule')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: artifacts/
+          
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          
+      - name: Generate comprehensive report
+        run: |
+          python scripts/generate_graduation_report.py --artifacts-dir artifacts/ --output reports/graduation_report.html
+          
+      - name: Update README badge
+        run: |
+          python scripts/update_readme_badge.py --report reports/graduation_report.html
+          
+      - name: Commit badge update
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: 'Update graduation suite badge [skip ci]'
+          file_pattern: README.md
+          
+      - name: Upload final report
+        uses: actions/upload-artifact@v3
+        with:
+          name: graduation-final-report
+          path: reports/graduation_report.html
+          retention-days: 90
+          
+      - name: Notify on failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          text: 'Graduation suite failed! Check the logs for details.'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # Clean up
+  cleanup:
+    runs-on: self-hosted
+    needs: [full-graduation, soak-testing, performance-regression]
+    if: always()
+    
+    steps:
+      - name: Clean up Docker resources
+        run: |
+          docker compose -f docker-compose.graduation.yml down -v
+          docker system prune -f
+          
+      - name: Clean up test artifacts
+        run: |
+          sudo rm -rf logs/* reports/* || true 

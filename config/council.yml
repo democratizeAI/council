@@ -1,0 +1,138 @@
+cost_optimization:
+  alert_on_daily_spend: true
+  auto_adjust_gate: false
+  distillation_enabled: false
+  quality_threshold: 0.8
+  shadow_mode_enabled: true
+  track_cloud_saves: true
+  track_cost_per_category: true
+council:
+  cloud_saves_tracking: true
+  confidence_gate: 0.5
+  daily_budget: 1.0
+  emergency_abort_threshold: 0.04
+  enabled: true
+  local_triage_model: tinyllama_1b
+  mandatory_cloud_keywords:
+  - safety-critical
+  - compliance
+  - legal
+  - medical
+  max_cost_per_request: 0.05
+  min_local_confidence: 0.5
+  min_tokens: 20
+  multiplex_enabled: true
+  multiplex_max_tokens: 200
+  multiplex_provider: gpt4o_mini
+  multiplex_temperature: 0.6
+  pocket_mode: true
+  quality_monitoring: true
+  scratchpad_context_boost: 0.15
+  target_local_only_latency_ms: 80
+  target_p95_latency_ms: 800
+  trigger_keywords:
+  - explain
+  - analyze
+  - compare
+  - evaluate
+  - strategy
+  - design
+  use_scratchpad_boost: true
+  deliberation_enabled: true
+
+budget:
+  max_spend_per_request_usd: 0.05
+  max_spend_per_day_usd: 1.0
+
+# Token and time limits to prevent CPU off-loading and fluff generation
+generation_limits:
+  max_tokens: 256        # Hard cap per voice to prevent 2000-token fluff
+  generation_timeout: 10 # seconds - kill generation if it takes too long
+  temperature: 0.7
+  top_p: 0.9
+
+# Confidence gates for tier routing - lowered to enable cloud bursts
+confidence_gate:
+  to_synth: 0.45     # Lower threshold to trigger synth if local < 0.45
+  to_premium: 0.20   # Lower threshold to trigger premium
+
+# Pocket-council configuration
+pocket_mode:
+  enabled: true
+  confidence_gate: 0.50
+  cost_per_deliberation: 0.002
+
+deployment_profiles:
+  pocket_council_aggressive:
+    confidence_gate: 0.6
+    max_cost_per_request: 0.03
+    target_local_percentage: 85
+  pocket_council_balanced:
+    confidence_gate: 0.5
+    max_cost_per_request: 0.05
+    target_local_percentage: 75
+  pocket_council_quality:
+    confidence_gate: 0.4
+    max_cost_per_request: 0.08
+    target_local_percentage: 60
+multiplex:
+  cost_per_token: 1.5e-05
+  expected_tokens: 150
+  system_prompt: "You are a Council-Multiplexer. Given a query, provide exactly 5\
+    \ distinct perspectives as a JSON array.\nEach voice has a specific role and should\
+    \ give a brief, focused response.\n\nReturn format: [{\"voice\":\"Reason\",\"\
+    reply\":\"...\"},{\"voice\":\"Spark\",\"reply\":\"...\"}...]\n\nVoice roles:\n\
+    - Reason: Logical step-by-step analysis (2 sentences max)\n- Spark: One creative/novel\
+    \ angle (≤40 words) \n- Edge: Biggest risk/concern (≤25 words)\n- Heart: Human-friendly\
+    \ rewrite (1-2 lines)\n- Vision: Future implication (≤30 chars)\n"
+  user_prompt_template: "{\n  \"query\": \"{prompt}\",\n  \"voices\": [\"Reason\"\
+    , \"Spark\", \"Edge\", \"Heart\", \"Vision\"],\n  \"format\": \"brief_focused_responses\"\
+    \n}\n"
+scratchpad:
+  confidence_boost_per_context: 0.075
+  context_retrieval_enabled: true
+  context_similarity_threshold: 0.7
+  enabled: true
+  max_context_entries: 2
+voices:
+  Edge:
+    max_tokens: 35
+    model: math_specialist_0.8b
+    multiplex: true
+    priority: high
+    prompt: Name the biggest risk in ≤25 words.
+    temperature: 0.3
+  Heart:
+    max_tokens: 45
+    model: codellama_0.7b_local
+    multiplex: true
+    priority: medium
+    prompt: Rewrite key point warmly in 1-2 lines.
+    temperature: 0.5
+  Reason:
+    max_tokens: 40
+    model: tinyllama_1b_local
+    multiplex: true
+    priority: critical
+    prompt: Think step-by-step. 2 sentences max.
+    temperature: 0.1
+  Spark:
+    max_tokens: 50
+    model: phi2_2.7b_local
+    multiplex: true
+    priority: high
+    prompt: Invent one fresh angle in ≤40 words.
+    temperature: 0.8
+  Vision:
+    max_tokens: 35
+    model: phi2_2.7b_local
+    multiplex: true
+    priority: low
+    prompt: Add 1 future implication. 30 chars.
+    temperature: 0.4
+
+# Fusion and voting
+fusion:
+  method: "confidence_weighted"
+  min_voices: 3
+  max_summary_tokens: 120  # Fusion summary token limit for memory system

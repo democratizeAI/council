@@ -338,7 +338,13 @@ def load_models(profile: Optional[str] = None, use_real_loading: bool = False) -
     if not config_path.exists():
         raise FileNotFoundError(f"Models config not found: {config_path}")
         
-    MODELS = yaml.safe_load(config_path.read_text())
+    # Use UTF-8 safe YAML loading
+    try:
+        from config.utils import load_yaml
+        MODELS = load_yaml(str(config_path))
+    except ImportError:
+        # Fallback if config.utils not available
+        MODELS = yaml.safe_load(config_path.read_text(encoding='utf-8'))
     strat = MODELS['loading_strategy'][profile]
     limit = strat['vram_limit_mb']
     force_cpu = set(strat.get('force_cpu', []))

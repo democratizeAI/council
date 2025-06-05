@@ -125,6 +125,72 @@ async def test_vote_endpoint():
     except Exception as e:
         print(f"❌ Vote endpoint error: {e}")
 
+async def test_distinct_personalities():
+    """Test that specialists now have distinct personalities"""
+    print(f"\n🎭 Testing Distinct Specialist Personalities...")
+    
+    router = RouterCascade()
+    
+    # Same query to different specialists - should get VERY different responses
+    test_query = "What is 2 + 2?"
+    
+    specialists = ["math", "knowledge", "agent0"]
+    responses = {}
+    
+    for specialist in specialists:
+        try:
+            result = await router.route_query(test_query, force_skill=specialist)
+            responses[specialist] = result['text']
+            print(f"\n🧠 **{specialist.upper()} RESPONSE**:")
+            print(f"   {result['text'][:150]}...")
+            print(f"   Model: {result.get('model', 'unknown')}")
+            print(f"   Confidence: {result.get('confidence', 0):.2f}")
+        except Exception as e:
+            print(f"❌ {specialist} failed: {e}")
+    
+    # Check for distinct responses
+    if len(responses) >= 2:
+        response_texts = list(responses.values())
+        
+        # Check if responses are meaningfully different
+        similarities = []
+        for i in range(len(response_texts)):
+            for j in range(i+1, len(response_texts)):
+                text1, text2 = response_texts[i].lower(), response_texts[j].lower()
+                # Simple similarity check - count common words
+                words1 = set(text1.split())
+                words2 = set(text2.split())
+                overlap = len(words1 & words2) / max(len(words1), len(words2))
+                similarities.append(overlap)
+        
+        avg_similarity = sum(similarities) / len(similarities)
+        print(f"\n📊 **Personality Analysis**:")
+        print(f"   Average response similarity: {avg_similarity:.2f}")
+        
+        if avg_similarity < 0.3:  # Less than 30% word overlap
+            print("✅ **DISTINCT PERSONALITIES CONFIRMED!** Each specialist has unique voice!")
+        elif avg_similarity < 0.5:
+            print("🟡 **MODERATE PERSONALITY DIFFERENCES** - Getting better!")
+        else:
+            print("❌ **STILL TOO SIMILAR** - Specialists sound like same bot")
+        
+        # Check for personality markers
+        personality_markers = {
+            "math": ["⚡", "🧮", "**", "Here's how:", "Quick"],
+            "knowledge": ["📚", "🔍", "💡", "fascinating", "mind-blowing"],
+            "agent0": ["🧠", "✨", "perspective", "analysis", "insights"]
+        }
+        
+        print(f"\n🎨 **Personality Markers Check**:")
+        for specialist, markers in personality_markers.items():
+            if specialist in responses:
+                found_markers = [m for m in markers if m.lower() in responses[specialist].lower()]
+                print(f"   {specialist}: Found {len(found_markers)}/{len(markers)} markers: {found_markers}")
+                
+        return avg_similarity < 0.4  # Return success if reasonably distinct
+    
+    return False
+
 async def main():
     """Run all tests"""
     print("🚀 AutoGen Council Fix Validation")
@@ -132,6 +198,7 @@ async def main():
     
     await test_fixed_specialists()
     await test_vote_endpoint()
+    await test_distinct_personalities()
     
     print(f"\n🏁 Test Complete!")
     print("📋 Expected improvements:")

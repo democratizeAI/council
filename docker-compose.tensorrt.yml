@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  # TensorRT-LLM Engine Builder (one-time build)
+  trtllm-build:
+    image: nvcr.io/nvidia/tensorrt_llm:v0.17.0-trt_llm-py3
+    volumes:
+      - ./models:/workspace/models
+      - ./engines:/workspace/engines
+      - ./scripts:/workspace/scripts
+    working_dir: /workspace
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            capabilities: [gpu]
+    command: >
+      bash -c "
+        echo '🚀 Building TensorRT-LLM engine for Phi-2 with 4-bit AWQ...' &&
+        mkdir -p /workspace/engines/phi-2-q4awq &&
+        trtllm-build --checkpoint_dir /workspace/models/phi-2
+                     --output_dir /workspace/engines/phi-2-q4awq
+                     --dtype float16
+                     --quantization int4_awq
+                     --max_batch_size 64
+                     --max_input_len 2048
+                     --max_output_len 512
+                     --max_beam_width 1
+                     --use_paged_kv_cache
+                     --workers 12
+                     --tp_size 1
+                     --plugin_config gemm_plugin=float16,lookup_plugin=float16 &&
+        echo '✅ TensorRT-LLM engine build complete!'
+      "
+
+  # TensorRT-LLM Inference Server
+  trtllm-server:
+    image: nvcr.io/nvidia/tensorrt_llm:v0.17.0-trt_llm-py3
+    volumes:
+      - ./engines:/workspace/engines
+    working_dir: /workspace
+    ports:
+      - "8081:8081"
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            capabilities: [gpu]
+    depends_on:
+      - trtllm-build
+    command: >
+      bash -c "
+        echo '🚀 Starting TensorRT-LLM server...' &&
+        python scripts/run_server.py --engine_dir /workspace/engines/phi-2-q4awq
+                                      --port 8081
+                                      --host 0.0.0.0
+                                      --max_batch_size 64
+                                      --max_beam_width 1
+                                      --use_py_session
+      "
+
+  # Model Download Service (helper)
+  model-prep:
+    image: python:3.10-slim
+    volumes:
+      - ./models:/workspace/models
+      - ./scripts:/workspace/scripts
+    working_dir: /workspace
+    command: >
+      bash -c "
+        echo '📥 Preparing Phi-2 model for TensorRT-LLM...' &&
+        pip install transformers torch huggingface-hub &&
+        python scripts/prepare_phi2_model.py
+      "
+
+networks:
+  default:
+    name: tensorrt_network 

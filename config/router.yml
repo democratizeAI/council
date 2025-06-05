@@ -1,0 +1,64 @@
+# Three-Tier Rescue Ladder Configuration
+# COST-CONTAINMENT APPLIED: Quality + Speed maintained, Cost reduced
+# Keeps 90-95% of requests local, escalates only when confidence is low
+
+# 🛡️ HARD PER-REQUEST CAP - Stops >20¢ outliers
+budget:
+  per_request_usd: 0.02      # Hard cap: abort Tier-3 if est_cost_next > cap
+  daily_budget_usd: 2.00
+  cost_alert_threshold: 0.03  # Alert if trending above 3¢ per request
+
+confidence_gate:
+  to_synth: 0.50      # TIGHTENED: was 0.45 → push more local success
+  to_premium: 0.18    # LOWERED: was 0.20 → reduce premium escalation
+
+# Cost guardrails - tighten gates when spending increases
+cost_guardrail:
+  daily_budget_usd: 2.00
+  tight_gates:
+    to_synth: 0.40     # tighter threshold when approaching budget
+    to_premium: 0.15
+
+# Tier definitions with token limits
+tiers:
+  tier1_local:
+    models: ["tinyllama_1b", "phi2_2.7b", "mistral_0.5b"]
+    target_confidence: 0.70
+    cost_per_token: 0.0000  # local GPU cost
+    max_tokens: 256         # Hard limit to prevent CPU off-loading
+    timeout: 10             # seconds
+    
+  tier2_synth:
+    models: ["mistral-small-latest", "gpt-3.5-turbo"]  
+    target_confidence: 0.60
+    cost_per_token: 0.00012  # ~$0.003 for 256 tokens
+    max_tokens: 160         # 🔪 TOKEN DIET: 256 → 160 (-25% cost cut)
+    timeout: 15             # seconds
+    
+  tier3_premium:
+    models: ["gpt-4o-mini", "claude-3-haiku", "gpt-4o"]
+    target_confidence: 0.90
+    cost_per_token: 0.00015  # premium pricing
+    max_tokens: 512         # Premium can use more tokens
+    timeout: 30             # seconds
+
+# Memory system token budgets - compressed for cost savings
+memory:
+  tier1_summary_tokens: 60    # Compressed: was 80
+  tier2_summary_tokens: 45    # Compressed: was 60  
+  tier3_summary_tokens: 60    # Tier-3 summary limit
+  episodic_memory_tokens: 180 # Reduced: was 240
+  max_context_tokens: 450     # Reduced: was 600 (still fits 2K models)
+
+# Caching configuration
+cache:
+  enabled: true
+  ttl_seconds: 3600          # 1 hour cache for identical prompts
+  max_entries: 10000         # Memory limit
+  key_template: "{session_id}:{prompt_hash}"
+
+# Provider chain transparency for UI
+ui_colors:
+  local: "🟢"     # green for local
+  synth: "🟠"     # orange for synth 
+  premium: "🔴"   # red for premium 

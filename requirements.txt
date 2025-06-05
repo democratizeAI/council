@@ -2,11 +2,11 @@
 # Production-ready multi-agent AI system dependencies
 
 # Core ML/AI Libraries
-torch>=1.13.0
-transformers>=4.21.0
-sentence-transformers>=2.2.0
+torch>=2.0.0
+transformers>=4.35.0
+sentence-transformers==3.2.0
 sympy>=1.11.0
-numpy>=1.21.0
+numpy>=1.24.0
 
 # API & Web Framework
 fastapi==0.104.1
@@ -30,7 +30,7 @@ python-dateutil>=2.8.0
 pathlib2>=2.3.0
 
 # HTTP client for LLM endpoints
-aiohttp==3.9.1
+aiohttp>=3.8.0
 httpx==0.25.2
 requests==2.31.0
 
@@ -38,15 +38,15 @@ requests==2.31.0
 pandas==2.1.4
 
 # Async support
-asyncio-mqtt==0.13.0
+asyncio-mqtt>=0.11.0
 
 # Logging and monitoring
-prometheus-client==0.19.0
+prometheus-client>=0.16.0
 structlog==23.2.0
 
 # Configuration
 python-dotenv==1.0.0
-pyyaml==6.0.1
+pyyaml>=6.0
 
 # Development
 black==23.11.0
@@ -55,4 +55,16 @@ mypy==1.7.1
 
 # Optional: Math and ML libraries (for local skills)
 sympy==1.12
-scipy==1.11.4 
+scipy==1.11.4
+
+# Phase 3 Memory Integration
+redis>=4.5.0
+qdrant-client>=1.6.0
+
+# Phase 4 TensorRT-LLM Integration  
+aiohttp>=3.8.0            # Async HTTP client for TensorRT backend
+locust>=2.17.0            # Load testing framework
+
+# Docker and containerization support
+docker>=6.1.0             # Docker SDK for Python
+docker-compose>=1.29.2    # Docker Compose support 

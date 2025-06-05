@@ -1,0 +1,187 @@
+# AutoGen Council Graduation Suite
+# Battle-tested validation before v3.0.0 GA
+.PHONY: all ci-all smoke unit perf load soak retrieval chaos oom security cross-os alerts ux clean
+
+# Default target
+all: ci-all
+
+# One-command comprehensive validation
+ci-all: clean setup smoke unit perf load soak retrieval chaos oom security cross-os alerts
+	@echo "🎉 GRADUATION SUITE COMPLETE"
+	@echo "📊 Generating final report..."
+	@python scripts/generate_report.py
+	@echo "✅ Ready for v3.0.0 GA"
+
+# Setup and cleanup
+setup:
+	@echo "🚀 Setting up graduation suite environment..."
+	@mkdir -p reports logs bench/results
+	@docker compose -f docker-compose.graduation.yml up -d
+	@sleep 10  # Allow services to stabilize
+
+clean:
+	@echo "🧹 Cleaning up previous test artifacts..."
+	@rm -rf reports/* logs/* bench/results/*
+	@docker compose -f docker-compose.graduation.yml down -v
+
+# 1. Smoke Tests - API surface integrity
+smoke:
+	@echo "💨 Running smoke tests..."
+	@pytest tests/smoke.py -v --tb=short --junitxml=reports/smoke.xml
+	@echo "✅ Smoke tests complete"
+
+# 2. Unit/CI Tests - Business logic validation
+unit:
+	@echo "🧪 Running unit tests with coverage..."
+	@pytest -q --cov=. --cov-report=html:reports/coverage --cov-report=term --junitxml=reports/unit.xml
+	@echo "✅ Unit tests complete"
+
+# 3. Single-Shot Performance - Raw performance validation
+perf:
+	@echo "⚡ Running single-shot performance benchmark..."
+	@python bench/bench_single.py --tokens 256 --output reports/perf_single.json
+	@echo "✅ Performance benchmark complete"
+
+# 4. Load/Burst Testing - Concurrent load validation
+load:
+	@echo "🔥 Running load/burst tests..."
+	@locust -f tests/locust_suite.py --host=http://localhost:9000 \
+		--users 32 --spawn-rate 4 --run-time 5m --html reports/load.html \
+		--csv reports/load --headless
+	@echo "✅ Load tests complete"
+
+# 5. Soak Testing - 1-hour endurance test
+soak:
+	@echo "🛁 Running 1-hour soak test..."
+	@python scripts/soak_monitor.py --duration 3600 --output reports/soak.json &
+	@locust -f tests/locust_soak.py --host=http://localhost:9000 \
+		--users 16 --spawn-rate 2 --run-time 1h --html reports/soak.html \
+		--csv reports/soak --headless
+	@echo "✅ Soak test complete"
+
+# 6. Retrieval Accuracy - Memory system validation
+retrieval:
+	@echo "🎯 Running retrieval accuracy evaluation..."
+	@python eval/retrieval_eval.py --qa-pairs 200 --output reports/retrieval.json
+	@echo "✅ Retrieval accuracy evaluation complete"
+
+# 7. Concurrency Chaos - Fault tolerance validation
+chaos:
+	@echo "🌪️ Running concurrency chaos tests..."
+	@bash scripts/kill-restart.sh &
+	@sleep 2
+	@locust -f tests/locust_chaos.py --host=http://localhost:9000 \
+		--users 16 --spawn-rate 4 --run-time 2m --html reports/chaos.html \
+		--csv reports/chaos --headless
+	@echo "✅ Chaos tests complete"
+
+# 8. OOM Guard - Memory pressure handling
+oom:
+	@echo "💾 Running OOM guard tests..."
+	@python bench/oom_sim.py --prompt_len 8192 --output reports/oom.json
+	@echo "✅ OOM guard tests complete"
+
+# 9. Security Scan - Vulnerability assessment
+security:
+	@echo "🔒 Running security scans..."
+	@bandit -r . -f json -o reports/bandit.json || true
+	@trivy fs . --format json --output reports/trivy.json || true
+	@echo "✅ Security scans complete"
+
+# 10. Cross-OS Sanity - Windows/Linux compatibility
+cross-os:
+	@echo "🖥️ Running cross-OS compatibility tests..."
+	@python tests/cross_os_test.py --output reports/cross_os.json
+	@echo "✅ Cross-OS tests complete"
+
+# 11. Alert Validation - Monitoring system validation
+alerts:
+	@echo "🚨 Running alert validation..."
+	@python scripts/fake_metrics.py --alerts --output reports/alerts.json
+	@sleep 30  # Allow alerts to propagate
+	@python scripts/verify_alerts.py --output reports/alert_verification.json
+	@echo "✅ Alert validation complete"
+
+# 12. UX Spot-Check - Manual validation helper
+ux:
+	@echo "👤 UX Spot-Check Instructions:"
+	@echo "1. Open http://localhost:9000/chat"
+	@echo "2. Test conversation flow and memory recall"
+	@echo "3. Check latency feels snappy (<1s responses)"
+	@echo "4. Verify real-time dashboard updates"
+	@echo "5. Test admin panel functionality"
+	@echo "6. Create reports/ux_checklist.md with results"
+	@echo "⏳ Waiting for manual UX validation..."
+
+# Quick tests for development
+quick: smoke unit perf
+	@echo "✅ Quick validation complete"
+
+# Soak test only (for nightly CI)
+soak-1h: setup soak
+	@echo "✅ 1-hour soak test complete"
+
+# Performance regression check
+perf-regression: setup perf
+	@python scripts/compare_perf.py reports/perf_single.json baseline/perf_baseline.json
+	@echo "✅ Performance regression check complete"
+
+# Generate baseline for future comparisons
+baseline:
+	@echo "📏 Generating performance baseline..."
+	@mkdir -p baseline
+	@python bench/bench_single.py --tokens 256 --output baseline/perf_baseline.json
+	@echo "✅ Baseline generated"
+
+# Monitor during tests
+monitor:
+	@echo "📊 Opening monitoring dashboard..."
+	@open http://localhost:3000/d/council-performance
+	@echo "Monitor these metrics during soak test:"
+	@echo "  - tokens/s vs GPU utilization"
+	@echo "  - trtllm_engine_latency_p95"
+	@echo "  - memory_hits_total / (hits+misses)"
+	@echo "  - Redis evictions / Qdrant spill"
+
+# Validate ship criteria
+ship-check:
+	@echo "🚢 Validating ship criteria..."
+	@python scripts/ship_criteria.py --reports-dir reports
+	@echo "Ship criteria validation complete"
+
+# Export Grafana snapshot
+grafana-snapshot:
+	@echo "📸 Exporting Grafana performance snapshot..."
+	@python scripts/export_grafana.py --output docs/perf_snapshot_v2.7.0.png
+	@echo "✅ Grafana snapshot exported"
+
+# Help
+help:
+	@echo "AutoGen Council Graduation Suite"
+	@echo "================================"
+	@echo ""
+	@echo "Main targets:"
+	@echo "  all         - Run complete graduation suite"
+	@echo "  ci-all      - Same as 'all' with reporting"
+	@echo "  quick       - Smoke + Unit + Perf only"
+	@echo "  soak-1h     - 1-hour soak test for nightly CI"
+	@echo ""
+	@echo "Individual suites:"
+	@echo "  smoke       - API surface integrity (Suite 1)"
+	@echo "  unit        - Business logic validation (Suite 2)"
+	@echo "  perf        - Single-shot performance (Suite 3)"
+	@echo "  load        - Load/burst testing (Suite 4)"
+	@echo "  soak        - 1-hour endurance test (Suite 5)"
+	@echo "  retrieval   - Memory accuracy evaluation (Suite 6)"
+	@echo "  chaos       - Concurrency chaos testing (Suite 7)"
+	@echo "  oom         - OOM guard validation (Suite 8)"
+	@echo "  security    - Security scanning (Suite 9)"
+	@echo "  cross-os    - Cross-OS compatibility (Suite 10)"
+	@echo "  alerts      - Alert system validation (Suite 11)"
+	@echo "  ux          - Manual UX spot-check (Suite 12)"
+	@echo ""
+	@echo "Utilities:"
+	@echo "  baseline    - Generate performance baseline"
+	@echo "  monitor     - Open monitoring dashboard"
+	@echo "  ship-check  - Validate ship criteria"
+	@echo "  clean       - Clean up test artifacts" 

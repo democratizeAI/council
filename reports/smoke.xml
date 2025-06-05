@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="smoke_tests" tests="8" failures="0" time="23.45">
+    <testcase name="test_health_endpoint" time="0.142"/>
+    <testcase name="test_basic_chat" time="2.534"/>
+    <testcase name="test_error_handling" time="0.892"/>
+    <testcase name="test_response_time" time="1.245"/>
+    <testcase name="test_parameter_validation" time="0.567"/>
+    <testcase name="test_json_format" time="0.333"/>
+    <testcase name="test_memory_endpoints" time="1.789"/>
+    <testcase name="test_metrics_endpoint" time="0.445"/>
+</testsuite>

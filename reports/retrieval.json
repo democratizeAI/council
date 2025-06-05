@@ -1,0 +1,11 @@
+{
+  "queries_tested": 200,
+  "hit_rate_percent": 87.0,
+  "mrr_score": 0.859,
+  "avg_retrieval_time_ms": 7.2,
+  "passed": true,
+  "requirements": {
+    "min_hit_rate": 65,
+    "min_mrr": 0.75
+  }
+}

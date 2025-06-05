@@ -1,0 +1,104 @@
+# 🏆 Titanic Gauntlet v2.6.0 - Docker Edition
+# Quick commands for running Council evaluation suites
+
+# Default values
+BUDGET ?= 10
+COUNCIL_URL ?= http://localhost:9000
+
+# Environment setup
+.PHONY: setup-env
+setup-env:
+	@echo "🔧 Setting up Titanic Gauntlet environment..."
+	@mkdir -p reports
+	@echo "✅ Reports directory created"
+
+# Health check
+.PHONY: health
+health:
+	@echo "🏥 Checking Council API health..."
+	@curl -f $(COUNCIL_URL)/health || echo "❌ Council API not responding"
+
+# Quick smoke test - 50 prompts (≈3 min)
+.PHONY: micro
+micro: setup-env
+	@echo "🚀 Running Micro Suite (50 prompts, ~3 min)"
+	python scripts/run_titanic_gauntlet_docker.py \
+		--suite micro \
+		--budget 2 \
+		--council-url $(COUNCIL_URL) \
+		--report reports/micro_$(shell date +%Y%m%d_%H%M).json
+
+# Full Titanic Gauntlet - 380 prompts (≈25 min)
+.PHONY: titanic
+titanic: setup-env
+	@echo "🏆 Running Full Titanic Gauntlet (380 prompts, ~25 min)"
+	python scripts/run_titanic_gauntlet_docker.py \
+		--suite full \
+		--budget $(BUDGET) \
+		--council-url $(COUNCIL_URL) \
+		--report reports/titanic_full_$(shell date +%Y%m%d_%H%M).json
+
+# Custom budget run
+.PHONY: titanic-budget
+titanic-budget: setup-env
+	@echo "🏆 Running Titanic with budget $$(BUDGET)"
+	python scripts/run_titanic_gauntlet_docker.py \
+		--suite full \
+		--budget $(BUDGET) \
+		--council-url $(COUNCIL_URL)
+
+# Start Council stack
+.PHONY: start-council
+start-council:
+	@echo "🚀 Starting Council stack..."
+	docker-compose up -d council-api prometheus grafana
+
+# Stop Council stack  
+.PHONY: stop-council
+stop-council:
+	@echo "🛑 Stopping Council stack..."
+	docker-compose down
+
+# View latest report
+.PHONY: latest-report
+latest-report:
+	@echo "📊 Latest Titanic report:"
+	@ls -t reports/titanic_*.json | head -1 | xargs cat | python -m json.tool
+
+# Clean up old reports (keep last 10)
+.PHONY: clean-reports
+clean-reports:
+	@echo "🧹 Cleaning old reports (keeping last 10)..."
+	@ls -t reports/titanic_*.json | tail -n +11 | xargs rm -f
+	@echo "✅ Cleanup complete"
+
+# Complete workflow: start → test → report
+.PHONY: full-workflow
+full-workflow: start-council health micro titanic latest-report
+	@echo "🎉 Full Titanic workflow complete!"
+
+# Help
+.PHONY: help
+help:
+	@echo "🏆 Titanic Gauntlet v2.6.0 Commands:"
+	@echo ""
+	@echo "Quick Tests:"
+	@echo "  make micro           - Fast 50-prompt test (~3 min)"
+	@echo "  make titanic         - Full 380-prompt gauntlet (~25 min)"
+	@echo "  make titanic BUDGET=5 - Custom budget limit"
+	@echo ""
+	@echo "Stack Management:"
+	@echo "  make start-council   - Start Council containers"
+	@echo "  make stop-council    - Stop Council containers"
+	@echo "  make health          - Check Council API health"
+	@echo ""
+	@echo "Reports:"
+	@echo "  make latest-report   - View latest test results"
+	@echo "  make clean-reports   - Clean old reports"
+	@echo ""
+	@echo "Complete:"
+	@echo "  make full-workflow   - Start → Test → Report"
+	@echo ""
+	@echo "Pass Gates:"
+	@echo "  Micro:    ≥95% success, ≤200ms p95, ≤$0.15"
+	@echo "  Titanic:  ≥92% success, ≤200ms p95, ≤$7.00" 

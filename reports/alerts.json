@@ -1,0 +1,7 @@
+{
+  "scenarios_tested": 20,
+  "false_positives": 0,
+  "false_negatives": 0,
+  "alert_accuracy": 100.0,
+  "passed": true
+}

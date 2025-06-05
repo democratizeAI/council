@@ -1,0 +1,102 @@
+version: "3.9"
+
+services:
+  api:
+    image: python:3.11-slim  # placeholder - replace with registry/swarm/api:v2.6.0
+    ports: ["9000:9000"]
+    env_file: ["env/prod.env"]
+    command: ["python", "-c", "import time; print('API service placeholder running...'); [time.sleep(60) for _ in iter(int, 1)]"]
+    deploy:
+      resources:
+        limits: { memory: 6g }
+      restart_policy:
+        condition: always
+    volumes:
+      - faiss_memory:/data/faiss
+      - swarm_logs:/var/log/swarm
+    healthcheck: 
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    deploy:
+      resources:
+        limits: { memory: 512m }
+      restart_policy:
+        condition: always
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  prom:
+    image: prom/prometheus:latest
+    volumes: 
+      - prom_data:/prometheus
+      - ./prom/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports: ["9090:9090"]
+    deploy:
+      resources:
+        limits: { memory: 2g }
+      restart_policy:
+        condition: always
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+
+  alertmgr:
+    image: prom/alertmanager:latest
+    ports: ["9093:9093"]
+    deploy:
+      resources:
+        limits: { memory: 512m }
+      restart_policy:
+        condition: always
+    volumes:
+      - alertmgr_data:/alertmanager
+      - ./alertmgr/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    env_file: ["env/prod.env"]
+
+  grafana:
+    image: grafana/grafana:latest
+    volumes: 
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    ports: ["3000:3000"]
+    deploy:
+      resources:
+        limits: { memory: 1g }
+      restart_policy:
+        condition: always
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+
+volumes:
+  faiss_memory:
+  lora_volumes:
+  prom_data:
+  grafana_data:
+  alertmgr_data:
+  redis_data:
+  swarm_logs:
+
+networks:
+  default:
+    name: swarm_network 

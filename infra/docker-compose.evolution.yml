@@ -1,0 +1,68 @@
+version: "3.9"
+
+services:
+  trainer:
+    image: swarm/trainer:v2.6.0
+    runtime: nvidia
+    env_file: ["env/prod.env", "env/evolution.env"]
+    deploy:
+      resources:
+        limits: { memory: 4g }
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+      restart_policy:
+        condition: on-failure
+    volumes:
+      - lora_volumes:/data/lora
+      - faiss_memory:/data/faiss
+      - swarm_logs:/var/log/swarm
+      - ./tasks:/app/tasks
+    environment:
+      - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:64
+      - CUDA_VISIBLE_DEVICES=0
+      - TIER2_TRAIN_BUDGET_USD=0.20
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f trainer_worker || exit 1"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+      start_period: 120s
+
+  scheduler:
+    image: swarm/cron:v2.6.0
+    env_file: ["env/prod.env", "env/evolution.env"]
+    deploy:
+      resources:
+        limits: { memory: 256m }
+      restart_policy:
+        condition: always
+    volumes:
+      - ./tasks:/app/tasks
+      - swarm_logs:/var/log/swarm
+    environment:
+      - SWARM_API=http://api:9000
+    depends_on:
+      - trainer
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f apscheduler || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  lora_volumes:
+  faiss_memory:
+  swarm_logs: 

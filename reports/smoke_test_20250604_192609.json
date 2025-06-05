@@ -1,0 +1,129 @@
+{
+  "test_name": "smoke_test_10",
+  "timestamp": "2025-06-04T19:26:09.685757",
+  "total_prompts": 10,
+  "success_count": 0,
+  "success_rate": 0.0,
+  "avg_latency_ms": 4007.4837923049927,
+  "p95_latency_ms": 4015.497922897339,
+  "total_cost_usd": 0.0,
+  "duration_seconds": 45.079020500183105,
+  "targets_met": {
+    "success_rate": false,
+    "p95_latency": false,
+    "total_cost": true,
+    "all_green": false
+  },
+  "detailed_results": [
+    {
+      "prompt": "What is 17 * 23?",
+      "expected_skill": "math",
+      "response": "Error: Cannot connect to host localhost:8000 ssl:default ",
+      "model": "error",
+      "confidence": 0.0,
+      "latency_ms": 4015.497922897339,
+      "cost_usd": 0.0,
+      "cached": false,
+      "status": "error"
+    },
+    {
+      "prompt": "Write a hello world function",
+      "expected_skill": "code",
+      "response": "Error: Cannot connect to host localhost:8000 ssl:default ",
+      "model": "error",
+      "confidence": 0.0,
+      "latency_ms": 4009.587287902832,
+      "cost_usd": 0.0,
+      "cached": false,
+      "status": "error"
+    },
+    {
+      "prompt": "What is the capital of France?",
+      "expected_skill": "knowledge",
+      "response": "Error: Cannot connect to host localhost:8000 ssl:default ",
+      "model": "error",
+      "confidence": 0.0,
+      "latency_ms": 4008.500099182129,
+      "cost_usd": 0.0,
+      "cached": false,
+      "status": "error"
+    },
+    {
+      "prompt": "If A > B and B > C, who is smallest?",
+      "expected_skill": "logic",
+      "response": "Error: Cannot connect to host localhost:8000 ssl:default ",
+      "model": "error",
+      "confidence": 0.0,
+      "latency_ms": 4006.052255630493,
+      "cost_usd": 0.0,
+      "cached": false,
+      "status": "error"
+    },
+    {
+      "prompt": "What is 25% of 80?",
+      "expected_skill": "math",
+      "response": "Error: Cannot connect to host localhost:8000 ssl:default ",
+      "model": "error",
+      "confidence": 0.0,
+      "latency_ms": 4000.6234645843506,
+      "cost_usd": 0.0,
+      "cached": false,
+      "status": "error"
+    },
+    {
+      "prompt": "Create a function to add two numbers",
+      "expected_skill": "code",
+      "response": "Error: Cannot connect to host localhost:8000 ssl:default ",
+      "model": "error",
+      "confidence": 0.0,
+      "latency_ms": 4006.5951347351074,
+      "cost_usd": 0.0,
+      "cached": false,
+      "status": "error"
+    },
+    {
+      "prompt": "What is photosynthesis?",
+      "expected_skill": "knowledge",
+      "response": "Error: Cannot connect to host localhost:8000 ssl:default ",
+      "model": "error",
+      "confidence": 0.0,
+      "latency_ms": 4004.347324371338,
+      "cost_usd": 0.0,
+      "cached": false,
+      "status": "error"
+    },
+    {
+      "prompt": "If it's raining then take umbrella. It's raining. ",
+      "expected_skill": "logic",
+      "response": "Error: Cannot connect to host localhost:8000 ssl:default ",
+      "model": "error",
+      "confidence": 0.0,
+      "latency_ms": 4014.521598815918,
+      "cost_usd": 0.0,
+      "cached": false,
+      "status": "error"
+    },
+    {
+      "prompt": "What is the square root of 144?",
+      "expected_skill": "math",
+      "response": "Error: Cannot connect to host localhost:8000 ssl:default ",
+      "model": "error",
+      "confidence": 0.0,
+      "latency_ms": 4004.4426918029785,
+      "cost_usd": 0.0,
+      "cached": false,
+      "status": "error"
+    },
+    {
+      "prompt": "How do I learn Python?",
+      "expected_skill": "general",
+      "response": "Error: Cannot connect to host localhost:8000 ssl:default ",
+      "model": "error",
+      "confidence": 0.0,
+      "latency_ms": 4004.6701431274414,
+      "cost_usd": 0.0,
+      "cached": false,
+      "status": "error"
+    }
+  ]
+}

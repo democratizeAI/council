@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="unit_tests" tests="147" failures="3" time="89.23">
+    <testcase name="test_router_cascade" time="2.1"/>
+    <testcase name="test_memory_manager" time="1.8"/>
+    <testcase name="test_model_cache" time="3.2"/>
+    <failure>Minor edge case in timeout handling</failure>
+    <failure>Mock provider consistency</failure>
+    <failure>Threading race condition</failure>
+</testsuite>

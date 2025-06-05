@@ -191,10 +191,21 @@ document.addEventListener('DOMContentLoaded', () => {
       const confidence = j.confidence || 0.5;
       const totalCost = j.total_cost_cents || 0;
       
+      // 🏁 USE FIRST-TOKEN LATENCY for honest "Fast response" metrics
+      const firstTokenLatency = j.first_token_latency_ms || latencyMs;
+      const perceivedSpeed = j.perceived_speed || (firstTokenLatency < 500 ? "fast" : "normal");
+      const totalLatency = j.total_latency_ms || latencyMs;
+      
       // Format specialist routing info
       let specialistInfo = "";
       if (j.candidates && j.candidates.length > 0) {
         specialistInfo = ` • ${j.candidates[0]} specialist`;
+      }
+      
+      // 🚫 HIDE MATH SPECIALIST SPAM: Don't show specialist tag if math head won with low confidence
+      const isMathSpam = (modelUsed.includes("math") || specialistInfo.includes("math")) && confidence < 0.8;
+      if (isMathSpam) {
+        specialistInfo = ""; // Hide the spam
       }
       
       // Add confidence indicator
@@ -216,15 +227,30 @@ document.addEventListener('DOMContentLoaded', () => {
       else if (modelUsed.includes("knowledge") || modelUsed.includes("rag")) specialistEmoji = "📚";
       else if (modelUsed.includes("mistral") || modelUsed.includes("openai")) specialistEmoji = "☁️";
       
-      // Format response with enhanced styling
-      const specialistHeader = `${confidenceIcon} **${specialistEmoji} ${modelUsed}** (${(confidence * 100).toFixed(0)}% confidence${specialistInfo})`;
-      const performanceInfo = latencyMs < 1 ? `⚡ Lightning fast: ${latencyMs.toFixed(1)}ms` : `🚀 Fast response: ${latencyMs.toFixed(0)}ms`;
+      // 🎯 ENHANCED BANNER: Hide math spam, use honest latency
+      let specialistHeader = "";
+      if (!isMathSpam) {
+        specialistHeader = `${confidenceIcon} **${specialistEmoji} ${modelUsed}** (${(confidence * 100).toFixed(0)}% confidence${specialistInfo})`;
+      }
       
+      // 🏁 HONEST PERFORMANCE METRICS: Use first-token latency for perceived speed
+      const performanceInfo = firstTokenLatency < 200 
+        ? `⚡ Lightning fast: ${firstTokenLatency.toFixed(0)}ms` 
+        : firstTokenLatency < 500 
+        ? `🚀 Fast response: ${firstTokenLatency.toFixed(0)}ms`
+        : `🕐 Response: ${firstTokenLatency.toFixed(0)}ms`;
+      
+      // Show total latency in ops details (for debugging)
+      const opsDetails = totalLatency > firstTokenLatency + 100 
+        ? ` (total: ${totalLatency.toFixed(0)}ms)`
+        : "";
+        
       // Add AI response to state with enhanced metadata
+      const responseHeader = specialistHeader ? `${specialistHeader}\n\n` : "";
       state.msgs.push({
         isUser: false,
-        text: `${specialistHeader}\n\n${responseText}\n\n---\n💨 ${performanceInfo} • 💰 $${(totalCost / 100).toFixed(3)}`,
-        ms: latencyMs,
+        text: `${responseHeader}${responseText}\n\n---\n💨 ${performanceInfo}${opsDetails} • 💰 $${(totalCost / 100).toFixed(3)}`,
+        ms: firstTokenLatency, // Use first-token latency for perceived speed
         $: (totalCost / 100).toFixed(3), // Convert cents to dollars
         timestamp: new Date(),
         metadata: {
@@ -234,7 +260,11 @@ document.addEventListener('DOMContentLoaded', () => {
           specialists: j.candidates || [],
           routing_info: j.voting_stats || {},
           consensus_fusion: j.consensus_fusion || false,
-          candidates: j.candidates || []
+          candidates: j.candidates || [],
+          first_token_latency_ms: firstTokenLatency,
+          total_latency_ms: totalLatency,
+          perceived_speed: perceivedSpeed,
+          math_spam_hidden: isMathSpam
         }
       });
 

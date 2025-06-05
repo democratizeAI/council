@@ -121,6 +121,10 @@ class VoteResponse(BaseModel):
     confidence: float
     candidates: List[str]
     total_cost_cents: float = 0.0
+    # 🎭 Council integration
+    council_voices: Optional[List[Dict[str, Any]]] = None
+    council_consensus: Optional[str] = None
+    council_used: Optional[bool] = False
 
 # API Key management models
 class APIKeyRequest(BaseModel):
@@ -518,11 +522,45 @@ async def models_endpoint():
 
 @app.post("/vote", response_model=VoteResponse)
 async def vote_endpoint(request: VoteRequest) -> VoteResponse:
-    """Voting endpoint - enhanced with memory context and confidence weighting"""
+    """🎭 Enhanced Voting endpoint - with Council deliberation + memory context"""
     start_time = time.time()
     stats["requests_total"] += 1
     
     try:
+        logger.info(f"🗳️ Vote request: '{request.prompt[:50]}...' with {len(request.candidates or [])} candidates")
+        
+        # 🎭 COUNCIL DELIBERATION: Run Council first for additional perspective
+        council_voices = None
+        council_consensus = None
+        council_used = False
+        
+        try:
+            from router.council import council_router
+            
+            logger.info(f"🎭 Running Council deliberation alongside voting...")
+            deliberation = await council_router.council_deliberate(request.prompt)
+            
+            # Format Council voices for response
+            council_voices = []
+            for voice_enum, voice_response in deliberation.voice_responses.items():
+                voice_dict = {
+                    "voice": voice_enum.value.title(),  # reason -> Reason
+                    "reply": voice_response.response,
+                    "tokens": len(voice_response.response.split()),
+                    "cost": voice_response.cost_dollars,
+                    "confidence": voice_response.confidence,
+                    "model": voice_response.model_used
+                }
+                council_voices.append(voice_dict)
+            
+            council_consensus = deliberation.final_response
+            council_used = True
+            logger.info(f"🎭 Council deliberation complete: {len(council_voices)} voices")
+            
+        except Exception as e:
+            logger.warning(f"🎭 Council deliberation failed: {e}, continuing with traditional voting")
+        
+        # TRADITIONAL VOTING: Run the original voting system
         # If no candidates provided, use default models
         candidates = request.candidates if request.candidates else ["math_specialist", "code_specialist", "logic_specialist", "knowledge_specialist", "mistral_general"]
         
@@ -542,13 +580,18 @@ async def vote_endpoint(request: VoteRequest) -> VoteResponse:
         winner = result.get("winner", {})
         voting_stats = result.get("voting_stats", {})
         
+        # 🎭 ENHANCED RESPONSE: Include both voting results + Council deliberation
         return VoteResponse(
             text=result.get("text", winner.get("text", "No response")),
             model_used=winner.get("model", "unknown"),
             latency_ms=latency_ms,
             confidence=winner.get("confidence", voting_stats.get("winner_confidence", 0.7)),
             candidates=candidates,
-            total_cost_cents=0.0  # No cost tracking in shim yet
+            total_cost_cents=0.0,  # No cost tracking in shim yet
+            # 🎭 Council integration
+            council_voices=council_voices,
+            council_consensus=council_consensus,
+            council_used=council_used
         )
         
     except Exception as e:
@@ -560,7 +603,11 @@ async def vote_endpoint(request: VoteRequest) -> VoteResponse:
             latency_ms=(time.time() - start_time) * 1000,
             confidence=0.0,
             candidates=request.candidates or ["error"],
-            total_cost_cents=0.0
+            total_cost_cents=0.0,
+            # 🎭 Council integration (error case)
+            council_voices=None,
+            council_consensus=None,
+            council_used=False
         )
 
 @app.get("/budget")

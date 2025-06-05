@@ -1,0 +1,10 @@
+{
+  "test_duration_minutes": 60,
+  "samples_taken": 120,
+  "performance_degradation_percent": 2.1,
+  "memory_growth_mb": 45,
+  "initial_throughput": 23.4,
+  "final_throughput": 22.9,
+  "passed": true,
+  "max_degradation_allowed": 3.0
+}

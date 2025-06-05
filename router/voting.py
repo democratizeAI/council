@@ -8,11 +8,16 @@ Enhanced voting system with P1 quality improvements:
 - Confidence-weighted voting
 - Quality post-processing
 - Memory hooks for context-aware conversations
+- LENGTH PENALTY: Prevents math head from dominating with short answers
 """
+
+# 🚨 DEBUG MODE: Enable raw candidate dumping
+DEBUG_DUMP = False
 
 import asyncio
 import time
 import random
+import re
 from typing import List, Dict, Any, Optional
 from loader.deterministic_loader import generate_response, get_loaded_models
 from router.quality_filters import (
@@ -32,6 +37,63 @@ from router.selector import pick_specialist, load_models_config, should_use_clou
 from router_cascade import RouterCascade
 
 logger = logging.getLogger(__name__)
+
+# 📝 CASCADING KNOWLEDGE FUNCTIONS
+def summarize_to_digest(text: str, max_tokens: int = 40) -> str:
+    """Create a 40-token digest summary for cascading knowledge"""
+    if not text or len(text.strip()) < 10:
+        return ""
+    
+    # Simple truncation fallback (if no AI summarizer available)
+    words = text.split()
+    if len(words) <= max_tokens:
+        return text
+    
+    # Take first and last portions for context preservation
+    first_half = words[:max_tokens//2]
+    last_half = words[-(max_tokens//2):]
+    
+    summary = " ".join(first_half) + " ... " + " ".join(last_half)
+    return summary
+
+def write_fusion_digest(final_answer: str, session_id: str, original_prompt: str):
+    """Write a 40-token digest after successful fusion for cascading knowledge"""
+    try:
+        from common.scratchpad import write
+        
+        # Create digest
+        digest = summarize_to_digest(final_answer, max_tokens=40)
+        if digest:
+            # Write to scratchpad with context
+            write(
+                session_id=session_id,
+                agent="fusion_digest", 
+                content=f"Q: {original_prompt[:100]} A: {digest}",
+                tags=["turn", "digest", "fusion"],
+                entry_type="digest"
+            )
+            logger.info(f"📝 Written fusion digest: {digest[:50]}...")
+        
+    except Exception as e:
+        logger.debug(f"Failed to write digest: {e}")
+
+def read_conversation_context(session_id: str, max_digests: int = 3) -> str:
+    """Read last 3 digests for conversation context"""
+    try:
+        from common.scratchpad import read
+        
+        entries = read(session_id, limit=max_digests * 2)  # Get extra in case of non-digests
+        digest_entries = [e for e in entries if e.entry_type == "digest"][:max_digests]
+        
+        if digest_entries:
+            context_lines = [entry.content for entry in digest_entries]
+            return "\n".join(reversed(context_lines))  # Chronological order
+        
+        return ""
+        
+    except Exception as e:
+        logger.debug(f"Failed to read context: {e}")
+        return ""
 
 class SpecialistRunner:
     """Runs individual specialists with timeout and error handling"""
@@ -288,22 +350,166 @@ async def vote(prompt: str, model_names: List[str] = None, top_k: int = 1, use_c
     """
     start_time = time.time()
     
+    # 🚀 SURGICAL FIX: Template stub detection patterns
+    stub_markers = [
+        'custom_function', 'TODO', 'pass', 'NotImplemented',
+        'placeholder', 'your_code_here', '# Add implementation',
+        'Processing', 'Transformers response', 'Mock response'
+    ]
+    
+    # 🎯 ENHANCED STUB PATTERNS: Catch greeting stubs and UNSURE responses
+    STUB_PATTERNS = [
+        r"^hello! i'm your autogen council assistant",
+        r"i can help with math, code, logic",
+        r"^UNSURE$",  # Math specialist UNSURE responses
+        r"let me analyze this.*problem",  # Generic analysis responses
+        r"ready to solve.*step by step",  # Generic step-by-step responses
+    ]
+    
+    # 🚨 GREETING FILTER: Stop ALL specialists from greeting
+    GREETING_STUB_RE = re.compile(r"^\s*(hi|hello|hey)[!,. ]", re.I)
+    
+    def scrub_greeting_stub(candidate: Dict[str, Any]) -> Dict[str, Any]:
+        """Filter out greeting responses from specialists - they should never greet"""
+        text = candidate.get("text", "")
+        if GREETING_STUB_RE.match(text):
+            candidate["confidence"] = 0.0
+            candidate["status"] = "greeting_filtered"
+            candidate["original_text"] = text
+            candidate["text"] = f"[GREETING_FILTERED] {candidate.get('specialist', 'unknown')} tried to greet"
+            logger.info(f"🚫 Filtered greeting from {candidate.get('specialist', 'unknown')}: '{text[:30]}...'")
+        return candidate
+    
+    def is_stub_response(text: str) -> bool:
+        """Detect if response is a template stub that should be rejected"""
+        if not text or len(text.strip()) < 10:
+            return True
+        
+        text_lower = text.lower()
+        
+        # Check original stub markers
+        if any(marker.lower() in text_lower for marker in stub_markers):
+            return True
+            
+        # 🎯 Check enhanced stub patterns (regex-based)
+        for pattern in STUB_PATTERNS:
+            if re.search(pattern, text, re.IGNORECASE):
+                return True
+                
+        return False
+    
+    def looks_stub(text: str) -> bool:
+        """Alias for is_stub_response for compatibility"""
+        return is_stub_response(text)
+    
+    def score_with_stub_filter(candidate: Dict[str, Any]) -> float:
+        """Apply stub filtering to candidate scoring"""
+        text = candidate.get("text", "")
+        confidence = candidate.get("confidence", 0)
+        
+        if looks_stub(text):
+            logger.debug(f"🚫 Stub detected: '{text[:50]}...' → confidence nuked to 0.0")
+            return 0.0  # Nuke confidence for stubs
+        
+        return confidence
+    
     # Build natural conversation prompt (o3plan.md recipe)
     conversation_prompt = build_conversation_prompt(prompt)
     
+    # 🚀 SIMPLE GREETING DETECTOR: Handle basic greetings directly without model calls
+    def is_simple_greeting(prompt: str) -> bool:
+        prompt_lower = prompt.strip().lower()
+        simple_greetings = ['hi', 'hello', 'hey', 'hi there', 'hello there', 'good morning', 'good afternoon']
+        # Don't treat math expressions or queries with numbers as greetings
+        if any(char in prompt for char in ['+', '-', '*', '/', '=', '?']) or any(char.isdigit() for char in prompt):
+            return False
+        return prompt_lower in simple_greetings
+    
+    if is_simple_greeting(prompt):
+        logger.info("🎯 Simple greeting detected - direct response")
+        return {
+            "winner": {
+                "specialist": "greeting_handler",
+                "text": "Hi! How can I help you today?",
+                "confidence": 1.0,
+                "status": "greeting"
+            },
+            "text": "Hi! How can I help you today?",
+            "specialist": "greeting_handler",
+            "confidence": 1.0,
+            "status": "greeting_shortcut",
+            "latency_ms": (time.time() - start_time) * 1000,
+            "voting_stats": {
+                "total_specialists": 0,
+                "successful_specialists": 0,
+                "winner_confidence": 1.0,
+                "total_latency_ms": (time.time() - start_time) * 1000,
+                "specialists_tried": [],
+                "greeting_shortcut": True,
+                "first_token_latency_ms": (time.time() - start_time) * 1000,
+                "perceived_speed": "instant"
+            }
+        }
+    
     # Determine specialists to try
     if model_names is None:
-        # Use intelligent specialist selection
+        # 🎯 FIXED: Always try multiple specialists for proper voting
+        # The original logic only tried one specialist with high confidence,
+        # which prevented length penalty from working since there was no comparison
         config = load_models_config()
-        specialist, confidence, tried = pick_specialist(prompt, config)
+        primary_specialist, confidence, tried = pick_specialist(prompt, config)
         
-        # Add primary specialist plus fallbacks
-        specialists_to_try = [specialist]
+        # 🎯 INTENT GATE: Exclude math head from non-math queries
+        is_math_query = any(pattern in prompt.lower() for pattern in [
+            'calculate', 'solve', 'math', '+', '-', '*', '/', '=', 'sqrt',
+            'factorial', 'equation', 'algebra', 'geometry'
+        ]) or bool(re.search(r'\d+\s*[\+\-\*/\^%]\s*\d+', prompt))
         
-        # Add other specialists if confidence is low
-        if confidence < 0.8:
-            other_specialists = [s for s in config["specialists_order"] if s != specialist]
-            specialists_to_try.extend(other_specialists[:2])  # Try 2 more
+        # Always include multiple specialists for voting comparison
+        specialists_to_try = [primary_specialist]
+        
+        # 🎯 ALWAYS add other specialists for comparison, not just when confidence is low
+        # This ensures length penalty can compare responses and rebalance
+        other_specialists = [s for s in config["specialists_order"] if s != primary_specialist]
+        
+        # 🔧 INTENT GATE: Filter out math specialist for non-math queries
+        if not is_math_query and primary_specialist == "math_specialist":
+            # Replace primary with non-math specialist
+            non_math_specialists = [s for s in other_specialists if s != "math_specialist"]
+            if non_math_specialists:
+                primary_specialist = non_math_specialists[0]
+                specialists_to_try = [primary_specialist]
+                other_specialists = [s for s in non_math_specialists[1:]]
+        
+        # Filter math from other specialists if not a math query
+        if not is_math_query:
+            other_specialists = [s for s in other_specialists if s != "math_specialist"]
+            
+        specialists_to_try.extend(other_specialists[:3])  # Try 3 other specialists
+        
+        # 🚨 GENERALIST PENALTY: Prevent silent fallback to cloud (Triage Step 1)
+        def apply_generalist_penalty(specialists: List[str]) -> List[str]:
+            """Apply penalty to generalist/cloud providers to prefer specialists"""
+            specialists_only = []
+            generalists = []
+            
+            for specialist in specialists:
+                # Identify generalist/cloud providers
+                if ("mistral" in specialist.lower() and "specialist" not in specialist.lower()) or \
+                   ("general" in specialist.lower()) or ("cloud" in specialist.lower()):
+                    logger.warning(f"🚨 Generalist {specialist} demoted to fallback position")
+                    generalists.append(specialist)
+                else:
+                    # Keep real specialists in priority order
+                    specialists_only.append(specialist)
+            
+            # Return specialists first, generalists last
+            return specialists_only + generalists
+        
+        # Apply generalist penalty to prevent cloud jumps
+        specialists_to_try = apply_generalist_penalty(specialists_to_try)
+        
+        logger.info(f"🗳️ Vote candidates: {specialists_to_try[:4]}... (primary: {primary_specialist}, is_math: {is_math_query})")
     else:
         specialists_to_try = model_names
     
@@ -311,77 +517,366 @@ async def vote(prompt: str, model_names: List[str] = None, top_k: int = 1, use_c
     runner = SpecialistRunner()
     results = []
     
-    for specialist in specialists_to_try:
-        logger.info(f"🎯 Council member: {specialist}")
+    # 🚀 AGENT-0 CONFIDENCE GATE: Skip specialists if Agent-0 is confident enough
+    # Quick Agent-0 check for simple queries (optimization #4)
+    try:
+        logger.info("🔬 Quick Agent-0 confidence check...")
+        agent0_result = await runner.run_specialist_with_conversation("mistral_general", conversation_prompt, timeout=2.0)
+        agent0_confidence = agent0_result.get("confidence", 0.0)
         
-        try:
-            # Pass the natural conversation prompt to specialists
-            result = await runner.run_specialist_with_conversation(specialist, conversation_prompt)
-            results.append(result)
+        # If Agent-0 is confident (>= 0.65), skip specialists and return immediately
+        # 🚀 LOWERED THRESHOLD: Was 0.90, now 0.65 for more shortcuts on simple queries
+        if agent0_confidence >= 0.65:
+            logger.info(f"🚀 Agent-0 confident ({agent0_confidence:.2f} ≥ 0.65) - skipping specialists")
             
-            # If we got a good result from a high-priority specialist, stop here
-            if (result["status"] == "success" and 
-                result["confidence"] > 0.85 and  # Raised from 0.7 to 0.85
-                "specialist" in specialist):
-                logger.info(f"✅ {specialist} provided confident answer ({result['confidence']:.2f})")
-                break
+            # 🚀 CRITICAL: Apply token limits to Agent-0 responses too
+            agent0_text = agent0_result.get("text", "")
+            if len(agent0_text) > 80:  # ~20 tokens whisper-size
+                agent0_text = agent0_text[:80] + "..."
+                logger.info(f"🔧 Truncated Agent-0 response to 20 tokens")
+            
+            agent0_result["text"] = agent0_text
+            agent0_result["agent0_shortcut"] = True
+            agent0_result["specialists_skipped"] = specialists_to_try
+            return {
+                "winner": agent0_result,
+                "text": agent0_result.get("text", ""),
+                "specialist": agent0_result.get("specialist", "mistral_general"),
+                "confidence": agent0_confidence,
+                "status": "agent0_shortcut",
+                "latency_ms": (time.time() - start_time) * 1000,
+                "voting_stats": {
+                    "total_specialists": 1,
+                    "successful_specialists": 1,
+                    "winner_confidence": agent0_confidence,
+                    "total_latency_ms": (time.time() - start_time) * 1000,
+                    "specialists_tried": ["mistral_general"],
+                    "agent0_shortcut": True,
+                    "first_token_latency_ms": agent0_result.get("latency_ms", (time.time() - start_time) * 1000),
+                    "perceived_speed": "fast"
+                }
+            }
+    except Exception as e:
+        logger.debug(f"🔬 Agent-0 confidence check failed: {e} - proceeding with specialists")
+    
+    # 🚀 PARALLEL EXECUTION: Run specialists concurrently (optimization #1)
+    # Replace sequential loop with asyncio.gather for massive speedup
+    logger.info(f"🚀 Running {len(specialists_to_try)} specialists in parallel...")
+    
+    try:
+        # Create parallel tasks with 4-second timeout each
+        tasks = [
+            runner.run_specialist_with_conversation(specialist, conversation_prompt, timeout=4.0)
+            for specialist in specialists_to_try
+        ]
+        
+        # Run all specialists in parallel - wall time = slowest specialist instead of sum
+        parallel_results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Process results and exceptions
+        results = []
+        for i, result in enumerate(parallel_results):
+            specialist = specialists_to_try[i]
+            logger.info(f"🎯 Council member: {specialist}")
+            
+            if isinstance(result, Exception):
+                # Handle exceptions from parallel execution
+                logger.warning(f"⚠️ {specialist} failed: {result}")
+                error_result = {
+                    "specialist": specialist,
+                    "text": f"[ERROR] {specialist}: {str(result)}",
+                    "confidence": 0.0,
+                    "status": "error",
+                    "latency_ms": 4000,  # Timeout value
+                    "error": str(result)
+                }
+                results.append(error_result)
+            else:
+                # 🚀 SURGICAL FIX: Filter out stub responses
+                if is_stub_response(result.get("text", "")):
+                    logger.warning(f"🚫 {specialist} returned stub response - filtering out")
+                    result["confidence"] = 0.0  # Mark as unusable
+                    result["status"] = "stub_filtered"
+                    result["text"] = f"[STUB_FILTERED] {specialist} returned template response"
                 
-        except Exception as e:
-            logger.warning(f"⚠️ {specialist} failed: {e}")
+                # 🚨 GREETING FILTER: Stop specialists from greeting
+                result = scrub_greeting_stub(result)
+                
+                results.append(result)
+                logger.info(f"✅ {specialist} completed: confidence={result['confidence']:.2f}, status={result.get('status', 'unknown')}")
+        
+        logger.info(f"🚀 Parallel execution completed in {(time.time() - start_time)*1000:.0f}ms")
+        
+    except Exception as e:
+        logger.error(f"🚀 Parallel execution failed: {e} - falling back to sequential")
+        
+        # Fallback to original sequential execution if parallel fails
+        results = []
+        for specialist in specialists_to_try:
+            logger.info(f"🎯 Council member: {specialist} (sequential fallback)")
             
-            # Check if we should try cloud fallback
-            if should_use_cloud_fallback(specialist, str(e)):
-                logger.info("☁️ Triggering cloud fallback")
-                try:
-                    cloud_result = await runner.run_specialist_with_conversation("mistral_general", conversation_prompt)
-                    results.append(cloud_result)
-                except Exception as cloud_error:
-                    logger.error(f"☁️ Cloud fallback also failed: {cloud_error}")
+            try:
+                # Pass the natural conversation prompt to specialists
+                result = await runner.run_specialist_with_conversation(specialist, conversation_prompt, timeout=4.0)
+                
+                # 🚀 SURGICAL FIX: Filter out stub responses
+                if is_stub_response(result.get("text", "")):
+                    logger.warning(f"🚫 {specialist} returned stub response - filtering out")
+                    result["confidence"] = 0.0  # Mark as unusable
+                    result["status"] = "stub_filtered"
+                    result["text"] = f"[STUB_FILTERED] {specialist} returned template response"
+                
+                # 🚨 GREETING FILTER: Stop specialists from greeting  
+                result = scrub_greeting_stub(result)
+                
+                results.append(result)
+                logger.info(f"✅ {specialist} completed: confidence={result['confidence']:.2f}, status={result.get('status', 'unknown')}")
+                    
+            except Exception as e:
+                logger.warning(f"⚠️ {specialist} failed: {e}")
+                
+                # Check if we should try cloud fallback
+                if should_use_cloud_fallback(specialist, str(e)):
+                    logger.info("☁️ Triggering cloud fallback")
+                    try:
+                        cloud_result = await runner.run_specialist_with_conversation("mistral_general", conversation_prompt)
+                        results.append(cloud_result)
+                    except Exception as cloud_error:
+                        logger.error(f"☁️ Cloud fallback also failed: {cloud_error}")
+    
+    # After all specialists have generated responses, apply UNSURE penalty
+    # 🎯 VOTE GUARD: Apply UNSURE confidence penalty to fix math head domination
+    for result in results:
+        response_text = result.get("text", "").strip()
+        
+        # 🚨 GREETING FILTER: Apply to any missed greeting responses
+        result = scrub_greeting_stub(result)
+        
+        # 🚀 CRITICAL FIX: Hard penalty for UNSURE and short responses
+        if response_text == "UNSURE" or len(response_text) < 10:
+            result["confidence"] = 0.05  # Can't win - hard penalty
+            result["unsure_penalty_applied"] = True
+            specialist_name = result.get('specialist', 'unknown')
+            logger.debug(f"🎯 Applied UNSURE/short penalty to {specialist_name}: confidence = 0.05 (text: '{response_text}')")
+        elif response_text == "UNSURE":
+            # Extra logging for pure UNSURE responses
+            result["confidence"] = 0.05
+            result["unsure_penalty_applied"] = True
+            specialist_name = result.get('specialist', 'unknown')
+            logger.info(f"🚫 {specialist_name} properly returned UNSURE for off-topic query - confidence = 0.05")
     
     # If no results, emergency fallback
     if not results:
         emergency_result = {
             "specialist": "emergency_fallback",
             "text": f"I apologize, but all specialists are currently unavailable. Please try again later.",
-            "confidence": 0.1,
+            "confidence": 0.05,  # Very low confidence for emergency fallback
             "status": "emergency",
             "latency_ms": (time.time() - start_time) * 1000
         }
         results.append(emergency_result)
+    
+    # 🚨 DEBUG DUMP: Print every raw candidate before any filtering
+    if DEBUG_DUMP:
+        print("\n=== RAW CANDIDATES DEBUG ===")
+        for i, result in enumerate(results):
+            specialist = result.get("specialist", f"unknown_{i}")
+            confidence = result.get("confidence", 0)
+            text = result.get("text", "")
+            status = result.get("status", "unknown")
+            print(f"[{specialist}] conf={confidence:.2f} status={status}")
+            print(f"TEXT: {text[:300]}...")  # First 300 chars
+            print("---")
+        print("=== END RAW CANDIDATES ===\n")
     
     # Vote for best result
     successful_results = [r for r in results if r["status"] == "success"]
     if not successful_results:
         successful_results = results  # Use whatever we have
     
-    # 🗳️ CONSENSUS FUSION: Instead of just picking winner, fuse all answers
+    # 🚀 PHASE A PATCH #2: Kill Mixtral on "UNSURE" - don't let it win
+    viable_candidates = []
+    for result in successful_results:
+        response_text = result.get("text", "").strip()
+        if response_text.startswith('UNSURE') or response_text == "UNSURE":
+            logger.info(f"🚫 Filtering out UNSURE candidate: {result.get('specialist', 'unknown')}")
+            continue  # Skip UNSURE responses completely
+        viable_candidates.append(result)
+    
+    # Use viable candidates for voting, fallback to all if none viable
+    if viable_candidates:
+        successful_results = viable_candidates
+        logger.info(f"🎯 Using {len(viable_candidates)} viable candidates (filtered out UNSURE)")
+    else:
+        logger.warning(f"⚠️ No viable candidates after UNSURE filter - using all results")
+    
+    # 🚀 PHASE A PATCH #3: Return after first confident specialist (≥ 0.8)
+    confident_specialist = None
+    for result in successful_results:
+        if result.get("confidence", 0) >= 0.8:
+            confident_specialist = result
+            logger.info(f"🚀 Found confident specialist: {result.get('specialist', 'unknown')} ({result.get('confidence', 0):.2f})")
+            break
+    
+    if confident_specialist:
+        # Return immediately without fusion
+        logger.info(f"🎯 Returning confident specialist without fusion for speed")
+        return {
+            "text": confident_specialist["text"],
+            "model": confident_specialist.get("model", confident_specialist["specialist"]),
+            "winner": confident_specialist,
+            "voting_stats": {
+                "total_specialists": len(results),
+                "successful_specialists": len(successful_results),
+                "winner_confidence": confident_specialist["confidence"],
+                "total_latency_ms": (time.time() - start_time) * 1000,
+                "specialists_tried": [r["specialist"] for r in results],
+                "confident_shortcut": True,
+                "first_token_latency_ms": confident_specialist.get("latency_ms", (time.time() - start_time) * 1000),
+                "perceived_speed": "fast"
+            },
+            "specialists_tried": [r["specialist"] for r in results],
+            "council_decision": True,
+            "confident_shortcut": True,
+            "timestamp": time.time()
+        }
+    
+    # 🗳️ ENHANCED VOTING: Apply length penalty to prevent math head domination
     if len(successful_results) > 1:
-        # Get top 5 candidates for fusion
+        # Apply both length penalty AND stub filtering to all candidates
+        for result in successful_results:
+            original_confidence = result.get("confidence", 0)
+            
+            # 🎯 FIRST: Apply stub filtering (sets confidence to 0 for stubs)
+            stub_filtered_confidence = score_with_stub_filter(result)
+            
+            # 🎯 SECOND: Apply length penalty only if not a stub
+            if stub_filtered_confidence > 0:
+                penalty_multiplier = length_penalty(result.get("text", ""), prompt)
+                final_confidence = stub_filtered_confidence * penalty_multiplier
+            else:
+                penalty_multiplier = 0.0
+                final_confidence = 0.0
+            
+            # Store all confidence transformations for transparency
+            result["original_confidence"] = original_confidence
+            result["stub_filtered_confidence"] = stub_filtered_confidence
+            result["length_penalty"] = penalty_multiplier
+            result["confidence"] = final_confidence
+            
+            # 📊 Track length penalty metrics
+            try:
+                from monitoring.hardening_metrics import track_length_penalty
+                track_length_penalty(
+                    result.get("specialist", "unknown"),
+                    original_confidence,
+                    final_confidence
+                )
+            except Exception as e:
+                logger.debug(f"Metrics tracking failed: {e}")
+            
+            logger.debug(f"📏 {result.get('specialist', 'unknown')}: "
+                        f"confidence {original_confidence:.3f} → {stub_filtered_confidence:.3f} (stub) → {final_confidence:.3f} (final) "
+                        f"(penalty: {penalty_multiplier:.2f})")
+        
+        # Re-sort after applying length penalties
         top_candidates = sorted(successful_results, key=lambda r: r.get("confidence", 0), reverse=True)[:5]
         
-        # Fuse all answers into consensus
+        # 🗳️ CONSENSUS FUSION: Fuse top candidates after length penalty
         try:
-            fused_answer = await consensus_fuse(top_candidates, prompt)
-            logger.info(f"🤝 Consensus fusion: {len(top_candidates)} heads → unified answer")
+            # 🚀 FUSION FILTER: Remove Agent-0 drafts to prevent bloat, keep only specialists
+            specialist_candidates = [c for c in top_candidates if c.get("specialist") not in ["mistral_general", "agent0_fallback", "emergency_fallback"]]
             
-            # Create consensus winner
-            winner = {
-                "specialist": "council_consensus", 
-                "text": fused_answer,
-                "confidence": sum(r["confidence"] for r in top_candidates) / len(top_candidates),
-                "status": "consensus",
-                "model": "council-fusion",
-                "candidates": top_candidates,  # Keep all candidates for transparency
-                "fusion_method": "local_llm"
-            }
+            if not specialist_candidates:
+                # Fallback: if no specialists, use all candidates
+                specialist_candidates = top_candidates
+                logger.debug("🚀 No specialists found - using all candidates for fusion")
+            else:
+                logger.info(f"🚀 Fusion filter: Using {len(specialist_candidates)} specialists, excluding Agent-0 drafts")
+            
+            fused_answer = await consensus_fuse(specialist_candidates, prompt)
+            logger.info(f"🤝 Consensus fusion: {len(specialist_candidates)} specialists → unified answer")
+            
+            # 🎯 CRITICAL: Check if fusion returned a stub - if so, use best individual answer
+            if looks_stub(fused_answer) or "Hello! I'm your AutoGen Council assistant" in fused_answer:
+                logger.warning("🚫 Consensus fusion returned stub - falling back to best individual answer")
+                winner = max(successful_results, key=lambda r: r.get("confidence", 0))
+                winner["fusion_attempted"] = True
+                winner["fusion_failed"] = "stub_detected"
+                # 🎯 FIXED: Set specialist to true source
+                winner["true_source"] = winner.get("specialist", "unknown")
+            else:
+                # Create consensus winner
+                winner = {
+                    "specialist": "council_consensus", 
+                    "text": fused_answer,
+                    "confidence": sum(r["confidence"] for r in specialist_candidates) / len(specialist_candidates),
+                    "status": "consensus",
+                    "model": "council-fusion",
+                    "candidates": specialist_candidates,  # Only specialist candidates for transparency
+                    "fusion_method": "specialist_only",   # 🚀 NEW: Track that we filtered Agent-0
+                    "length_penalty_applied": True,
+                    "true_source": "consensus_fusion",    # Track true source
+                    "agent0_filtered": len(top_candidates) != len(specialist_candidates)  # Track if Agent-0 was filtered
+                }
         except Exception as e:
             logger.warning(f"Consensus fusion failed: {e}, falling back to top candidate")
             winner = max(successful_results, key=lambda r: r.get("confidence", 0))
             winner["candidates"] = top_candidates  # Still provide candidates
+            winner["length_penalty_applied"] = True
+            winner["fusion_attempted"] = True
+            winner["fusion_failed"] = str(e)
+            # 🎯 FIXED: Set specialist to true source
+            winner["true_source"] = winner.get("specialist", "unknown")
     else:
-        # Single answer or emergency fallback
-        winner = max(successful_results, key=lambda r: r.get("confidence", 0))
+        # Single answer - still apply both stub filtering and length penalty
+        if successful_results:
+            result = successful_results[0]
+            original_confidence = result.get("confidence", 0)
+            
+            # 🎯 FIRST: Apply stub filtering
+            stub_filtered_confidence = score_with_stub_filter(result)
+            
+            # 🎯 SECOND: Apply length penalty only if not a stub
+            if stub_filtered_confidence > 0:
+                penalty_multiplier = length_penalty(result.get("text", ""), prompt)
+                final_confidence = stub_filtered_confidence * penalty_multiplier
+            else:
+                penalty_multiplier = 0.0
+                final_confidence = 0.0
+            
+            result["original_confidence"] = original_confidence
+            result["stub_filtered_confidence"] = stub_filtered_confidence
+            result["length_penalty"] = penalty_multiplier
+            result["confidence"] = final_confidence
+            result["length_penalty_applied"] = True
+            result["true_source"] = result.get("specialist", "unknown")  # Track true source
+            
+            # 📊 Track length penalty metrics for single result
+            try:
+                from monitoring.hardening_metrics import track_length_penalty
+                track_length_penalty(
+                    result.get("specialist", "unknown"),
+                    original_confidence,
+                    final_confidence
+                )
+            except Exception as e:
+                logger.debug(f"Metrics tracking failed: {e}")
+            
+            logger.debug(f"📏 Single result {result.get('specialist', 'unknown')}: "
+                        f"confidence {original_confidence:.3f} → {stub_filtered_confidence:.3f} (stub) → {final_confidence:.3f} (final)")
+        
+            winner = max(successful_results, key=lambda r: r.get("confidence", 0))
+            # 🎯 FIXED: Ensure specialist tag reflects true source
+            winner["true_source"] = winner.get("specialist", "unknown")
     
+    # 📊 Track specialist win for rebalancing monitoring
+    try:
+        from monitoring.hardening_metrics import track_specialist_win
+        track_specialist_win(winner.get("specialist", "unknown"))
+    except Exception as e:
+        logger.debug(f"Win tracking failed: {e}")
+
     # Voting statistics (enhanced for consensus)
     voting_stats = {
         "total_specialists": len(results),
@@ -390,10 +885,14 @@ async def vote(prompt: str, model_names: List[str] = None, top_k: int = 1, use_c
         "total_latency_ms": (time.time() - start_time) * 1000,
         "specialists_tried": [r["specialist"] for r in results],
         "consensus_fusion": winner.get("specialist") == "council_consensus",
-        "candidates_count": len(winner.get("candidates", []))
+        "candidates_count": len(winner.get("candidates", [])),
+        # 🏁 FIRST-TOKEN LATENCY: For honest "Fast response" metrics
+        "first_token_latency_ms": min([r.get("latency_ms", 999999) for r in successful_results], default=(time.time() - start_time) * 1000),
+        "perceived_speed": "fast" if min([r.get("latency_ms", 999999) for r in successful_results], default=9999) < 500 else "normal"
     }
     
     logger.info(f"🏆 Council decision: {winner['specialist']} wins with {winner['confidence']:.2f} confidence")
+    logger.info(f"⚡ Performance: first-token {voting_stats['first_token_latency_ms']:.0f}ms, total {voting_stats['total_latency_ms']:.0f}ms")
     
     # 🧠 Log Q&A to memory with success flags (required for Phase 3 self-improvement)
     try:
@@ -427,6 +926,18 @@ async def vote(prompt: str, model_names: List[str] = None, top_k: int = 1, use_c
     except Exception as e:
         logger.warning(f"Memory logging failed: {e}")
     
+    # 📝 CASCADING KNOWLEDGE: Write fusion digest for next conversation
+    try:
+        # Extract original prompt and create session ID
+        original_prompt = prompt.split("\nUser query: ")[-1] if "\nUser query: " in prompt else prompt
+        session_id = f"council_{int(time.time())}"
+        
+        # Write 40-token digest
+        write_fusion_digest(winner["text"], session_id, original_prompt)
+        
+    except Exception as e:
+        logger.debug(f"Failed to write fusion digest: {e}")
+
     return {
         "text": winner["text"],
         "model": winner.get("model", winner["specialist"]),
@@ -438,7 +949,12 @@ async def vote(prompt: str, model_names: List[str] = None, top_k: int = 1, use_c
         # 🗳️ Consensus transparency
         "consensus_fusion": winner.get("specialist") == "council_consensus",
         "candidates": winner.get("candidates", []),  # All head votes for transparency
-        "fusion_method": winner.get("fusion_method", "single_winner")
+        "fusion_method": winner.get("fusion_method", "single_winner"),
+        "length_penalty_applied": winner.get("length_penalty_applied", False),
+        # 🏁 PERFORMANCE METRICS: Honest latency reporting
+        "first_token_latency_ms": voting_stats["first_token_latency_ms"],
+        "perceived_speed": voting_stats["perceived_speed"],
+        "total_latency_ms": voting_stats["total_latency_ms"]
     }
 
 def smart_select(prompt: str, model_names: List[str]) -> str:
@@ -482,18 +998,7 @@ def smart_select(prompt: str, model_names: List[str]) -> str:
                 return model
     
     # Fallback to first available model
-    return model_names[0]
-
-def is_simple_greeting(prompt: str) -> bool:
-    """Detect if this is a simple greeting that doesn't need specialist routing"""
-    prompt_lower = prompt.lower().strip()
-    simple_greetings = [
-        'hi', 'hello', 'hey', 'hey!', 'hi!', 'hello!', 
-        'good morning', 'good afternoon', 'good evening',
-        'how are you', 'how are you?', 'whats up', "what's up",
-        'sup', 'yo', 'greetings'
-    ]
-    return prompt_lower in simple_greetings or len(prompt_lower) <= 3
+    return model_names[0] 
 
 def handle_simple_greeting(prompt: str, start_time: float) -> Dict[str, Any]:
     """Handle simple greetings with memory-aware, contextual responses"""
@@ -505,9 +1010,9 @@ def handle_simple_greeting(prompt: str, start_time: float) -> Dict[str, Any]:
     memory_context = ""
     
     try:
-        from faiss_memory import FaissMemory
-        memory = FaissMemory()
-        context_results = memory.query(prompt, k=2)  # Get recent context
+        # 🚀 HARDENING FIX: Use singleton memory instead of re-instantiating
+        from bootstrap import MEMORY
+        context_results = MEMORY.query(prompt, k=2)  # Get recent context
         
         if context_results:
             # Look for user name or preferences in memory
@@ -527,9 +1032,9 @@ def handle_simple_greeting(prompt: str, start_time: float) -> Dict[str, Any]:
             if names:
                 user_name = names[-1]  # Use most recent name
                 contextual_greetings = [
-                    f"Hello {user_name}! Great to see you again. How can I help you today?",
-                    f"Hi {user_name}! I'm ready to assist with any questions you have.",
-                    f"Hey {user_name}! 👋 What would you like to work on today?",
+                    f"Hi {user_name}! How can I help today?",
+                    f"Hello {user_name}! What would you like to explore?", 
+                    f"Hey {user_name}! 👋 Ask me anything.",
                 ]
                 import random
                 response_text = random.choice(contextual_greetings)
@@ -539,9 +1044,9 @@ def handle_simple_greeting(prompt: str, start_time: float) -> Dict[str, Any]:
             else:
                 # Standard but context-aware greeting
                 contextual_greetings = [
-                    "Hello! I'm your AutoGen Council assistant. How can I help you today?",
-                    "Hi there! I'm ready to help with math, code, logic, knowledge, or general questions!",
-                    "Hey! 👋 What would you like to work on? I have specialists for math, coding, reasoning, and more!",
+                    "Hi! How can I help today?",
+                    "Hello again — what would you like to explore?", 
+                    "Hey there! Ask me anything.",
                 ]
                 import random
                 response_text = random.choice(contextual_greetings)
@@ -549,11 +1054,11 @@ def handle_simple_greeting(prompt: str, start_time: float) -> Dict[str, Any]:
             memory_context = f"Found {len(context_results)} relevant memories"
         else:
             # First-time greeting
-            response_text = "Hello! I'm your AutoGen Council assistant with specialized capabilities. What would you like to explore?"
+            response_text = "Hello! What would you like to explore?"
             
         # Log this greeting interaction to memory (just like the full system)
-        memory.add(prompt, {"role": "user", "timestamp": time.time(), "greeting": True})
-        memory.add(response_text, {"role": "assistant", "timestamp": time.time(), "greeting_response": True, "success": True})
+        MEMORY.add(prompt, {"role": "user", "timestamp": time.time(), "greeting": True})
+        MEMORY.add(response_text, {"role": "assistant", "timestamp": time.time(), "greeting_response": True, "success": True})
         
     except Exception as e:
         logger.warning(f"Memory lookup failed for greeting: {e}")
@@ -588,30 +1093,68 @@ def build_conversation_prompt(user_msg: str) -> str:
     """
     Build natural conversation prompt with memory context.
     
+    🧠 PHASE B: Enhanced with conversation summarizer for smart context retrieval.
+    
     Following o3plan.md recipe: 
     - Fetch 3 most relevant memories
-    - Add friendly system prompt
+    - Add conversation summary (≤ 80 tokens)
     - Make Council sound conversational
     """
     try:
+        # 📝 CASCADING KNOWLEDGE: Read conversation digests
+        session_id = f"council_{int(time.time())}"
+        digest_context = read_conversation_context(session_id, max_digests=3)
+        
+        # 🧠 PHASE B PATCH #2: Retrieval before every draft
+        from common.summarizer import SUMMARIZER
+        
         # Use singleton memory instead of creating new instance
         ctx = MEMORY.query(user_msg, k=3)
         ctx_block = "\n".join(f"- {m['text']}" for m in ctx) if ctx else "- none"
         
-        # Guard rails: truncate to 1000 chars
-        if len(ctx_block) > 1000:
-            ctx_block = ctx_block[:1000] + "..."
+        # 🧠 PHASE B: Add conversation summary for context
+        session_id = "default_session"  # Could be passed in future
+        try:
+            # Get recent conversation summary (≤ 80 tokens)
+            recent_entries = MEMORY.get_recent(limit=5)  # Get last 5 turns
+            if recent_entries:
+                conversation_text = "\n".join([
+                    f"{'User' if entry.get('role') == 'user' else 'Assistant'}: {entry.get('text', '')}"
+                    for entry in recent_entries
+                ])
+                
+                # Generate compressed summary
+                summary = SUMMARIZER.summarize_conversation(conversation_text, max_tokens=60)
+                conversation_summary = f"Recent conversation: {summary.summary_text}"
+                
+                logger.debug(f"🧠 Context enriched: {summary.original_length} → {summary.token_count} tokens")
+            else:
+                conversation_summary = "New conversation"
+                
+        except Exception as e:
+            logger.debug(f"🧠 Conversation summary failed: {e} - using basic context")
+            conversation_summary = "Conversation context unavailable"
+        
+        # Guard rails: truncate to 1000 chars total
+        full_context = f"{ctx_block}\n{conversation_summary}"
+        
+        # Add digest context if available
+        if digest_context:
+            full_context += f"\nPrevious turns:\n{digest_context}"
+            
+        if len(full_context) > 1000:
+            full_context = full_context[:1000] + "..."
         
     except Exception as e:
         logger.warning(f"Memory context failed: {e}")
-        ctx_block = "- none"
+        full_context = "- none\nNew conversation"
     
-    # 2) Build conversation-style system prompt
+    # 2) Build conversation-style system prompt with enriched context
     system_prompt = f"""You are the **Council**, a collective of five specialist heads.
 Be concise, helpful, and keep a friendly tone.
 
-Relevant past facts:
-{ctx_block}
+Relevant context:
+{full_context}
 —
 Answer the user:"""
 
@@ -716,4 +1259,75 @@ Unified Council answer:"""
             
             return best_answer.get("text", "I apologize, but I couldn't process your request.")
         
-        return "I apologize, but I couldn't process your request." 
+        return "I apologize, but I couldn't process your request."
+
+def length_penalty(text: str, query: str) -> float:
+    """
+    🎯 LENGTH PENALTY: Prevent math head from dominating with ultra-short answers
+    
+    Args:
+        text: The response text
+        query: Original query to check if scalar answer is expected
+        
+    Returns:
+        Penalty multiplier (0.4-1.0)
+    """
+    if not text:
+        return 0.4
+    
+    # Tokenize response (simple word-based tokenization)
+    tokens = text.strip().split()
+    token_count = len(tokens)
+    
+    # 🎯 ENHANCED: Check if prompt is obviously numeric/mathematical
+    query_lower = query.lower()
+    is_numeric_prompt = any(pattern in query_lower for pattern in [
+        'what is', 'how much', 'calculate', 'solve', 'equals', '=',
+        'add', 'subtract', 'multiply', 'divide', '+', '-', '*', '/',
+        'sqrt', 'square root', 'factorial', 'prime'
+    ]) or bool(re.search(r'\d+\s*[\+\-\*/\^%]\s*\d+', query))
+    
+    # 🔧 SIMPLE 3-LINE PENALTY: Penalize very short replies unless obviously numeric
+    if is_numeric_prompt:
+        # For math queries, allow shorter answers with mild penalty
+        penalty = 0.7 + min(0.3, 0.04 * token_count)  # 1-token → 0.7, 8+ tokens → 1.0
+    else:
+        # For non-numeric queries, heavily penalize short answers
+        penalty = 0.4 + min(0.6, 0.04 * token_count)  # 1-token → 0.4, 15+ tokens → 1.0
+    
+    return penalty
+
+def score_answer(tokens: list, mean_logprob: float, query: str) -> float:
+    """
+    🎯 ENHANCED SCORING: Apply length penalty to prevent short answer domination
+    
+    Args:
+        tokens: Response tokens (for length calculation)
+        mean_logprob: Mean log probability of the response
+        query: Original query for context
+        
+    Returns:
+        Adjusted score with length penalty applied
+    """
+    # Convert tokens to text for penalty calculation
+    text = " ".join(tokens) if isinstance(tokens, list) else str(tokens)
+    
+    # Apply length penalty
+    penalty = length_penalty(text, query)
+    
+    return mean_logprob * penalty
+
+def expect_scalar_answer(query: str) -> bool:
+    """Check if query expects a scalar/numerical answer"""
+    query_lower = query.lower()
+    
+    # Math calculation patterns
+    math_patterns = [
+        r'\d+\s*[\+\-\*/\^%]\s*\d+',  # 2+2, 5*7
+        r'what\s+is\s+\d+',           # what is 5+3
+        r'calculate\s+\d+',           # calculate 15*3
+        r'solve\s+for\s+\w+',         # solve for x
+        r'equals?\s*\?',              # equals?
+    ]
+    
+    return any(re.search(pattern, query_lower) for pattern in math_patterns) 

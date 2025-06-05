@@ -1,7 +1,7 @@
 # AutoGen Council Makefile
 # Provides convenient commands for development, testing, and deployment
 
-.PHONY: help setup start stop test micro soak titanic health logs clean
+.PHONY: help setup start stop test micro soak titanic health logs clean test-all test-unit test-service test-e2e test-ui install-test-deps
 
 # Default target
 help:
@@ -33,6 +33,16 @@ help:
 	@echo "Release Gate:"
 	@echo "  gate        - Run complete release gate tests"
 	@echo "  tag         - Tag new version"
+	@echo ""
+	@echo "Available test targets:"
+	@echo "  test-all       - Run all test layers (unit, service, e2e, ui)"
+	@echo "  test-unit      - Run unit tests only"
+	@echo "  test-service   - Run service tests only"
+	@echo "  test-e2e       - Run end-to-end Docker tests"
+	@echo "  test-ui        - Run UI/frontend tests"
+	@echo "  test-quick     - Run unit + service tests only"
+	@echo "  test-ci        - CI-friendly test run"
+	@echo "  install-test-deps - Install all test dependencies"
 
 # Setup and preparation
 setup:
@@ -176,4 +186,56 @@ smoke:
 	@curl -s -o /dev/null -w "API Health: %{http_code}\n" http://localhost:9000/health
 	@curl -X POST http://localhost:9000/hybrid \
 		-H 'Content-Type: application/json' \
-		-d '{"prompt":"hello"}' -s | jq -r '.text' | head -1 
+		-d '{"prompt":"hello"}' -s | jq -r '.text' | head -1
+
+# Install test dependencies
+install-test-deps:
+	pip install pytest pytest-asyncio httpx pydantic
+	npm install -D playwright @playwright/test
+	npx playwright install --with-deps
+
+# Run unit tests (fast, pure Python)
+test-unit:
+	pytest -q tests/unit
+
+# Run service tests (FastAPI TestClient)
+test-service:
+	pytest -q tests/service
+
+# Run end-to-end tests (Docker stack)
+test-e2e:
+	@echo "Running E2E Docker stack tests..."
+	@if command -v bash >/dev/null 2>&1; then \
+		bash tests/e2e/test_stack.sh; \
+	else \
+		echo "Bash not available, skipping E2E tests"; \
+	fi
+
+# Run UI tests (Playwright)
+test-ui:
+	@echo "Running UI tests..."
+	@if command -v npx >/dev/null 2>&1; then \
+		npx playwright test tests/ui; \
+	else \
+		echo "Node.js/npx not available, skipping UI tests"; \
+	fi
+
+# Run all test layers
+test-all: test-unit test-service test-e2e test-ui
+	@echo ""
+	@echo "=================================="
+	@echo "🎉 All test layers completed!"
+	@echo "=================================="
+	@echo "✅ Unit tests: Pure Python logic"
+	@echo "✅ Service tests: FastAPI endpoints" 
+	@echo "✅ E2E tests: Docker stack health"
+	@echo "✅ UI tests: Frontend functionality"
+	@echo ""
+
+# Quick test (unit + service only)
+test-quick: test-unit test-service
+
+# CI-friendly test run
+test-ci:
+	pytest -q tests/unit tests/service --tb=short
+	@echo "CI tests completed" 

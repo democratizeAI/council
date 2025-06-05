@@ -49,11 +49,30 @@ function render() {
               <div class="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white text-xs">🤖</div>
               <div class="flex-1">
                 <div class="bg-gray-50 rounded-lg p-3">${msg.a}</div>
+                
+                ${msg.voices && msg.voices.length > 0 ? `
+                  <details class="council-panel mt-3 p-2 border border-gray-300 rounded bg-gray-50">
+                    <summary class="cursor-pointer font-semibold text-gray-700 hover:text-gray-900">
+                      🤖 Council consensus (${msg.voices.length} voices, $${(msg.cost_usd || 0).toFixed(4)})
+                    </summary>
+                    <div class="mt-2 space-y-2">
+                      ${msg.voices.map(v => `
+                        <div class="ml-4 p-2 bg-white rounded border">
+                          <div class="font-semibold text-sm text-gray-800">${v.voice}</div>
+                          <div class="text-xs text-gray-500 mb-1">${v.tokens || 0}t, $${(v.cost || 0).toFixed(4)}, conf: ${Math.round((v.confidence || 0) * 100)}%</div>
+                          <div class="text-sm text-gray-700">${v.reply || 'No response'}</div>
+                        </div>
+                      `).join('')}
+                    </div>
+                  </details>
+                ` : ''}
+                
                 <div class="mt-2 flex items-center space-x-4 text-xs text-gray-500">
                   <span>⚡ ${msg.ms}ms</span>
                   <span>🎯 ${msg.skill}</span>
                   <span>📊 ${Math.round(msg.confidence * 100)}% confidence</span>
                   <span>🕒 ${new Date(msg.timestamp * 1000).toLocaleTimeString()}</span>
+                  ${msg.cost_usd ? `<span>💰 $${msg.cost_usd.toFixed(4)}</span>` : ''}
                 </div>
               </div>
             </div>
@@ -106,27 +125,36 @@ async function sendMessage() {
   
   try {
     const t0 = performance.now();
-    const res = await fetch('/vote', {
+    // Use the new /chat endpoint that includes Council voices
+    const res = await fetch('/chat', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({prompt: text})
+      body: JSON.stringify({
+        prompt: text,
+        session_id: 'chat_' + Date.now()  // Simple session ID
+      })
     });
     
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: ${res.statusText}`);
     }
     
-    const data = await res.json();
+    const payload = await res.json();
     const latency = Math.round(performance.now() - t0);
     
-    state.msgs.push({
+    // Add message to state with Council data
+    const msgData = {
       q: text, 
-      a: data.text || 'No response received',
-      ms: Math.round(data.latency_ms || latency),
-      skill: data.model_used || 'council',
-      confidence: data.confidence || 0.5,
-      timestamp: data.timestamp || Date.now() / 1000
-    });
+      a: payload.text || 'No response received',
+      ms: Math.round(latency),
+      skill: payload.model_chain ? payload.model_chain.join(' → ') : 'council',
+      confidence: 0.8,  // Default for Council responses
+      timestamp: Date.now() / 1000,
+      voices: payload.voices || [],  // Council voices
+      cost_usd: payload.cost_usd || 0
+    };
+    
+    state.msgs.push(msgData);
     
   } catch (error) {
     console.error('Request failed:', error);
@@ -136,7 +164,9 @@ async function sendMessage() {
       ms: 0,
       skill: 'error',
       confidence: 0,
-      timestamp: Date.now() / 1000
+      timestamp: Date.now() / 1000,
+      voices: [],
+      cost_usd: 0
     });
   }
   
