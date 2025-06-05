@@ -7,11 +7,11 @@ ACTION:DISPLAY
 DESCRIPTION:
 TRIGGER:-PT10M
 END:VALARM
-DESCRIPTION:🚀 Soak Test: Weekly Soak Test\n📅 Duration: 24 hours\n📍 Location: Production Infrastructure\n🎯 Objective: Extended stability and performance validation\n\n📊 Monitoring:\n• just gates-watch (continuous gate monitoring)\n• Grafana: http://localhost:3000\n• Prometheus: http://localhost:9090\n• Ops Dashboard: ops/ops_dashboard_v2.html\n\n🚨 Critical Gates:\n• P95 latency < 500ms\n• Error rate < 1%\n• GPU memory < 10GB\n\n⚠️ Actions:\n• Monitor continuously\n• Check alerts every 2 hours\n• Stop test if critical gates fail\n• Document results in lineage
-DTEND:20250607T140000Z
+DESCRIPTION:🚀 Soak Test: Final Test\n📅 Duration: 24 hours\n📍 Location: Production Infrastructure\n🎯 Objective: Extended stability and performance validation\n\n📊 Monitoring:\n• just gates-watch (continuous gate monitoring)\n• Grafana: http://localhost:3000\n• Prometheus: http://localhost:9090\n• Ops Dashboard: ops/ops_dashboard_v2.html\n\n🚨 Critical Gates:\n• P95 latency < 500ms\n• Error rate < 1%\n• GPU memory < 10GB\n\n⚠️ Actions:\n• Monitor continuously\n• Check alerts every 2 hours\n• Stop test if critical gates fail\n• Document results in lineage
+DTEND:20250608T190000Z
 LOCATION:Production Infrastructure
-DTSTART:20250606T140000Z
-SUMMARY:🧪 Weekly Soak Test
-UID:84390c5f-efd1-48ae-ba51-393f07e8fc97@8439.org
+DTSTART:20250607T190000Z
+SUMMARY:🧪 Final Test
+UID:d31627c9-8a1c-4786-9f7b-6879029d39e2@d316.org
 END:VEVENT
 END:VCALENDAR
