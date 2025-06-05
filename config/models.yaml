@@ -243,18 +243,22 @@ specialist_overrides:
     max_tokens: 64           # Math needs even fewer tokens for answers like "4"
     temperature: 0.0         # Deterministic math answers
     timeout_seconds: 8       # Hard timeout for math
+    backend: transformers    # Use HuggingFace Transformers backend
   code_specialist:
     max_tokens: 160          # Code can be a bit longer but still capped
     temperature: 0.0         # Deterministic code generation
     timeout_seconds: 8       # Hard timeout for code
+    backend: vllm            # Use vLLM backend for better code generation
   logic_specialist:
     max_tokens: 96           # Logic reasoning should be concise
     temperature: 0.0         # Deterministic logical conclusions
     timeout_seconds: 8       # Hard timeout for logic
+    backend: transformers    # Use Transformers for logical reasoning
   knowledge_specialist:
     max_tokens: 160          # Knowledge answers capped at 160 tokens
     temperature: 0.1         # Slight creativity for knowledge explanations
     timeout_seconds: 8       # Hard timeout for knowledge
+    backend: transformers    # Use Transformers for knowledge queries
   mistral_general:
     max_tokens: 20           # 🚀 WHISPER-SIZE: Agent-0 draft now just 16-24 tokens for bullet sketch
     temperature: 0.7         # More creative for general responses

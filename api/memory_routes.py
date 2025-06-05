@@ -153,4 +153,42 @@ async def memory_clear():
 @router.get("/keys")
 async def memory_keys():
     """List all memory keys"""
-    return {"keys": ["test_key_1", "test_key_2"], "count": 2} 
+    return {"keys": ["test_key_1", "test_key_2"], "count": 2}
+
+# ===============================
+# /scratch/* alias routes
+# ===============================
+# These provide identical functionality to /memory/* routes
+# for backward compatibility with existing test suites
+
+scratch_router = APIRouter(prefix="/scratch", tags=["scratch"])
+
+@scratch_router.get("/read/{key}", response_model=MemoryReadResponse)
+async def scratch_read(key: str):
+    """Alias for memory_read - maintains backward compatibility"""
+    return await memory_read(key)
+
+@scratch_router.post("/write", response_model=dict)
+async def scratch_write(request: MemoryWriteRequest):
+    """Alias for memory_write - maintains backward compatibility"""
+    return await memory_write(request)
+
+@scratch_router.get("/health")
+async def scratch_health():
+    """Alias for memory_health - maintains backward compatibility"""
+    return await memory_health()
+
+@scratch_router.get("/stats")
+async def scratch_stats():
+    """Alias for memory_stats - maintains backward compatibility"""
+    return await memory_stats()
+
+@scratch_router.post("/clear")
+async def scratch_clear():
+    """Alias for memory_clear - maintains backward compatibility"""
+    return await memory_clear()
+
+@scratch_router.get("/keys")
+async def scratch_keys():
+    """Alias for memory_keys - maintains backward compatibility"""
+    return await memory_keys() 

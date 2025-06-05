@@ -19,7 +19,7 @@ providers:
       output_per_1k: 0.0001
     max_tokens: 512
     temperature: 0.7
-    enabled: false  # Disabled until model downloaded
+    enabled: true  # ✅ ENABLED: CUDA now working
     
   local_tinyllama:
     type: transformers
@@ -33,7 +33,7 @@ providers:
       output_per_1k: 0.0001
     max_tokens: 256
     temperature: 0.7
-    enabled: false  # Disabled until model downloaded
+    enabled: true  # ✅ ENABLED: CUDA now working
     
   # LEGACY: Keep old local for backwards compatibility
   local:

@@ -48,6 +48,17 @@ ROUTER_REQUESTS = Counter(
     "Total router requests"
 )
 
+# Service wrapper metrics
+SERVICE_STARTUPS_TOTAL = Counter(
+    "service_startups_total", 
+    "Agent-0 service restart count"
+)
+
+SERVICE_UP = Counter(
+    "service_up",
+    "Agent-0 service status (1=up, 0=down)"
+)
+
 # Pydantic models for API
 class OrchestrateRequest(BaseModel):
     prompt: str
@@ -160,6 +171,10 @@ async def lifespan(app: FastAPI):
     print("🎯 Router 2.0 ready for requests")
     print("📊 Production monitoring active")
     
+    # Increment service startup counter
+    SERVICE_STARTUPS_TOTAL.inc()
+    echo("[METRICS] Service startup recorded")
+    
     yield
     
     # Shutdown
@@ -206,9 +221,11 @@ def echo(msg: str):
 # Register additional API routers after echo function is defined
 # Memory API router for graduation suite compatibility
 try:
-    from api.memory_routes import router as memory_router
+    from api.memory_routes import router as memory_router, scratch_router
     app.include_router(memory_router)
+    app.include_router(scratch_router)
     echo("[MEMORY] Memory API routes registered successfully")
+    echo("[SCRATCH] Scratch API alias routes registered successfully")
 except ImportError as e:
     echo(f"[MEMORY] Memory routes not available: {e}")
 
@@ -343,7 +360,7 @@ async def budget():
 
 @app.get("/health")
 async def health():
-    """Health check endpoint with production monitoring"""
+    """Health check endpoint with production monitoring and service status"""
     try:
         result = await health_check()
         
@@ -353,6 +370,14 @@ async def health():
         # 📊 NEW: Add production monitoring health
         monitoring_health = get_system_health()
         
+        # 🔧 Service wrapper status
+        service_status = {
+            "startups_total": SERVICE_STARTUPS_TOTAL._value._value,
+            "uptime_seconds": time.time() - (monitoring_health.get("start_time", time.time())),
+            "service_managed": os.getenv("AGENT0_SERVICE_MANAGED", "false").lower() == "true",
+            "health_endpoint_ok": True
+        }
+        
         return {
             **result,
             "council": {
@@ -361,9 +386,11 @@ async def health():
                 "controller_active": council_status["controller_active"]
             },
             "monitoring": monitoring_health,
+            "service": service_status,
             "production_ready": (
                 monitoring_health.get("system_health", 0) > 0.5 and
-                monitoring_health.get("monitoring_active", False)
+                monitoring_health.get("monitoring_active", False) and
+                service_status["health_endpoint_ok"]
             )
         }
     except Exception as e:

@@ -35,6 +35,96 @@ from pathlib import Path
 # 🧠 WORKING MEMORY SYSTEM: Turn ledger cache
 TURN_CACHE: Dict[str, OrderedDict] = {}  # keyed by <session_id + turn_id>
 
+# 🧠 REFLECTION SYSTEM: For emergent self-improvement behavior
+def write_reflection_note(session_id: str, turn_id: str, agent0_confidence: float, 
+                         specialists_used: List[str], final_confidence: float, 
+                         correction_made: bool, user_query: str) -> None:
+    """Write a reflection note about this turn for future learning"""
+    if not SCRATCHPAD_AVAILABLE:
+        return
+    
+    try:
+        from common.scratchpad import write as sp_write
+        
+        # Determine what was learned this turn
+        if correction_made and specialists_used:
+            learning = f"My draft was improved by {', '.join(specialists_used)}. "
+            if 'math' in specialists_used:
+                learning += "Next time I should invoke FLAG_MATH for numerical queries. "
+            elif 'code' in specialists_used:
+                learning += "Next time I should invoke FLAG_CODE for programming questions. "
+            elif 'logic' in specialists_used:
+                learning += "Next time I should invoke FLAG_LOGIC for reasoning problems. "
+            else:
+                learning += "Next time I should be more conservative with confidence. "
+        elif agent0_confidence >= 0.6:
+            learning = "My initial response was sufficient - good confidence calibration. "
+        else:
+            learning = "I was appropriately cautious about my response quality. "
+        
+        # Generate heuristic for next time
+        if 'math' in user_query.lower() and 'math' not in specialists_used:
+            heuristic = "Watch for mathematical expressions and set FLAG_MATH earlier."
+        elif any(word in user_query.lower() for word in ['function', 'code', 'python']) and 'code' not in specialists_used:
+            heuristic = "Watch for programming keywords and set FLAG_CODE proactively."
+        elif len(user_query.split()) > 10 and not specialists_used:
+            heuristic = "Complex questions often benefit from specialist review."
+        else:
+            heuristic = "Current approach seems appropriate for this query type."
+        
+        reflection_content = f"TURN {turn_id}: {learning}{heuristic}"
+        
+        sp_write(
+            session_id=session_id,
+            agent="agent0_reflection", 
+            content=reflection_content,
+            tags=["reflection", "learning", turn_id],
+            entry_type="reflection",
+            metadata={
+                "agent0_confidence": agent0_confidence,
+                "final_confidence": final_confidence,
+                "specialists_used": specialists_used,
+                "correction_made": correction_made,
+                "turn_id": turn_id
+            }
+        )
+        
+        logger.debug(f"🧠 Reflection stored: {reflection_content[:50]}...")
+        
+    except Exception as e:
+        logger.debug(f"🧠 Reflection write failed: {e}")
+
+def get_reflection_context(session_id: str, limit: int = 2) -> str:
+    """Get the last N reflection notes for Agent-0 context injection"""
+    if not SCRATCHPAD_AVAILABLE:
+        return ""
+    
+    try:
+        from common.scratchpad import read as sp_read
+        
+        # Get recent entries and filter for reflections
+        entries = sp_read(session_id, limit=10)  # Read more to find reflections
+        reflections = [e for e in entries if e.entry_type == "reflection" and e.agent == "agent0_reflection"]
+        
+        if not reflections:
+            return ""
+        
+        # Get the most recent N reflections
+        recent_reflections = reflections[:limit]
+        
+        reflection_lines = []
+        for reflection in recent_reflections:
+            reflection_lines.append(f"- {reflection.content}")
+        
+        if reflection_lines:
+            return f"SYSTEM REFLECTIONS:\n" + "\n".join(reflection_lines) + "\n---\n"
+        else:
+            return ""
+            
+    except Exception as e:
+        logger.debug(f"🧠 Reflection read failed: {e}")
+        return ""
+
 # 🚫 GLOBAL KILL-SWITCH: Never emit the legacy AutoGen greeting again
 BLOCK_AUTOGEN_GREETING = True
 GREETING_RE = re.compile(r"hello!\s*i'?m your autogen council assistant", re.I)
@@ -923,9 +1013,10 @@ print(result)"""
             except Exception as e:
                 logger.warning(f"⚠️ Failed to load Agent-0 manifest: {e}")
         
-        # 🚀 SURGICAL FIX: Always inject memory context into Agent-0 prompts
+        # 🚀 SURGICAL FIX: Always inject memory context AND reflections into Agent-0 prompts
         enhanced_query = query
         memory_context = ""
+        reflection_context = get_reflection_context(self.current_session_id, limit=2)
         
         if SCRATCHPAD_AVAILABLE:
             try:
@@ -969,8 +1060,8 @@ print(result)"""
                 except ImportError:
                     logger.debug("🧠 Entity enhancement not available - using original query")
                 
-                # 🧩 Build full prompt with system manifest
-                full_prompt = f"{agent0_system}\n\nUser: {enhanced_query}\nAgent-0:"
+                # 🧩 Build full prompt with system manifest and reflections
+                full_prompt = f"{agent0_system}\n\n{reflection_context}User: {enhanced_query}\nAgent-0:"
                 
                 result = await asyncio.wait_for(
                     call_llm(full_prompt,  # Use manifest + enhanced query
@@ -1084,24 +1175,8 @@ print(result)"""
             force_skill: Force routing to specific skill (bypasses confidence checks)
         """
         
-        # 🚨 RECIPE STEP 2c: Pre-router greeting shortcut (per recipe)
-        GREETING_RE = re.compile(r'^\s*(hi|hey|hello|yo|sup|greetings|howdy)\b', re.I)
-        if GREETING_RE.match(query.strip()):
-            # Quick emoji greeting instead of Agent-0 for bare greets (per recipe)
-            return {
-                "text": "👋 Hi! How can I help you today?",
-                "model": "greeting-shortcut",
-                "confidence": 0.99,
-                "skill_type": "greeting",
-                "latency_ms": 0,
-                "cost_usd": 0.0,
-                "provider": "instant",
-                "specialists_used": [],
-                "flags_detected": [],
-                "escalation_reason": "greeting_shortcut",
-                "refinement_available": False,
-                "agent0_first": True
-            }
+        # 🔥 REMOVED greeting shortcut - let Agent-0 handle all greetings
+        # This ensures Agent-0 ALWAYS speaks first as per single-path recipe
         
         # 💰 CACHE CHECK: Look for identical prompts to save cost
         cache_key = _get_cache_key(self.current_session_id, query)
@@ -1129,6 +1204,27 @@ print(result)"""
                 logger.info(f"💰 Cached response for future use: {query[:30]}...")
         except Exception as e:
             logger.debug(f"Cache store error: {e}")
+        
+        # 🧠 REFLECTION LOOP: Write self-improvement note after each turn
+        try:
+            turn_id = _generate_turn_id()
+            agent0_confidence = result.get("confidence", 0.0) if result.get("agent0_first") else 0.0
+            specialists_used = result.get("specialists_used", [])
+            final_confidence = result.get("confidence", 0.0)
+            correction_made = len(specialists_used) > 0 or result.get("refinement_type") in ["specialist_replacement", "fusion"]
+            
+            if agent0_confidence > 0:  # Only write reflections for Agent-0 first responses
+                write_reflection_note(
+                    session_id=self.current_session_id,
+                    turn_id=turn_id,
+                    agent0_confidence=agent0_confidence,
+                    specialists_used=specialists_used,
+                    final_confidence=final_confidence,
+                    correction_made=correction_made,
+                    user_query=query
+                )
+        except Exception as e:
+            logger.debug(f"🧠 Reflection write failed: {e}")
         
         return result
     

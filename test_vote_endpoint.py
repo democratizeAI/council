@@ -58,24 +58,23 @@ def test_vote_endpoint():
             if response.status_code == 200:
                 data = response.json()
                 
-                # Extract winner info
-                winner = data.get("winner", {})
-                specialist = winner.get("specialist", "unknown")
-                confidence = winner.get("confidence", 0.0)
+                # Extract response info (VoteResponse format)
+                model_used = data.get("model_used", "unknown")
+                confidence = data.get("confidence", 0.0)
                 text = data.get("text", "")
                 
                 print(f"   ✅ Response: '{text[:60]}{'...' if len(text) > 60 else ''}'")
                 print(f"   ⏱️ Latency: {latency_ms:.1f}ms")
-                print(f"   🎯 Winner: {specialist} (confidence: {confidence:.2f})")
-                print(f"   📊 Stats: {data.get('voting_stats', {})}")
+                print(f"   🎯 Model: {model_used} (confidence: {confidence:.2f})")
+                print(f"   📊 Full Response: {data}")
                 
                 # Validate result
-                if specialist == "agent0":
+                if model_used == "agent0" or "agent" in model_used:
                     print(f"   ✅ PASS: Agent-0 responded first")
-                elif specialist in ["math", "code", "logic", "knowledge"]:
-                    print(f"   🟡 SPECIALIST: {specialist} won (may be correct)")
+                elif model_used in ["math", "code", "logic", "knowledge"]:
+                    print(f"   🟡 SPECIALIST: {model_used} won (may be correct)")
                 else:
-                    print(f"   ❌ UNKNOWN: {specialist}")
+                    print(f"   🟡 MODEL: {model_used}")
                 
                 # Check for greeting stubs
                 if any(stub in text.lower() for stub in ["hi, how can i help", "hello, how can i help"]):

@@ -1,0 +1,12 @@
+repos:
+- repo: local
+  hooks:
+  - id: prompt-lint
+    name: Lint prompt files for TEMPLATE_STUB
+    entry: bash -c 'grep -R --line-number -e "TEMPLATE_STUB" prompts/ && exit 1 || exit 0'
+    language: system
+  - id: model-config-lint
+    name: Check models.yaml for incomplete configs
+    entry: bash -c 'grep -n "PLACEHOLDER\|TODO\|FIXME" config/models.yaml && exit 1 || exit 0'
+    language: system
+    files: config/models\.yaml$ 

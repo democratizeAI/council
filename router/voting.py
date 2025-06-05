@@ -14,6 +14,15 @@ Enhanced voting system with P1 quality improvements:
 # 🚨 DEBUG MODE: Enable raw candidate dumping
 DEBUG_DUMP = False
 
+# 🎯 VOTING QUALITY CONFIGURATION
+VOTING_CONFIG = {
+    "min_confidence": 0.75,  # Raised from 0.50 to prevent choppy answers
+    "stub_detection_enabled": True,
+    "template_rejection_enabled": True,
+    "agent0_confidence_gate": 0.65,  # Skip specialists if Agent-0 is confident
+    "parallel_execution": True  # Run specialists in parallel
+}
+
 import asyncio
 import time
 import random
