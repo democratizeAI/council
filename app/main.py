@@ -261,93 +261,73 @@ async def orchestrate(request: OrchestrateRequest):
 
 @app.post("/vote", response_model=VotingResponse)
 async def vote_endpoint(request: VotingRequest):
-    """🎭 Enhanced Router 2.0: Confidence-weighted voting + Council deliberation"""
+    """🎯 AGENT-0 FIRST: Routes via RouterCascade for single-path recipe compliance"""
     
     start_time = time.time()
     
     try:
         ROUTER_REQUESTS.inc()
         
-        echo(f"🗳️ Vote request: '{request.prompt[:50]}...' with {len(request.candidates)} candidates")
+        echo(f"🚀 Agent-0 first vote: '{request.prompt[:50]}...' (session: {getattr(request, 'session_id', 'vote_session')})")
         
-        # 🎭 COUNCIL DELIBERATION: Run Council first for additional perspective
-        council_result = None
-        council_voices = None
-        council_consensus = None
-        council_used = False
+        # 🎯 SINGLE-PATH RECIPE: Use RouterCascade for Agent-0-first routing
+        from router_cascade import RouterCascade
         
-        try:
-            from router.council import council_router
-            
-            echo(f"🎭 Running Council deliberation alongside voting...")
-            deliberation = await council_router.council_deliberate(request.prompt)
-            
-            # Format Council voices for response
-            council_voices = []
-            for voice_enum, voice_response in deliberation.voice_responses.items():
-                voice_dict = {
-                    "voice": voice_enum.value.title(),  # reason -> Reason
-                    "reply": voice_response.response,
-                    "tokens": len(voice_response.response.split()),
-                    "cost": voice_response.cost_dollars,
-                    "confidence": voice_response.confidence,
-                    "model": voice_response.model_used
-                }
-                council_voices.append(voice_dict)
-            
-            council_consensus = deliberation.final_response
-            council_used = True
-            echo(f"🎭 Council deliberation complete: {len(council_voices)} voices")
-            
-        except Exception as e:
-            echo(f"🎭 Council deliberation failed: {e}, continuing with traditional voting")
-        
-        # TRADITIONAL VOTING: Run the original voting system
-        # Apply budget-aware candidate selection
-        cost_optimized_candidates = downgrade_route(request.candidates)
-        if cost_optimized_candidates != request.candidates:
-            echo(f"💰 Budget-aware voting: {request.candidates} -> {cost_optimized_candidates}")
+        router = RouterCascade()
         
         with REQUEST_LATENCY.time():
-            result = await vote(request.prompt, cost_optimized_candidates, request.top_k)
+            result = await router.route_query(request.prompt)
         
-        # 📊 NEW: Record Agent-0 performance if this was an Agent-0 response
-        if result.get("winner", {}).get("specialist") == "mistral_general":
-            latency_ms = (time.time() - start_time) * 1000
-            confidence = result.get("winner", {}).get("confidence", 0.0)
+        # 📊 Record Agent-0 performance 
+        latency_ms = (time.time() - start_time) * 1000
+        if result.get("skill_type") == "agent0":
+            confidence = result.get("confidence", 0.0)
             record_agent0_performance(latency_ms, confidence)
         
-        # Track costs for all candidates that responded
-        total_cost_cents = 0.0
-        all_candidates = result.get("all_candidates", result.get("candidates", []))
+        # Convert RouterCascade result to VotingResponse format
+        # Extract text - handle both string and list formats
+        response_text = result.get("text", "")
+        if isinstance(response_text, list) and len(response_text) > 0:
+            response_text = response_text[0]
+        elif not isinstance(response_text, str):
+            response_text = str(response_text)
         
-        for candidate in all_candidates:
-            # Safely estimate tokens from response snippet
-            response_text = candidate.get("response_snippet", candidate.get("text", ""))
-            if isinstance(response_text, str):
-                tokens = len(response_text.split())
-                model_name = candidate.get("model", candidate.get("specialist", "unknown"))
-                cost = debit(model_name, tokens)
-                total_cost_cents += cost
+        # Create winner info
+        winner = {
+            "specialist": result.get("skill_type", "agent0"),
+            "confidence": result.get("confidence", 0.95),
+            "model": result.get("model_used", "agent0"),
+            "response_snippet": response_text[:100],
+            "latency_ms": latency_ms
+        }
         
-        # Add Council cost if used
-        if council_used and deliberation:
-            total_cost_cents += deliberation.total_cost_dollars * 100  # Convert dollars to cents
+        # Create all_candidates (RouterCascade doesn't expose intermediate candidates)
+        all_candidates = [winner]  # Agent-0 first approach means we show the final result
         
-        # 🎭 ENHANCED RESPONSE: Include both voting results + Council deliberation
+        # Estimate cost
+        tokens = len(response_text.split()) if response_text else 0
+        model_name = result.get("model_used", "agent0")
+        total_cost_cents = debit(model_name, tokens)
+        
         return VotingResponse(
-            text=result["text"],
-            winner=result["winner"],
-            all_candidates=all_candidates,  # Use the candidates we found
-            voting_stats=result.get("voting_stats", {}),
+            text=response_text,
+            winner=winner,
+            all_candidates=all_candidates,
+            voting_stats={
+                "agent0_first": True,
+                "total_latency_ms": latency_ms,
+                "specialist_used": result.get("skill_type", "agent0"),
+                "escalation_flags": result.get("escalation_flags", [])
+            },
             total_cost_cents=total_cost_cents,
-            # 🎭 Council integration
-            council_voices=council_voices,
-            council_consensus=council_consensus,
-            council_used=council_used
+            # Council integration (disabled for Agent-0 first)
+            council_voices=None,
+            council_consensus=None,
+            council_used=False
         )
         
     except Exception as e:
+        echo(f"❌ Vote endpoint error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/budget", response_model=BudgetResponse)

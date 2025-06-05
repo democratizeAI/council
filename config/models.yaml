@@ -165,6 +165,8 @@ loading_strategy:
     vram_limit_mb: 1000
   rtx_4070:
     force_cpu: []
+    lazy_load: true
+    preload: ["tinyllama_1b", "safety_guard_0.3b"]  # Only Agent-0 + safety hot
     priority_order:
     - gpu_heads_small
     - gpu_heads_medium

@@ -522,76 +522,41 @@ async def models_endpoint():
 
 @app.post("/vote", response_model=VoteResponse)
 async def vote_endpoint(request: VoteRequest) -> VoteResponse:
-    """🎭 Enhanced Voting endpoint - with Council deliberation + memory context"""
+    """🎯 AGENT-0 FIRST: Routes via RouterCascade for single-path recipe compliance"""
     start_time = time.time()
     stats["requests_total"] += 1
     
     try:
-        logger.info(f"🗳️ Vote request: '{request.prompt[:50]}...' with {len(request.candidates or [])} candidates")
+        logger.info(f"🚀 Agent-0 first vote: '{request.prompt[:50]}...'")
         
-        # 🎭 COUNCIL DELIBERATION: Run Council first for additional perspective
-        council_voices = None
-        council_consensus = None
-        council_used = False
-        
-        try:
-            from router.council import council_router
-            
-            logger.info(f"🎭 Running Council deliberation alongside voting...")
-            deliberation = await council_router.council_deliberate(request.prompt)
-            
-            # Format Council voices for response
-            council_voices = []
-            for voice_enum, voice_response in deliberation.voice_responses.items():
-                voice_dict = {
-                    "voice": voice_enum.value.title(),  # reason -> Reason
-                    "reply": voice_response.response,
-                    "tokens": len(voice_response.response.split()),
-                    "cost": voice_response.cost_dollars,
-                    "confidence": voice_response.confidence,
-                    "model": voice_response.model_used
-                }
-                council_voices.append(voice_dict)
-            
-            council_consensus = deliberation.final_response
-            council_used = True
-            logger.info(f"🎭 Council deliberation complete: {len(council_voices)} voices")
-            
-        except Exception as e:
-            logger.warning(f"🎭 Council deliberation failed: {e}, continuing with traditional voting")
-        
-        # TRADITIONAL VOTING: Run the original voting system
-        # If no candidates provided, use default models
-        candidates = request.candidates if request.candidates else ["math_specialist", "code_specialist", "logic_specialist", "knowledge_specialist", "mistral_general"]
-        
-        # 🧠 Use memory-enhanced voting instead of hybrid routing
-        from router.voting import vote
-        result = await vote(
-            prompt=request.prompt,
-            model_names=candidates,
-            top_k=request.top_k,
-            use_context=True  # Enable memory context injection
-        )
+        # 🎯 SINGLE-PATH RECIPE: Use RouterCascade for Agent-0-first routing
+        result = await router.route_query(request.prompt)
         
         stats["requests_success"] += 1
         latency_ms = (time.time() - start_time) * 1000
         
-        # Extract response data from voting result
-        winner = result.get("winner", {})
-        voting_stats = result.get("voting_stats", {})
+        # Convert RouterCascade result to VoteResponse format
+        # Extract text - handle both string and list formats
+        response_text = result.get("text", "")
+        if isinstance(response_text, list) and len(response_text) > 0:
+            response_text = response_text[0]
+        elif not isinstance(response_text, str):
+            response_text = str(response_text)
         
-        # 🎭 ENHANCED RESPONSE: Include both voting results + Council deliberation
+        # Get candidates list (RouterCascade doesn't expose all candidates, so use request defaults)
+        candidates = request.candidates if request.candidates else ["agent0", "math", "code", "logic", "knowledge"]
+        
         return VoteResponse(
-            text=result.get("text", winner.get("text", "No response")),
-            model_used=winner.get("model", "unknown"),
+            text=response_text,
+            model_used=result.get("model", "agent0"),
             latency_ms=latency_ms,
-            confidence=winner.get("confidence", voting_stats.get("winner_confidence", 0.7)),
+            confidence=result.get("confidence", 0.95),
             candidates=candidates,
             total_cost_cents=0.0,  # No cost tracking in shim yet
-            # 🎭 Council integration
-            council_voices=council_voices,
-            council_consensus=council_consensus,
-            council_used=council_used
+            # Council integration (disabled for Agent-0 first)
+            council_voices=None,
+            council_consensus=None,
+            council_used=False
         )
         
     except Exception as e:
@@ -604,7 +569,7 @@ async def vote_endpoint(request: VoteRequest) -> VoteResponse:
             confidence=0.0,
             candidates=request.candidates or ["error"],
             total_cost_cents=0.0,
-            # 🎭 Council integration (error case)
+            # Council integration (error case)
             council_voices=None,
             council_consensus=None,
             council_used=False

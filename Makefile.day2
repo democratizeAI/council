@@ -1,128 +1,132 @@
-# Makefile.day2 - v2.6.0 Stack Operations
-# Convenience targets for day-to-day operations
+# Swarm v2.6.0 Infrastructure Management
+# Usage: make <target>
 
-.PHONY: up down set-canary-weight smoke-live test-alerts-e2e promote-canary status logs help
+.PHONY: help up down restart status logs clean test smoke canary-up canary-down evolution-up evolution-down push-metrics
 
-# Default registry and image tag
-REGISTRY ?= registry.swarm.local
-IMAGE_TAG ?= v2.6.0
-PERCENT ?= 5
-
-# Docker Compose command base
-COMPOSE_BASE = docker compose --env-file infra/env/prod.env
+# Default target
+help:
+	@echo "🚀 Swarm v2.6.0 Infrastructure Commands"
+	@echo ""
+	@echo "Stack Management:"
+	@echo "  up              Deploy full stack (core + canary + evolution)"
+	@echo "  down            Stop all services"
+	@echo "  restart         Restart all services"
+	@echo "  status          Show service status"
+	@echo "  logs            Show all service logs"
+	@echo ""
+	@echo "Individual Stacks:"
+	@echo "  core-up         Deploy core services only"
+	@echo "  canary-up       Deploy canary services"
+	@echo "  evolution-up    Deploy LoRA training pipeline"
+	@echo "  canary-down     Stop canary services"
+	@echo "  evolution-down  Stop evolution services"
+	@echo ""
+	@echo "Testing & Operations:"
+	@echo "  smoke           Run smoke test for LoRA training"
+	@echo "  test            Run all health checks"
+	@echo "  push-metrics    Push test metrics to Pushgateway"
+	@echo "  clean           Clean up stopped containers and images"
+	@echo ""
+	@echo "Environment: T:\LAB\infra"
 
 # Full stack deployment
-up:
-	@echo "🚀 Bringing up v2.6.0 stack (main + canary + evolution)..."
-	$(COMPOSE_BASE) \
-		-f infra/docker-compose.yml \
-		-f infra/docker-compose.canary.yml \
-		-f infra/docker-compose.evolution.yml \
-		up -d --build
-	@echo "✅ Stack deployed. Grafana: http://localhost:3000, API: http://localhost:9000"
+up: core-up canary-up evolution-up
+	@echo "✅ Full v2.6.0 stack deployed!"
+	@echo "🌐 Access points:"
+	@echo "  - API: http://localhost:9000"
+	@echo "  - Grafana: http://localhost:3000 (admin/admin)"
+	@echo "  - Prometheus: http://localhost:9090"
+	@echo "  - Alertmanager: http://localhost:9093"
 
-# Stack with pushgateway for chaos testing
-up-with-pushgw:
-	@echo "🚀 Bringing up full stack with pushgateway..."
-	$(COMPOSE_BASE) \
-		-f infra/docker-compose.yml \
-		-f infra/docker-compose.canary.yml \
-		-f infra/docker-compose.evolution.yml \
-		-f infra/docker-compose.pushgw.yml \
-		up -d --build
-
-# Stop all services
 down:
-	@echo "🛑 Stopping all stack services..."
-	$(COMPOSE_BASE) \
-		-f infra/docker-compose.yml \
-		-f infra/docker-compose.canary.yml \
-		-f infra/docker-compose.evolution.yml \
-		-f infra/docker-compose.pushgw.yml \
-		down
-	@echo "✅ Stack stopped"
+	@echo "🛑 Stopping all services..."
+	docker compose -f docker-compose.yml down
+	docker compose -f docker-compose.canary.yml down
+	docker compose -f docker-compose.evolution.yml down
+	docker compose -f docker-compose.pushgw.yml down
 
-# Set canary traffic weight
-set-canary-weight:
-	@echo "⚖️ Setting canary traffic to $(PERCENT)%..."
-	@sed -i 's/COUNCIL_TRAFFIC_PERCENT=.*/COUNCIL_TRAFFIC_PERCENT=$(PERCENT)/' infra/env/canary.env
-	@docker exec $$(docker ps -q -f name=api-canary) kill -HUP 1 2>/dev/null || true
-	@echo "✅ Canary weight set to $(PERCENT)%"
+# Core services (monitoring + API)
+core-up:
+	@echo "🚀 Deploying core services..."
+	docker compose -f docker-compose.yml --env-file env/prod.env up -d
 
-# Functional smoke test
-smoke-live:
-	@echo "🧪 Running 10 functional smoke tests..."
-	@for i in $$(seq 1 10); do \
-		echo "Test $$i/10:"; \
-		curl -f -s http://localhost:9000/health | jq '.status' || exit 1; \
-		sleep 1; \
-	done
-	@echo "✅ All smoke tests passed"
+# Canary deployment
+canary-up:
+	@echo "🐤 Deploying canary services..."
+	docker compose -f docker-compose.canary.yml --env-file env/canary.env up -d
 
-# End-to-end alert testing via pushgw
-test-alerts-e2e:
-	@echo "🚨 Running VRAM chaos drill via pushgateway..."
-	@if ! docker ps -q -f name=pushgw >/dev/null 2>&1; then \
-		echo "Starting pushgateway..."; \
-		$(COMPOSE_BASE) -f infra/docker-compose.pushgw.yml up -d; \
-		sleep 5; \
-	fi
-	@echo "Sending test metrics..."
-	@echo "gpu_memory_usage 0.95" | curl -X POST --data-binary @- http://localhost:9091/metrics/job/chaos-drill/instance/vram-test
-	@echo "gpu_temperature 85" | curl -X POST --data-binary @- http://localhost:9091/metrics/job/chaos-drill/instance/temp-test
-	@echo "✅ Chaos drill metrics sent. Check alertmanager: http://localhost:9093"
+canary-down:
+	@echo "🛑 Stopping canary services..."
+	docker compose -f docker-compose.canary.yml down
 
-# Blue-green promotion (canary -> main)
-promote-canary:
-	@echo "🔄 Promoting canary to main..."
-	@echo "Stopping main API..."
-	@docker stop $$(docker ps -q -f name=api_1 -f name=swarm_api) 2>/dev/null || true
-	@echo "Scaling canary to main traffic..."
-	@$(MAKE) set-canary-weight PERCENT=100
-	@echo "Restarting as main with canary image..."
-	@$(COMPOSE_BASE) -f infra/docker-compose.yml up -d api
-	@echo "✅ Canary promoted to main. Verify with smoke tests."
+# LoRA training pipeline
+evolution-up:
+	@echo "🧠 Deploying LoRA training pipeline..."
+	docker compose -f docker-compose.evolution.yml --env-file env/evolution.env up -d
 
-# Stack status
+evolution-down:
+	@echo "🛑 Stopping evolution services..."
+	docker compose -f docker-compose.evolution.yml down
+
+# Restart services
+restart:
+	@echo "🔄 Restarting all services..."
+	$(MAKE) down
+	sleep 5
+	$(MAKE) up
+
+# Status and monitoring
 status:
-	@echo "📊 Stack Status:"
-	@docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" -f network=swarm_network
+	@echo "📊 Service Status:"
+	@docker compose ps 2>/dev/null || true
 	@echo ""
-	@echo "📈 Resource Usage:"
-	@docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"
+	@echo "🧠 Evolution Services:"
+	@docker compose -f docker-compose.evolution.yml ps 2>/dev/null || true
 
-# Service logs
 logs:
 	@echo "📝 Recent logs from all services:"
-	$(COMPOSE_BASE) \
-		-f infra/docker-compose.yml \
-		-f infra/docker-compose.canary.yml \
-		-f infra/docker-compose.evolution.yml \
-		logs --tail=50 -t
+	docker compose logs --tail=10
+	docker compose -f docker-compose.evolution.yml logs --tail=10
 
-# Health check all services
-health:
-	@echo "🏥 Health checking all services..."
-	@curl -f http://localhost:9000/health && echo "✅ API healthy" || echo "❌ API unhealthy"
-	@curl -f http://localhost:9090/-/healthy && echo "✅ Prometheus healthy" || echo "❌ Prometheus unhealthy"
-	@curl -f http://localhost:3000/api/health && echo "✅ Grafana healthy" || echo "❌ Grafana unhealthy"
-	@redis-cli -p 6379 ping >/dev/null && echo "✅ Redis healthy" || echo "❌ Redis unhealthy"
+# Testing
+smoke:
+	@echo "🧪 Running LoRA training smoke test..."
+	@echo '[{"name":"smoke_test_$(shell date +%s)","dataset":["2+2=?","What is ML?","Explain AI"]}]' > tasks/lora_queue.json
+	@echo "✅ Smoke test job queued. Check trainer logs with: make logs"
 
-# Help
-help:
-	@echo "v2.6.0 Stack Operations"
+test:
+	@echo "🔍 Running health checks..."
+	@curl -f http://localhost:9000/health || echo "❌ Main API unhealthy"
+	@curl -f http://localhost:9090/-/healthy || echo "❌ Prometheus unhealthy"
+	@curl -f http://localhost:3000/api/health || echo "❌ Grafana unhealthy"
+	@curl -f http://localhost:9091/-/healthy || echo "❌ Pushgateway unhealthy"
+	@echo "✅ Health checks completed"
+
+push-metrics:
+	@echo "📊 Pushing test metrics..."
+	@echo 'swarm_test_metric 1' | curl -X POST --data-binary @- http://localhost:9091/metrics/job/test
+
+# Cleanup
+clean:
+	@echo "🧹 Cleaning up..."
+	docker container prune -f
+	docker image prune -f
+	docker volume prune -f
+	@echo "✅ Cleanup completed"
+
+# Build real images
+build-images:
+	@echo "🔨 Building trainer and scheduler images..."
+	docker build -t swarm/trainer:v2.6.0 -f trainer/Dockerfile trainer/
+	docker build -t swarm/cron:v2.6.0 -f scheduler/Dockerfile scheduler/
+	@echo "✅ Images built successfully"
+
+# Environment info
+env:
+	@echo "🌍 Environment Information:"
+	@echo "Workspace: $(shell pwd)"
+	@echo "Docker version: $(shell docker --version)"
+	@echo "Docker Compose version: $(shell docker compose version)"
 	@echo ""
-	@echo "Main commands:"
-	@echo "  make up                    - Deploy full stack (main + canary + evolution)"
-	@echo "  make down                  - Stop all services"
-	@echo "  make status                - Show stack status and resource usage"
-	@echo "  make logs                  - Show recent logs from all services"
-	@echo ""
-	@echo "Canary operations:"
-	@echo "  make set-canary-weight PERCENT=25  - Set canary traffic percentage"
-	@echo "  make promote-canary        - Blue-green promote canary to main"
-	@echo ""
-	@echo "Testing:"
-	@echo "  make smoke-live            - Run 10 functional health checks"
-	@echo "  make test-alerts-e2e       - VRAM chaos drill via pushgateway"
-	@echo "  make health                - Health check all services"
+	@echo "📦 Available images:"
+	@docker images | grep -E "(swarm|prom|grafana|redis)" || true

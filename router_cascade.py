@@ -540,7 +540,7 @@ class RouterCascade:
             confidence = confidences[skill]
             
             # Set different thresholds for different skills
-            if skill == "math" and confidence >= 0.8:
+            if skill == "math" and confidence >= 0.95:
                 return skill, confidence
             elif skill == "code" and confidence >= 0.7:
                 return skill, confidence

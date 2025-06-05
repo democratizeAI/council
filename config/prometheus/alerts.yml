@@ -1,0 +1,57 @@
+groups:
+  - name: swarm.alerts
+    rules:
+      - alert: SwarmDown
+        expr: up{job="swarm-api"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Swarm API is down"
+          description: "Swarm API has been down for more than 5 minutes"
+
+      - alert: SwarmCanaryDown
+        expr: up{job="swarm-canary"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Swarm Canary API is down"
+          description: "Swarm Canary API has been down for more than 2 minutes"
+
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis is down"
+          description: "Redis has been down for more than 1 minute"
+
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, swarm_request_duration_seconds_bucket) > 2.0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High request latency"
+          description: "95th percentile latency is above 2 seconds"
+
+      - alert: HighErrorRate
+        expr: rate(swarm_errors_total[5m]) > 0.1
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate"
+          description: "Error rate is above 10% for 3 minutes"
+
+      - alert: LoraNightlyMissed
+        expr: time() - swarm_lora_reload_timestamp_seconds > 86400
+        for: 2h
+        labels:
+          severity: warning
+        annotations:
+          summary: "No new LoRA uploaded in 24 h"
+          runbook: "docs/runbooks/lora_missed.md"
+          description: "LoRA training pipeline hasn't produced a new model in over 24 hours" 

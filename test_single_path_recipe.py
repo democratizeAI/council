@@ -13,7 +13,7 @@ import time
 import json
 from typing import Dict, Any
 
-BASE_URL = "http://localhost:8080"
+BASE_URL = "http://localhost:8000"
 
 def test_request(prompt: str, session_id: str, expected_max_ms: int, description: str) -> Dict[str, Any]:
     """Send test request and measure performance"""
@@ -25,11 +25,10 @@ def test_request(prompt: str, session_id: str, expected_max_ms: int, description
     
     try:
         response = requests.post(
-            f"{BASE_URL}/vote",
+            f"{BASE_URL}/chat",
             json={
                 "prompt": prompt,
-                "session_id": session_id,
-                "model_preference": "fast"
+                "session_id": session_id
             },
             timeout=10
         )
