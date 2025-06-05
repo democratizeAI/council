@@ -1,0 +1,52 @@
+api:
+  dashboard: true
+  debug: true
+
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+  file:
+    filename: /etc/traefik/dynamic.yml
+    watch: true
+
+http:
+  routers:
+    api-router:
+      rule: "PathPrefix(`/api`)"
+      service: api-split
+      entryPoints: [websecure]
+      middlewares: [strip-prefix]
+
+  services:
+    api-split:
+      weighted:
+        services:
+          - name: api-main
+            weight: 95
+          - name: api-canary
+            weight: 5
+        sticky:
+          cookie:  # ensures a user stays on one backend per session
+            name: gpu_affinity
+
+    api-main:
+      loadBalancer:
+        servers: 
+          - url: "http://council-api:9000"
+
+    api-canary:
+      loadBalancer:
+        servers: 
+          - url: "http://api-canary:8000"
+
+  middlewares:
+    strip-prefix:
+      stripPrefix:
+        prefixes: ["/api"] 

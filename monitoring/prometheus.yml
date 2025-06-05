@@ -27,10 +27,10 @@ scrape_configs:
     scrape_interval: 5s
     metrics_path: '/metrics'
 
-  # Canary Council API metrics - for A/B testing
-  - job_name: 'council-api-canary'
+  # Canary Council API metrics - for A/B testing  
+  - job_name: 'api-canary'
     static_configs:
-      - targets: ['council-api-canary:9000']
+      - targets: ['api-canary:8000']
     scrape_interval: 5s
     metrics_path: '/metrics'
     relabel_configs:

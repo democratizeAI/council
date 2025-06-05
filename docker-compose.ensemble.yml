@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+  swarm-api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - MAX_ADAPTERS=3
+      - BASE_MODEL_PATH=/models/tinyllama
+      - REDIS_CLUSTER_PREFIX=pattern:cluster:
+      - CANARY_MODE=true
+      - CUDA_VISIBLE_DEVICES=0
+    volumes:
+      - ./loras:/loras:ro  # LoRA adapters read-only mount
+      - ./models:/models:ro  # Base models read-only mount
+      - ./logs:/app/logs
+    depends_on:
+      - redis
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/recording_rules.yml:/etc/prometheus/recording_rules.yml:ro
+      - ./monitoring/ensemble_alerts.yml:/etc/prometheus/ensemble_alerts.yml:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    environment:
+      - PROM_JIRA_TOKEN=${PROM_JIRA_TOKEN}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=swarm-ops
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/swarm_ops_v3.json:/var/lib/grafana/dashboards/swarm_ops_v3.json:ro
+
+volumes:
+  redis_data:
+  grafana_data:

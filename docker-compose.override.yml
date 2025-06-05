@@ -1,6 +1,48 @@
 version: '3.8'
 
 services:
+  # --- Canary service (5% traffic on GPU-1) ---
+  api-canary:
+    build: .
+    container_name: api-canary
+    ports:
+      - "8001:8000"
+    environment:
+      GPU_AUX_ID: "1"                # ensure heavy models hit GPU-1
+      CANARY_MODE: "true"            # flag used by Prom counters
+      CUDA_VISIBLE_DEVICES: "1"
+      REDIS_URL: "redis://redis:6379/0"
+      SWARM_PROFILE: "canary"
+      COUNCIL_TRAFFIC_PERCENT: 5
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+              device_ids: ["1"]      # bind to GPU-1 only
+        limits:
+          memory: 8g
+          cpus: "4.0"
+    volumes:
+      - ./memory:/app/memory
+      - ./logs:/app/logs
+    depends_on:
+      - redis
+    restart: on-failure:3
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    networks:
+      - default
+
   # Prometheus Pushgateway for chaos testing
   pushgw:
     image: prom/pushgateway:latest

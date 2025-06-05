@@ -69,6 +69,19 @@ groups:
           description: "Canary daily cost is ${{ $value | printf \"%.2f\" }} (limit: $1.50). Monitor for cost optimization."
           runbook_url: "https://docs.swarm.ai/runbook/canary-budget"
 
+      - alert: CanaryHighError
+        expr: rate(swarm_canary_fail_total[5m]) / (rate(swarm_canary_success_total[5m]) + 1e-9) > 0.05
+        for: 2m
+        labels:
+          severity: page
+          environment: "{{ $labels.environment | default \"production\" }}"
+          team: "swarm-ops"
+          component: "canary"
+        annotations:
+          summary: "🚨 Canary error ratio > 5% — auto-rollback recommended"
+          description: "Canary error rate is {{ $value | humanizePercentage }}. Consider immediate rollback to prevent traffic impact."
+          runbook_url: "https://docs.swarm.ai/runbook/canary-rollback"
+
   # =============================================================================
   # 🛠️ DAY-2 OPERATIONS ALERTS - Production Tuned
   # =============================================================================
