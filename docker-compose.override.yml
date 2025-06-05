@@ -75,6 +75,35 @@ services:
     networks:
       - default
 
+  # Reward model trainer - runs nightly at 02:00
+  reward-trainer:
+    build: .
+    container_name: reward-trainer
+    volumes:
+      - ./preference_model:/app/preference_model
+      - ./scripts:/app/scripts
+      - reward_data:/opt/lumina/reward
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - redis
+      - pushgw
+    restart: unless-stopped
+    command: >
+      bash -c "
+        apt-get update && apt-get install -y cron jq &&
+        echo '0 2 * * * cd /app && bash scripts/nightly_reward_train.sh >> /var/log/reward_train.log 2>&1' | crontab - &&
+        echo '0 * * * * cd /app && python preference_model/dataset.py >> /var/log/pair_builder.log 2>&1' | crontab - &&
+        cron && tail -f /var/log/cron.log /var/log/reward_train.log /var/log/pair_builder.log
+      "
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    networks:
+      - default
+
   # Pattern-Miner service  
   pattern-miner:
     build: .
@@ -92,6 +121,10 @@ services:
           cpus: "1.0"
     networks:
       - default
+
+volumes:
+  reward_data:
+    driver: local
 
 networks:
   default:

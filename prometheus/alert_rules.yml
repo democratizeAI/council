@@ -1,0 +1,38 @@
+groups:
+  - name: reward_model_alerts
+    rules:
+      - alert: RewardLowAcc
+        expr: reward_val_accuracy < 0.65
+        for: 5m
+        labels:
+          severity: warn
+          component: reward-model
+          team: "swarm-ops"
+        annotations:
+          summary: "🧠 Reward model validation accuracy critically low"
+          description: "Reward model validation accuracy is {{ $value | humanizePercentage }} (<65%). This may indicate insufficient training data or model degradation."
+          runbook_url: "https://docs.swarm.ai/runbook/reward-model-low-accuracy"
+
+      - alert: RewardTrainingFailed
+        expr: absent(reward_val_accuracy) or increase(reward_val_accuracy[24h]) == 0
+        for: 6h
+        labels:
+          severity: critical
+          component: reward-model
+          team: "swarm-ops"
+        annotations:
+          summary: "🚨 Reward model training pipeline failed"
+          description: "No reward model metrics received in 6+ hours. Check nightly training cron job."
+          runbook_url: "https://docs.swarm.ai/runbook/reward-training-failure"
+
+      - alert: RewardDataInsufficient  
+        expr: absent(reward_val_accuracy) and time() % 86400 > 7200 and time() % 86400 < 10800
+        for: 30m
+        labels:
+          severity: warn
+          component: reward-model
+          team: "swarm-ops"
+        annotations:
+          summary: "📊 Insufficient preference data for training"
+          description: "Reward model training likely skipped due to < 50 preference pairs. Check feedback collection."
+          runbook_url: "https://docs.swarm.ai/runbook/reward-data-collection" 
