@@ -5,6 +5,7 @@ global:
 rule_files:
   - "alerts.yml"
   - "snapshot_alerts.yml"
+  - "alert_rules.yml"
 
 scrape_configs:
   # Pushgateway for chaos testing and metrics injection
