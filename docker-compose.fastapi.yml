@@ -80,7 +80,7 @@ services:
     image: redis:7-alpine
     container_name: swarm-redis
     ports:
-      - "6379:6379"
+      - "6380:6379"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
