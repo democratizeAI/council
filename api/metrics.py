@@ -93,4 +93,23 @@ adapter_select_total = Counter(
 lineage_last_push_timestamp = Gauge(
     'lineage_last_push_timestamp',
     'Epoch timestamp when lineage was last pushed to IPFS'
+)
+
+# Streaming metrics
+stream_requests_total = Counter(
+    'stream_requests_total',
+    'Total streaming requests',
+    ['model', 'stream']
+)
+
+stream_chunk_duration_seconds = Histogram(
+    'stream_chunk_duration_seconds',
+    'Time between streaming chunks',
+    buckets=(0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, float('inf'))
+)
+
+stream_total_duration_seconds = Histogram(
+    'stream_total_duration_seconds', 
+    'Total streaming response duration',
+    buckets=(0.1, 0.25, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0, 60.0, float('inf'))
 ) 

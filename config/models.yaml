@@ -205,6 +205,28 @@ models:
   dtype: q4_K
   name: mixtral-8x7b
   path: /models/mixtral-8x7b.gguf
+- name: phi2_base
+  path: microsoft/phi-2
+  vram_mb: 1600
+  backend: vllm
+  role: generation
+- name: mistral_7b_instruct
+  path: mistralai/Mistral-7B-Instruct-v0.1
+  vram_mb: 3500
+  backend: vllm
+  role: generation
+- name: phi2_pref_head
+  path: models/lora_pref_phi2_20250605
+  vram_mb: 220            # LoRA adds ~60 MB on top of base
+  backend: vllm
+  role: preference        # used by router for reward-scoring
+  base_model: microsoft/phi-2
+- name: phi2_canary
+  path: microsoft/phi-2
+  vram_mb: 1600
+  backend: vllm
+  role: canary
+  traffic_split: 0.05
 profiles:
   working_test:
     enable_council: false

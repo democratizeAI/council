@@ -6,6 +6,7 @@ rule_files:
   - "alerts.yml"
   - "snapshot_alerts.yml"
   - "alert_rules.yml"
+  - "soak_alerts.yml"
 
 scrape_configs:
   # Pushgateway for chaos testing and metrics injection
@@ -77,7 +78,16 @@ scrape_configs:
     static_configs:
       - targets: ['alertmanager:9093']
 
+  - job_name: 'swarm-api'
+    static_configs:
+      - targets: ['swarm-api-main:8000']
+  
+  - job_name: 'swarm-api-canary'
+    static_configs:
+      - targets: ['swarm-api-canary:8000']
+
 alerting:
   alertmanagers:
     - static_configs:
-        - targets: ['alertmanager:9093'] 
+        - targets:
+          - alertmanager:9093 

@@ -1,0 +1,221 @@
+groups:
+  - name: "soak_testing_alerts"
+    interval: 30s
+    rules:
+      # Critical: 5xx errors detected during soak testing
+      - alert: SoakTest5xxErrors
+        expr: increase(swarm_api_5xx_total[2m]) > 0
+        for: 0s  # Immediate alerting during soak tests
+        labels:
+          severity: critical
+          service: fastapi-soak
+          ticket: "217"
+        annotations:
+          summary: "🚨 5xx errors detected during soak testing"
+          description: |
+            FastAPI service is experiencing 5xx errors during soak testing.
+            
+            **Error Details:**
+            - Service: {{ $labels.route }}
+            - Errors in last 2m: {{ $value }}
+            - Time: {{ $labels.__timestamp__ }}
+            
+            **Actions Required:**
+            1. Check Locust test results
+            2. Review container logs 
+            3. Validate memory/GPU usage
+            4. Consider halting soak test if critical
+            
+            **Dashboards:**
+            - [Grafana FastAPI Dashboard](http://localhost:3000/d/fastapi-soak)
+            - [Locust Live Results](http://localhost:8089)
+          slack_channel: "#dev-alerts"
+          playbook: "https://wiki.company.com/soak-test-5xx-runbook"
+
+      # Warning: High response times during soak
+      - alert: SoakTestHighLatency  
+        expr: histogram_quantile(0.95, rate(swarm_api_request_duration_seconds_bucket[2m])) > 0.2
+        for: 1m
+        labels:
+          severity: warning
+          service: fastapi-soak
+          ticket: "217"
+        annotations:
+          summary: "⚠️ High response times during soak testing"
+          description: |
+            P95 response times are exceeding 200ms threshold during soak testing.
+            
+            **Performance Details:**
+            - P95 latency: {{ $value | humanizeDuration }}
+            - Route: {{ $labels.route }}
+            - Method: {{ $labels.method }}
+            
+            **Monitoring:**
+            - Current load may be approaching capacity limits
+            - Check for memory pressure or GPU contention
+            - Review container resource utilization
+
+      # Critical: Memory pressure during soak
+      - alert: SoakTestMemoryPressure
+        expr: swarm_api_memory_usage_bytes > 1.5 * 1024 * 1024 * 1024  # 1.5GB
+        for: 2m
+        labels:
+          severity: critical  
+          service: fastapi-soak
+          ticket: "217"
+        annotations:
+          summary: "🧠 Memory pressure detected during soak testing"
+          description: |
+            FastAPI container memory usage is high during soak testing.
+            
+            **Memory Details:**
+            - Current usage: {{ $value | humanizeBytes }}
+            - Container limit: 2GB
+            - Utilization: {{ $value / (2 * 1024 * 1024 * 1024) * 100 | printf "%.1f" }}%
+            
+            **Risk Assessment:**
+            - Potential OOM kill risk
+            - May impact VRAM allocation
+            - Could trigger fragmentation
+
+      # Warning: Request rate spike beyond expected
+      - alert: SoakTestRequestSpike
+        expr: rate(swarm_api_requests_total[1m]) > 50  # More than 50 RPS
+        for: 2m
+        labels:
+          severity: warning
+          service: fastapi-soak
+          ticket: "217"
+        annotations:
+          summary: "📈 Request rate spike during soak testing"
+          description: |
+            Request rate is higher than expected during soak testing.
+            
+            **Rate Details:**
+            - Current RPS: {{ $value | printf "%.1f" }}
+            - Expected max: 50 RPS
+            - Route: {{ $labels.route }}
+            
+            **Validation:**
+            - Verify Locust configuration is correct (-u 150 -r 25)
+            - Check if test is running longer than expected
+            - Monitor for cascading effects
+
+      # Info: Soak test progress tracking
+      - alert: SoakTestProgress
+        expr: increase(swarm_api_requests_total[5m]) > 1000
+        for: 0s
+        labels:
+          severity: info
+          service: fastapi-soak
+          ticket: "217"
+        annotations:
+          summary: "📊 Soak test progress milestone"
+          description: |
+            Soak test has processed significant request volume.
+            
+            **Progress Details:**
+            - Requests in last 5m: {{ $value }}
+            - Test appears to be running successfully
+            - Continue monitoring for anomalies
+            
+            **Metrics to Watch:**
+            - Error rates remain < 0.5%
+            - P95 latency stays < 200ms
+            - Memory usage stable
+
+      # Critical: Canary service down during soak
+      - alert: SoakTestCanaryDown
+        expr: up{job="swarm-api-canary"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: fastapi-canary
+          ticket: "217"
+        annotations:
+          summary: "🔥 Canary service down during soak testing"
+          description: |
+            Canary FastAPI service is down during soak testing.
+            
+            **Impact:**
+            - 5% traffic mirroring unavailable
+            - Canary deployment validation blocked
+            - Potential production deployment risk
+            
+            **Actions:**
+            1. Check canary container status
+            2. Review canary-specific logs
+            3. Validate resource allocation
+            4. Consider main API impact
+
+      # Warning: GPU memory fragmentation risk
+      - alert: SoakTestGPUFragmentation
+        expr: swarm_api_gpu_memory_mb > 8000  # 8GB+ usage
+        for: 3m
+        labels:
+          severity: warning
+          service: fastapi-soak
+          ticket: "217"
+        annotations:
+          summary: "🎮 GPU memory pressure during soak testing"
+          description: |
+            GPU memory usage is high, fragmentation risk detected.
+            
+            **GPU Details:**
+            - Current VRAM: {{ $value }}MB
+            - Threshold: 8000MB
+            - PYTORCH_CUDA_ALLOC_CONF: max_split_size_mb:128
+            
+            **Monitoring:**
+            - Watch for CUDA OOM errors
+            - Check model loading patterns
+            - Validate memory cleanup between requests
+
+  - name: "soak_test_recovery"
+    interval: 15s
+    rules:
+      # Auto-recovery: Errors stopped
+      - alert: SoakTest5xxRecovered
+        expr: increase(swarm_api_5xx_total[5m]) == 0 and ALERTS{alertname="SoakTest5xxErrors"} == 1
+        for: 2m
+        labels:
+          severity: info
+          service: fastapi-soak
+          ticket: "217"
+        annotations:
+          summary: "✅ 5xx errors resolved during soak testing"
+          description: |
+            FastAPI service has recovered from 5xx errors.
+            
+            **Recovery Status:**
+            - No 5xx errors in last 5 minutes
+            - Service appears stable
+            - Soak test can continue
+            
+            **Next Steps:**
+            - Continue monitoring for patterns
+            - Review error root cause in logs
+            - Document any fixes applied
+
+      # Auto-recovery: Latency improved
+      - alert: SoakTestLatencyRecovered
+        expr: histogram_quantile(0.95, rate(swarm_api_request_duration_seconds_bucket[2m])) < 0.15 and ALERTS{alertname="SoakTestHighLatency"} == 1
+        for: 3m
+        labels:
+          severity: info
+          service: fastapi-soak
+          ticket: "217"
+        annotations:
+          summary: "⚡ Response times recovered during soak testing"
+          description: |
+            P95 response times have returned to normal levels.
+            
+            **Performance Recovery:**
+            - P95 latency: {{ $value | humanizeDuration }}
+            - Below 150ms threshold
+            - Performance stable
+            
+            **Analysis:**
+            - System adapted to load successfully
+            - No permanent performance degradation
+            - Soak test objectives met 

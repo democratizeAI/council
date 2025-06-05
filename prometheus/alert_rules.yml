@@ -35,4 +35,62 @@ groups:
         annotations:
           summary: "📊 Insufficient preference data for training"
           description: "Reward model training likely skipped due to < 50 preference pairs. Check feedback collection."
-          runbook_url: "https://docs.swarm.ai/runbook/reward-data-collection" 
+          runbook_url: "https://docs.swarm.ai/runbook/reward-data-collection"
+
+- name: swarm.rules
+  rules:
+    - alert: HighVRAM
+      expr: swarm_vram_used_bytes{gpu="0"} > 0.9 * 12 * 1024 * 1024 * 1024
+      for: 1m
+      labels: 
+        severity: page
+      annotations: 
+        summary: "GPU VRAM >90%"
+        description: "GPU 0 VRAM usage is {{ $value | humanizeBytes }} (>90% of 12GB)"
+        
+    - alert: RouterLatencyP95
+      expr: histogram_quantile(0.95, sum(rate(swarm_router_request_latency_bucket[2m])) by (le)) > 0.5
+      for: 2m
+      labels: 
+        severity: page
+      annotations: 
+        summary: "p95 latency >500ms"
+        description: "Router p95 latency is {{ $value | humanizeDuration }} (>500ms threshold)"
+        
+    - alert: CUDAFragmentation
+      expr: increase(swarm_cuda_fragmentation_events_total[5m]) > 0
+      labels: 
+        severity: page
+      annotations: 
+        summary: "CUDA allocator fragmentation detected"
+        description: "{{ $value }} CUDA fragmentation events in last 5m - memory allocator stress"
+
+- name: swarm.infrastructure
+  rules:
+    # Additional safety nets for production
+    - alert: HighErrorRate
+      expr: rate(swarm_router_errors_total[5m]) > 0.1
+      for: 1m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High error rate detected"
+        description: "Error rate is {{ $value | humanizePercentage }} (>10% threshold)"
+        
+    - alert: ServiceDown
+      expr: up{job="swarm-api"} == 0
+      for: 30s
+      labels:
+        severity: critical
+      annotations:
+        summary: "Swarm API service down"
+        description: "Main API service has been down for >30s"
+        
+    - alert: DiskSpaceLow
+      expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 15
+      for: 2m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Low disk space"
+        description: "Filesystem has less than 15% space remaining" 

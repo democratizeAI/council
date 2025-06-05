@@ -31,6 +31,10 @@ jobs:
         pytest tests/ -v
         python -m pytest tests/test_weighted_ensemble.py -v
     
+    - name: Run E2E smoke tests
+      run: |
+        python tests/test_e2e_smoke.py smoke
+    
     - name: Validate ensemble configuration
       run: |
         python -c "

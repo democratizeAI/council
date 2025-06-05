@@ -1,0 +1,126 @@
+version: '3.8'
+
+services:
+  # Main FastAPI service (replacing placeholder)
+  swarm-api:
+    image: ghcr.io/luminainterface/fastapi-pro:1.0.0
+    container_name: swarm-api-main
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
+      - PROMETHEUS_ENABLED=true
+      - REDIS_URL=redis://redis:6379
+      - LOG_LEVEL=INFO
+      - ENVIRONMENT=production
+    volumes:
+      - ./logs:/app/logs
+      - ./models:/app/models
+    depends_on:
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+          cpus: "2.0"
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # Canary FastAPI service  
+  swarm-api-canary:
+    image: ghcr.io/luminainterface/fastapi-pro:1.0.0-canary
+    container_name: swarm-api-canary
+    build:
+      context: ./api_canary
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    environment:
+      - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
+      - PROMETHEUS_ENABLED=true
+      - REDIS_URL=redis://redis:6379
+      - CANARY_MODE=true
+      - TRAFFIC_PERCENT=5
+      - LOG_LEVEL=INFO
+      - ENVIRONMENT=canary
+    volumes:
+      - ./logs:/app/logs
+      - ./models:/app/models
+    depends_on:
+      - redis
+      - swarm-api
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1.0"
+
+  # Supporting infrastructure
+  redis:
+    image: redis:7-alpine
+    container_name: swarm-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: swarm-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring:/etc/prometheus/rules
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: swarm-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - grafana-storage:/var/lib/grafana
+      - ./monitoring/grafana:/etc/grafana/provisioning
+    restart: unless-stopped
+
+volumes:
+  grafana-storage:
+
+networks:
+  default:
+    name: swarm-soak-network 
