@@ -3,7 +3,9 @@ version: '3.8'
 services:
   # --- Canary service (5% traffic on GPU-1) ---
   api-canary:
-    build: .
+    build: 
+      context: .
+      dockerfile: Dockerfile.canary
     container_name: api-canary
     ports:
       - "8001:8000"
