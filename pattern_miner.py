@@ -10,6 +10,7 @@ Goal: Cut another 20-30% of cloud usage by learning patterns.
 """
 
 import os
+import sys
 import json
 import time
 import logging
@@ -19,6 +20,9 @@ from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass
 from pathlib import Path
 import re
+import hdbscan
+import redis
+from sentence_transformers import SentenceTransformer
 
 # ML libraries for clustering
 try:
@@ -43,6 +47,10 @@ EMBEDDING_MODEL = "all-MiniLM-L6-v2"  # Lightweight sentence transformer
 PATTERN_CACHE_FILE = "patterns/learned_patterns.json"
 COMPLETIONS_DIR = "data/completions"
 SYNTHETIC_SPECIALISTS_FILE = "patterns/synthetic_specialists.py"
+
+# Initialize embeddings model and Redis connection
+EMB = SentenceTransformer("thenlper/gte-small")
+R = redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379/0"))
 
 @dataclass
 class CompletionRecord:
@@ -604,6 +612,31 @@ class PatternMiner:
         logger.info(f"   📊 Covered: {total_prompts} prompts")
         logger.info(f"   🚀 Expected savings: 20-30% of cloud calls")
 
+def mine_batch(batch):
+    """Process a batch of logs through HDBSCAN clustering"""
+    docs = [b["text"] for b in batch]
+    vecs = EMB.encode(docs, convert_to_numpy=True)
+    cids = hdbscan.HDBSCAN(min_cluster_size=15, metric="cosine").fit_predict(vecs)
+    
+    for rec, cid in zip(batch, cids):
+        sha = hashlib.sha1(rec["text"].encode()).hexdigest()[:12]
+        key = f"pattern:{sha}"
+        R.hset(key, mapping={"cid": int(cid), "ts": int(time.time())})
+        R.incr("pattern_clusters_total")
+
+def run():
+    """Main pattern mining loop"""
+    while True:
+        # fetch up to 200 unclustered logs
+        raw = R.lrange("logs:recent", 0, 199)
+        if not raw:
+            time.sleep(30)
+            continue
+        
+        batch = [json.loads(r) for r in raw]
+        mine_batch(batch)
+        R.ltrim("logs:recent", len(raw), -1)
+
 def main():
     """CLI entry point for pattern mining"""
     import argparse
@@ -623,4 +656,10 @@ def main():
     miner.run_pattern_mining(args.sources)
 
 if __name__ == "__main__":
-    main() 
+    # Check if we should run as daemon or CLI
+    if len(sys.argv) == 1:
+        # No arguments - run as daemon
+        run()
+    else:
+        # Arguments provided - run CLI
+        main() 

@@ -31,6 +31,24 @@ services:
     networks:
       - default
 
+  # Pattern-Miner service  
+  pattern-miner:
+    build: .
+    command: python pattern_miner.py
+    environment:
+      CUDA_VISIBLE_DEVICES: "0"
+      REDIS_URL: "redis://redis:6379/0"
+    depends_on:
+      - redis
+    restart: on-failure:3
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1.0"
+    networks:
+      - default
+
 networks:
   default:
     name: council-network
