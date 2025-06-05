@@ -471,8 +471,20 @@ class RouterCascade:
         logger.info(f"   Budget: ${self.budget_usd}")
 
         self.sandbox_enabled = os.getenv("AZ_SHELL_TRUSTED", "no").lower() == "yes"
+        
+        # Week 2 - Register OS Shell Executor
+        self.executors = {}
+        if self.sandbox_enabled and SANDBOX_AVAILABLE:
+            try:
+                from action_handlers import get_executor
+                self.executors["shell"] = get_executor()
+                logger.info("🔧 Shell executor registered successfully")
+            except ImportError as e:
+                logger.warning(f"⚠️ Shell executor registration failed: {e}")
+        
         logger.info(f"🛡️ Sandbox execution: {'enabled' if self.sandbox_enabled and SANDBOX_AVAILABLE else 'disabled'}")
         logger.info(f"🎭 Loaded {len(self.specialist_prompts)} specialist personalities")
+        logger.info(f"🔧 Registered {len(self.executors)} action executors")
         logger.info("🧠 Working memory system initialized")
 
     def _load_specialist_prompts(self) -> Dict[str, str]:

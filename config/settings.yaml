@@ -22,24 +22,92 @@ memory:
   cache_size: 1000
   episodic_limit: 240  # tokens for episodic context
 sandbox:
-  cpu_limit: 1.0
+  provider: auto                    # auto-detect: docker > wsl > firejail
+  enabled: true                     # Enable sandbox execution
+  timeout_seconds: 10               # Maximum execution time (increased for Week 2)
+  memory_limit_mb: 512              # Memory limit (increased for OS commands)
+  cpu_limit: 2.0                    # CPU cores limit (increased for OS commands)
+  
+  # Docker-specific settings (preferred on all platforms)
   docker:
-    image: agent-sandbox:latest
-    network: none
-    remove_after: true
+    image: agent-sandbox:latest     # Container image
+    network: none                   # No network access
+    remove_after: true              # Clean up containers
     volumes: []
     working_dir: /tmp/execution
-  enabled: true
-  firejail:
-    no_network: true
-    private_tmp: true
-    profile: sandbox/profile.conf
-  memory_limit_mb: 256
-  provider: wsl
-  timeout_seconds: 5
+    
+  # WSL-specific settings (Windows fallback)
   wsl:
-    distro: Ubuntu
-    user: sandbox
+    distro: Ubuntu                  # WSL distribution
+    user: sandbox                   # Execution user
+    
+  # Firejail-specific settings (Linux native)
+  firejail:
+    profile: sandbox/profile.conf
+    private_tmp: true
+    no_network: true
+
+# Week 2 - OS Executor Configuration
+os_executor:
+  max_cpu_seconds: 10               # CPU time limit for OS commands
+  max_fs_changes: 100               # Filesystem change limit
+  audit_enabled: true               # Enable audit logging
+  
+  # Command allowlist categories
+  allowed_categories:
+    - file_operation
+    - directory_operation  
+    - system_info
+    - process_management
+    
+  # Platform-specific settings
+  windows:
+    shell: powershell               # Use PowerShell on Windows
+    safe_commands_only: true        # Extra safety on Windows
+    
+  linux:
+    shell: bash                     # Use bash on Linux
+    firejail_enabled: true          # Use firejail when available
+
+# Week 1 Foundation - Model Configuration  
+models:
+  local_tinyllama:
+    provider: exllama2              # Week 2-1: ExLlama V2 upgrade
+    enabled: true
+    path: /models/tinyllama/TinyLlama-1B-chat-q4_k_m.gguf
+    device: cuda:0
+    dtype: q4_k_m
+    vram_mb: 785                    # ExLlama V2 efficiency
+    max_context: 4096
+    batch_size: 2
+    cache_8bit: true
+
+# Week 1 Foundation - Voting Configuration
+voting:
+  min_confidence: 0.75              # Confidence floor
+  use_stub_filter: true             # Enhanced stub filtering
+  
+# Week 1 Foundation - Specialist Configuration  
+specialists:
+  math_specialist:
+    batch_size: 2
+    max_new_tokens: 160
+    temperature: 0.05               # Low temp for deterministic math
+    
+  code_specialist:
+    batch_size: 2
+    max_new_tokens: 160
+    temperature: 0.1                # Low temp for code
+    
+  logic_specialist:
+    batch_size: 2
+    max_new_tokens: 160
+    temperature: 0.1                # Low temp for logic
+    
+  knowledge_specialist:
+    batch_size: 2
+    max_new_tokens: 160
+    temperature: 0.2                # Higher temp for creativity
 
 qdrant:
   collection: "lumina_mem_v2"

@@ -129,6 +129,21 @@ class ChatRequest(BaseModel):
     prompt: str
     session_id: str = "default_session"
 
+# Week 2 - OS Task Execution
+class TaskRequest(BaseModel):
+    command: str
+    working_dir: Optional[str] = None
+    session_id: str = "default_session"
+
+class TaskResponse(BaseModel):
+    success: bool
+    stdout: str
+    stderr: str
+    exit_code: int
+    execution_time_ms: int
+    command_type: str
+    blocked_reason: Optional[str] = None
+
 class ChatResponse(BaseModel):
     text: str
     voices: List[Dict[str, Any]]
@@ -937,6 +952,62 @@ async def chat_stream(request: ChatRequest):
             "Access-Control-Allow-Headers": "*"
         }
     )
+
+@app.post("/task", response_model=TaskResponse)
+async def execute_task(request: TaskRequest):
+    """
+    Week 2: OS Task Execution Endpoint
+    
+    Execute OS commands with security allowlist and cost guards.
+    Integrates with existing sandbox infrastructure.
+    """
+    start_time = time.time()
+    
+    try:
+        echo(f"🔧 Task execution: '{request.command[:50]}...' (session: {request.session_id})")
+        
+        # Import shell executor
+        try:
+            from action_handlers import execute_shell_command
+        except ImportError as e:
+            raise HTTPException(
+                status_code=503, 
+                detail=f"Shell executor not available: {str(e)}"
+            )
+        
+        # Execute command with security controls
+        result = execute_shell_command(
+            command=request.command,
+            working_dir=request.working_dir
+        )
+        
+        execution_time_ms = int((time.time() - start_time) * 1000)
+        
+        echo(f"✅ Task completed: {result['exit_code']} in {execution_time_ms}ms")
+        
+        return TaskResponse(
+            success=result["success"],
+            stdout=result["stdout"],
+            stderr=result["stderr"],
+            exit_code=result["exit_code"],
+            execution_time_ms=result["execution_time_ms"],
+            command_type=result["command_type"],
+            blocked_reason=result.get("blocked_reason")
+        )
+        
+    except Exception as e:
+        echo(f"❌ Task execution error: {e}")
+        execution_time_ms = int((time.time() - start_time) * 1000)
+        
+        return TaskResponse(
+            success=False,
+            stdout="",
+            stderr=f"Task execution failed: {str(e)}",
+            exit_code=-1,
+            execution_time_ms=execution_time_ms,
+            command_type="error",
+            blocked_reason=f"System error: {str(e)}"
+        )
 
 if __name__ == "__main__":
     import uvicorn
