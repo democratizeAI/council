@@ -37,15 +37,6 @@ groups:
       title: "Canary API Service Down"
       description: "Canary API service has been down for more than 2 minutes"
 
-  - alert: RedisDown
-    expr: up{job="redis"} == 0
-    for: 30s
-    labels:
-      severity: critical
-    annotations:
-      title: "Redis Service Down"
-      description: "Redis service has been down for more than 30 seconds"
-
   - alert: HighMemoryUsage
     expr: (container_memory_usage_bytes / container_spec_memory_limit_bytes) > 0.9
     for: 5m
@@ -71,4 +62,59 @@ groups:
       severity: warning
     annotations:
       title: "High API Latency"
-      description: "95th percentile latency is above 2 seconds for more than 3 minutes" 
+      description: "95th percentile latency is above 2 seconds for more than 3 minutes"
+
+- name: api.alerts
+  rules:
+  - alert: API5xxSpike
+    expr: increase(swarm_api_5xx_total[2m]) > 5
+    for: 3m
+    labels:
+      severity: critical
+      component: api
+    annotations:
+      summary: "🚨 API 5xx error spike detected"
+      description: "{{ $value }} server errors in last 2 minutes (>5 threshold)"
+      runbook_url: "https://wiki.company.com/api-5xx-runbook"
+      
+  - alert: APIHighLatency
+    expr: histogram_quantile(0.95, sum(rate(swarm_router_request_latency_bucket[5m])) by (le)) > 1.0
+    for: 2m
+    labels:
+      severity: warning
+      component: api
+    annotations:
+      summary: "API high latency detected"
+      description: "P95 latency is {{ $value | humanizeDuration }} (>1s threshold)"
+      
+  - alert: APIErrorRate
+    expr: rate(swarm_api_errors_total[5m]) / rate(swarm_api_requests_total[5m]) > 0.1
+    for: 1m
+    labels:
+      severity: warning
+      component: api
+    annotations:
+      summary: "API error rate elevated"
+      description: "Error rate is {{ $value | humanizePercentage }} (>10% threshold)"
+
+- name: infrastructure.alerts
+  rules:
+  - alert: HighMemoryUsage
+    expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes > 0.85
+    for: 5m
+    labels:
+      severity: warning
+      component: infrastructure
+    annotations:
+      summary: "High memory usage detected"
+      description: "Memory usage is {{ $value | humanizePercentage }} (>85% threshold)"
+      
+  - alert: DiskSpaceLow
+    expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.1
+    for: 2m
+    labels:
+      severity: critical
+      component: infrastructure
+    annotations:
+      summary: "Disk space critically low"
+      description: "Disk space is {{ $value | humanizePercentage }} available (<10% threshold)" 

@@ -1,7 +1,7 @@
 # AutoGen Council Makefile
 # Provides convenient commands for development, testing, and deployment
 
-.PHONY: help setup start stop test micro soak titanic health logs clean test-all test-unit test-service test-e2e test-ui install-test-deps
+.PHONY: help setup start stop test micro soak titanic health logs clean test-all test-unit test-service test-e2e test-ui install-test-deps train_reward merge_rl_lora status
 
 # Default target
 help:
@@ -238,4 +238,41 @@ test-quick: test-unit test-service
 # CI-friendly test run
 test-ci:
 	pytest -q tests/unit tests/service --tb=short
-	@echo "CI tests completed" 
+	@echo "CI tests completed"
+
+# Lumina Council Training Makefile (Ticket #203, #204)
+# Key commands for reward model and RL-LoRA training
+
+# Seq 3: Reward model training
+train_reward:
+	@echo "🧠 Starting reward model training for $(MODEL_ID)..."
+	@echo "📊 Target: reward_head_val_acc ≥ 0.65"
+	python training/train_reward_model.py \
+		--model_id $(MODEL_ID) \
+		--epochs 10 \
+		--batch_size 16 \
+		--learning_rate 1e-4 \
+		--target_accuracy 0.65 \
+		--prometheus_metrics
+
+# Seq 4: RL-LoRA PPO fine-tuning  
+merge_rl_lora:
+	@echo "🔗 Merging RL-LoRA after reward ≥ 0.65..."
+	@echo "📈 Target: rl_lora_last_reward flat-to-up trend"
+	python training/rl_lora_ppo.py \
+		--commit_sha $(SHA) \
+		--reward_threshold 0.65 \
+		--merge_strategy ppo \
+		--prometheus_metrics
+
+# Training status check
+status:
+	@echo "📊 Training Status Dashboard:"
+	@python -c "import requests; r = requests.get('http://localhost:8000/metrics'); print('API Status: Healthy' if r.status_code == 200 else 'API Status: Down')"
+	@python training/check_training_progress.py
+
+# Clean training artifacts
+clean:
+	rm -rf models/reward_v1/
+	rm -rf logs/training/
+	rm -rf checkpoints/ 

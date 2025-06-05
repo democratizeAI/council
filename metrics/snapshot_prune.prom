@@ -1,0 +1,9 @@
+# HELP snapshot_pruned_total Snapshots deleted by GDPR purge
+# TYPE snapshot_pruned_total counter
+snapshot_pruned_total 2
+# HELP snapshot_prune_errors_total Errors during snapshot prune
+# TYPE snapshot_prune_errors_total counter
+snapshot_prune_errors_total 0
+# HELP snapshot_prune_last_run_timestamp_seconds Last successful prune run
+# TYPE snapshot_prune_last_run_timestamp_seconds gauge
+snapshot_prune_last_run_timestamp_seconds 1749163142.547397

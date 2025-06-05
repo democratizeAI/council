@@ -1,0 +1,6 @@
+# HELP lineage_last_push_timestamp_seconds Last lineage push timestamp
+# TYPE lineage_last_push_timestamp_seconds gauge
+lineage_last_push_timestamp_seconds 1749163146.9208963
+# HELP lineage_entries_total Total lineage entries pushed
+# TYPE lineage_entries_total counter
+lineage_entries_total 1

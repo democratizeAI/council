@@ -46,6 +46,7 @@ services:
     volumes: 
       - prom_data:/prometheus
       - ./prom/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prom/alerts.yml:/etc/prometheus/alerts.yml
     ports: ["9090:9090"]
     deploy:
       resources:

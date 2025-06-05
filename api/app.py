@@ -252,6 +252,22 @@ def test_error():
     logger.warning("🧪 Test error endpoint triggered")
     raise HTTPException(status_code=500, detail="Intentional test error for alert validation")
 
+@app.post("/internal/metrics")
+def receive_training_metrics(metrics_data: dict):
+    """Internal endpoint to receive training metrics from reward model"""
+    try:
+        # Update Prometheus gauges with training metrics
+        if "reward_head_val_acc" in metrics_data:
+            # Create new gauge for reward accuracy
+            reward_acc_gauge = Gauge('reward_head_val_acc', 'Reward model validation accuracy')
+            reward_acc_gauge.set(metrics_data["reward_head_val_acc"])
+            logger.info(f"📊 Reward accuracy updated: {metrics_data['reward_head_val_acc']}")
+        
+        return {"status": "metrics_received", "timestamp": int(time.time())}
+    except Exception as e:
+        logger.error(f"Failed to process training metrics: {e}")
+        raise HTTPException(status_code=500, detail="Metrics processing failed")
+
 @app.get("/")
 def root():
     """Root endpoint with enhanced API information"""
@@ -266,13 +282,15 @@ def root():
             "metrics": "/metrics",
             "orchestrate": "/orchestrate",
             "admin_reload": "/admin/reload",
-            "test_error": "/test/error"
+            "test_error": "/test/error",
+            "internal_metrics": "/internal/metrics"
         },
         "features": {
             "prometheus_metrics": True,
             "gpu_support": True,
             "health_monitoring": True,
-            "soak_testing": True
+            "soak_testing": True,
+            "training_metrics": True
         }
     }
 

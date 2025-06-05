@@ -25,6 +25,28 @@ services:
         max-size: "50m"
         max-file: "3"
 
+  # Redis Exporter for Prometheus metrics
+  redis_exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: redis-exporter
+    ports:
+      - "9121:9121"
+    environment:
+      - REDIS_ADDR=redis://redis:6379
+    depends_on:
+      - redis
+    restart: on-failure:3
+    deploy:
+      resources:
+        limits:
+          memory: 64m
+          cpus: "0.1"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
+
   # Main Council API - Stable traffic
   council-api:
     build: 

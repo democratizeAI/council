@@ -1,0 +1,17 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:ics.py - http://git.io/lLljaA
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT10M
+END:VALARM
+DESCRIPTION:🚀 Deployment: v2.1.0\n🎯 Environment: production\n⏱️ Estimated Duration: 60 minutes\n\n📋 Pre-deployment Checklist:\n• Boot sequence validation\n• Gate checks passed  \n• Monitoring ready\n• Rollback plan prepared\n\n🔧 Deployment Steps:\n• docker-compose down\n• git pull origin main\n• docker-compose up -d\n• Health checks\n• Gate validation\n\n📊 Post-deployment:\n• python scripts/soak_gates.py\n• just health\n• Monitor for 2 hours
+DTEND:20250606T190000Z
+LOCATION:Production Infrastructure
+DTSTART:20250606T180000Z
+SUMMARY:🚀 Deploy v2.1.0 to production
+UID:1f7053fa-288c-409d-80d6-ecb890d1cfd2@1f70.org
+END:VEVENT
+END:VCALENDAR

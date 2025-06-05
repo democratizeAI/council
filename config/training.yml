@@ -1,0 +1,61 @@
+training:
+  # Core training parameters
+  epochs: 10
+  batch_size: 32
+  learning_rate: 3e-4
+  warmup_steps: 500
+  
+  # Model configuration
+  model:
+    name: "tinyllama"
+    max_length: 1024
+    hidden_size: 768
+    
+  # Data configuration
+  data:
+    train_path: "./data/train.jsonl"
+    eval_path: "./data/eval.jsonl"
+    validation_split: 0.1
+    
+  # Early stopping configuration (needs guard)
+  early_stopping:
+    enabled: true
+    patience: 3
+    min_delta: 0.001
+    monitor: "eval_loss"
+    mode: "min"
+    restore_best_weights: true
+    
+  # Checkpointing
+  checkpointing:
+    save_strategy: "epoch"
+    save_total_limit: 3
+    load_best_model_at_end: true
+    
+  # Optimization
+  optimizer:
+    type: "adamw"
+    weight_decay: 0.01
+    beta1: 0.9
+    beta2: 0.999
+    
+  # Scheduler
+  scheduler:
+    type: "cosine"
+    num_cycles: 0.5
+    
+  # Evaluation
+  evaluation:
+    strategy: "epoch"
+    steps: 500
+    
+  # Logging
+  logging:
+    steps: 100
+    report_to: ["prometheus", "tensorboard"]
+    
+  # Resource limits
+  resources:
+    max_memory_mb: 8192
+    gradient_checkpointing: true
+    fp16: true 

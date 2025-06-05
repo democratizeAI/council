@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swarm Ops Console v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .grid { display: grid; }
+        .md\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .gap-4 { gap: 1rem; }
+        .p-4 { padding: 1rem; }
+        .bg-card\/70 { background-color: rgba(30, 41, 59, 0.7); }
+        .border-gray-700 { border-color: rgb(55, 65, 81); }
+        .rounded-lg { border-radius: 0.5rem; }
+        .text-sm { font-size: 0.875rem; }
+        .text-gray-400 { color: rgb(156, 163, 175); }
+        .bg-warn\/30 { background-color: rgba(251, 191, 36, 0.3); }
+        .border-warn\/60 { border-color: rgba(251, 191, 36, 0.6); }
+        .bg-ok\/30 { background-color: rgba(16, 185, 129, 0.3); }
+        .border-ok\/60 { border-color: rgba(16, 185, 129, 0.6); }
+        .font-medium { font-weight: 500; }
+        .flex { display: flex; }
+        .items-center { align-items: center; }
+        .justify-center { justify-content: center; }
+        .h-full { height: 100%; }
+    </style>
+</head>
+<body class="bg-gray-900 text-white">
+    <div class="container mx-auto p-6">
+        <h1 class="text-3xl font-bold mb-6">🤖 Swarm Ops Console v2</h1>
+        
+        <!-- Main metrics grid -->
+        <section class="grid md:grid-cols-4 gap-4 mb-6">
+            <div class="p-4 bg-card/70 border border-gray-700 rounded-lg">
+                <h3 class="text-sm text-gray-400">Flag Routing</h3>
+                <div id="flagCount" class="text-2xl font-bold">-</div>
+            </div>
+            <div class="p-4 bg-card/70 border border-gray-700 rounded-lg">
+                <h3 class="text-sm text-gray-400">Execution Success</h3>
+                <div id="execSuccess" class="text-2xl font-bold">-</div>
+            </div>
+            <div class="p-4 bg-card/70 border border-gray-700 rounded-lg">
+                <h3 class="text-sm text-gray-400">Merge Efficiency</h3>
+                <div id="mergeEff" class="text-2xl font-bold">-</div>
+            </div>
+            <div class="p-4 bg-card/70 border border-gray-700 rounded-lg">
+                <h3 class="text-sm text-gray-400">Total Cost USD</h3>
+                <div id="totalCost" class="text-2xl font-bold">-</div>
+            </div>
+        </section>
+
+        <!-- Kill-Switch & System Status -->
+        <section class="grid md:grid-cols-5 gap-4 mb-6">
+            <!-- Kill-Switch Status (prominent) -->
+            <div id="killSwitchPanel" class="col-span-2 p-6 bg-card/70 border border-gray-700 rounded-lg">
+                <h3 class="text-lg font-semibold mb-3">🚨 Kill-Switch Status</h3>
+                <div id="killSwitchStatus" class="text-4xl font-bold text-center py-4">NORMAL</div>
+                <div id="killSwitchSubtext" class="text-sm text-center text-gray-400">All systems operational</div>
+                <div class="flex justify-center mt-4 space-x-3">
+                    <button id="engageBtn" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded font-medium" onclick="toggleKillSwitch(1)">
+                        Engage
+                    </button>
+                    <button id="disengageBtn" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-medium" onclick="toggleKillSwitch(0)">
+                        Disengage
+                    </button>
+                </div>
+            </div>
+
+            <!-- Extension widgets section -->
+            <div class="col-span-3 grid md:grid-cols-3 gap-4">
+                <!-- Pattern-cluster heat-map -->
+                <div class="p-4 bg-card/70 border border-gray-700 rounded-lg">
+                    <h3 class="text-sm text-gray-400">Pattern Clusters (last 6h)</h3>
+                    <canvas id="clusterHeat" height="120"></canvas>
+                </div>
+
+                <!-- Per-agent cost bar -->
+                <div class="p-4 bg-card/70 border border-gray-700 rounded-lg">
+                    <h3 class="text-sm text-gray-400">Cost (USD) past 24h</h3>
+                    <canvas id="costBar" height="120"></canvas>
+                </div>
+
+                <!-- Canary pill -->
+                <div id="canaryPill" class="flex items-center justify-center h-full text-sm font-medium rounded-lg bg-warn/30 border border-warn/60">
+                    Canary OFF
+                </div>
+            </div>
+        </section>
+
+        <!-- Pattern-Miner Health Monitor -->
+        <section class="mb-6">
+            <h2 class="text-xl font-semibold mb-4">🔬 Pattern-Miner Health</h2>
+            <div class="grid md:grid-cols-4 gap-4">
+                <!-- Lag Gauge -->
+                <div class="p-4 bg-card/70 border border-gray-700 rounded-lg">
+                    <h3 class="text-sm text-gray-400">Cluster Lag</h3>
+                    <div id="lagGauge" class="text-3xl font-bold text-center py-4">-</div>
+                    <div id="lagStatus" class="text-xs text-center">Waiting...</div>
+                </div>
+
+                <!-- Prompt Queue -->
+                <div class="p-4 bg-card/70 border border-gray-700 rounded-lg">
+                    <h3 class="text-sm text-gray-400">Prompt Queue</h3>
+                    <canvas id="queueSparkline" height="80"></canvas>
+                    <div id="queueCount" class="text-lg font-semibold text-center mt-2">-</div>
+                </div>
+
+                <!-- Clusters/min Rate -->
+                <div class="p-4 bg-card/70 border border-gray-700 rounded-lg">
+                    <h3 class="text-sm text-gray-400">Clusters/min Rate</h3>
+                    <canvas id="clusterRate" height="80"></canvas>
+                    <div id="rateValue" class="text-lg font-semibold text-center mt-2">-</div>
+                </div>
+
+                <!-- Last Run Duration -->
+                <div class="p-4 bg-card/70 border border-gray-700 rounded-lg">
+                    <h3 class="text-sm text-gray-400">Run Duration</h3>
+                    <canvas id="runDuration" height="80"></canvas>
+                    <div id="durationValue" class="text-lg font-semibold text-center mt-2">-</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Alerts section -->
+        <section id="alerts" class="space-y-4">
+            <h2 class="text-xl font-semibold">📊 System Alerts</h2>
+            <div id="alertsList" class="space-y-2">
+                <!-- Alerts will be populated here -->
+            </div>
+        </section>
+    </div>
+
+    <script>
+        /* ----------------------------------------------------------
+           Core Dashboard Logic
+        -----------------------------------------------------------*/
+        let heatChart = null;
+        let costChart = null;
+        let queueChart = null;
+        let rateChart = null;
+        let durationChart = null;
+        
+        // Pattern-miner alert state
+        let alertState = {
+            lagHigh: false,
+            queueBacklog: false,
+            minerStopped: false
+        };
+
+        async function fetchMetrics() {
+            try {
+                const response = await fetch('/metrics');
+                const text = await response.text();
+                return parsePrometheusData(text);
+            } catch (error) {
+                console.error('Failed to fetch metrics:', error);
+                return {};
+            }
+        }
+
+        function parsePrometheusData(text) {
+            const lines = text.split('\n');
+            const data = {};
+            
+            lines.forEach(line => {
+                if (line.startsWith('#') || !line.trim()) return;
+                
+                const spaceIndex = line.lastIndexOf(' ');
+                if (spaceIndex === -1) return;
+                
+                const metric = line.substring(0, spaceIndex);
+                const value = parseFloat(line.substring(spaceIndex + 1));
+                
+                data[metric] = value;
+            });
+            
+            return data;
+        }
+
+        function renderCards(data) {
+            // Update main metrics (using recording rules where available)
+            document.getElementById('flagCount').textContent = 
+                (data['swarm_router_flag_total'] || 0).toFixed(0);
+            document.getElementById('execSuccess').textContent = 
+                (data['swarm_execution_success_total'] || 0).toFixed(0);
+            
+            // Use pre-computed pattern efficiency or fallback
+            const efficiency = data['pattern:miner_efficiency'] || data['merge_efficiency'] || 0;
+            document.getElementById('mergeEff').textContent = 
+                (efficiency * 100).toFixed(1) + '%';
+                
+            document.getElementById('totalCost').textContent = 
+                '$' + (data['cost_usd_total'] || 0).toFixed(4);
+        }
+
+        /* ----------------------------------------------------------
+           EXTENSION WIDGETS
+        -----------------------------------------------------------*/
+        
+        // Pattern-Miner Health Monitoring
+        function updatePatternMinerHealth(parsed) {
+            // 1. Cluster Lag Gauge
+            const lag = parsed['pattern_miner_lag_seconds'] || 0;
+            const lagGauge = document.getElementById('lagGauge');
+            const lagStatus = document.getElementById('lagStatus');
+            
+            lagGauge.textContent = lag.toFixed(1) + 's';
+            
+            // Color-coded thresholds: Green ≤5s, Yellow ≤60s, Red >60s
+            if (lag <= 5) {
+                lagGauge.className = 'text-3xl font-bold text-center py-4 text-green-400';
+                lagStatus.textContent = 'Healthy';
+                lagStatus.className = 'text-xs text-center text-green-400';
+                alertState.lagHigh = false;
+            } else if (lag <= 60) {
+                lagGauge.className = 'text-3xl font-bold text-center py-4 text-yellow-400';
+                lagStatus.textContent = 'Elevated';
+                lagStatus.className = 'text-xs text-center text-yellow-400';
+                alertState.lagHigh = false;
+            } else {
+                lagGauge.className = 'text-3xl font-bold text-center py-4 text-red-400';
+                lagStatus.textContent = 'Critical';
+                lagStatus.className = 'text-xs text-center text-red-400';
+                alertState.lagHigh = true;
+            }
+
+            // 2. Prompt Queue Sparkline
+            const queueLength = parsed['redis_list_length{key="prompt_queue"}'] || 0;
+            const queueCount = document.getElementById('queueCount');
+            
+            if (queueLength >= 10000) {
+                queueCount.textContent = (queueLength/1000).toFixed(1) + 'k';
+                queueCount.className = 'text-lg font-semibold text-center mt-2 text-red-400';
+                alertState.queueBacklog = true;
+            } else if (queueLength >= 1000) {
+                queueCount.textContent = (queueLength/1000).toFixed(1) + 'k';
+                queueCount.className = 'text-lg font-semibold text-center mt-2 text-yellow-400';
+                alertState.queueBacklog = false;
+            } else {
+                queueCount.textContent = queueLength.toString();
+                queueCount.className = 'text-lg font-semibold text-center mt-2 text-green-400';
+                alertState.queueBacklog = false;
+            }
+
+            // Initialize or update queue sparkline
+            if (!queueChart) {
+                const ctx = document.getElementById('queueSparkline').getContext('2d');
+                queueChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: Array(10).fill(''),
+                        datasets: [{
+                            data: Array(10).fill(queueLength),
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { display: false },
+                            y: { display: false, beginAtZero: true }
+                        }
+                    }
+                });
+            } else {
+                // Shift data and add new value
+                queueChart.data.datasets[0].data.shift();
+                queueChart.data.datasets[0].data.push(queueLength);
+                queueChart.update('none');
+            }
+
+            // 3. Clusters/min Rate (use recording rule if available)
+            const clusterRate = data['pattern:miner_efficiency'] || 
+                               data['rate(pattern_clusters_total[10m])'] || 0;
+            const rateValue = document.getElementById('rateValue');
+            rateValue.textContent = clusterRate.toFixed(2) + '/min';
+
+            if (!rateChart) {
+                const ctx = document.getElementById('clusterRate').getContext('2d');
+                rateChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: Array(8).fill(''),
+                        datasets: [{
+                            data: Array(8).fill(clusterRate),
+                            backgroundColor: '#10b981',
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { display: false },
+                            y: { display: false, beginAtZero: true }
+                        }
+                    }
+                });
+            } else {
+                rateChart.data.datasets[0].data.shift();
+                rateChart.data.datasets[0].data.push(clusterRate);
+                rateChart.update('none');
+            }
+
+            // 4. Last Run Duration
+            const runDuration = parsed['pattern_miner_run_seconds'] || 0;
+            const durationValue = document.getElementById('durationValue');
+            
+            if (runDuration > 120) {
+                durationValue.textContent = runDuration.toFixed(1) + 's';
+                durationValue.className = 'text-lg font-semibold text-center mt-2 text-yellow-400';
+            } else if (runDuration === 0) {
+                durationValue.textContent = 'No data';
+                durationValue.className = 'text-lg font-semibold text-center mt-2 text-red-400';
+                alertState.minerStopped = true;
+            } else {
+                durationValue.textContent = runDuration.toFixed(1) + 's';
+                durationValue.className = 'text-lg font-semibold text-center mt-2 text-green-400';
+                alertState.minerStopped = false;
+            }
+
+            if (!durationChart) {
+                const ctx = document.getElementById('runDuration').getContext('2d');
+                durationChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Latest'],
+                        datasets: [{
+                            data: [runDuration],
+                            backgroundColor: runDuration > 120 ? '#f59e0b' : '#10b981',
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { display: false },
+                            y: { display: false, beginAtZero: true }
+                        }
+                    }
+                });
+            } else {
+                durationChart.data.datasets[0].data = [runDuration];
+                durationChart.data.datasets[0].backgroundColor = runDuration > 120 ? '#f59e0b' : '#10b981';
+                durationChart.update('none');
+            }
+
+            // Update system alerts based on alert state
+            updatePatternMinerAlerts();
+        }
+
+        function updatePatternMinerAlerts() {
+            const alertsList = document.getElementById('alertsList');
+            const existingAlerts = alertsList.querySelectorAll('[data-alert-type]');
+            
+            // Clear existing pattern-miner alerts
+            existingAlerts.forEach(alert => {
+                if (alert.dataset.alertType.startsWith('pattern-miner')) {
+                    alert.remove();
+                }
+            });
+
+            // Add new alerts based on current state
+            if (alertState.lagHigh) {
+                addAlert('pattern-miner-lag', 'critical', 
+                    'Pattern-Miner Lag Critical', 
+                    'Lag > 60s - check Redis backlog or HDBSCAN crash');
+            }
+
+            if (alertState.queueBacklog) {
+                addAlert('pattern-miner-queue', 'warning',
+                    'Prompt Queue Backlog',
+                    'Queue > 10k - router enqueueing faster than miner can cluster');
+            }
+
+            if (alertState.minerStopped) {
+                addAlert('pattern-miner-stopped', 'critical',
+                    'Pattern-Miner Stopped',
+                    'No run time recorded - check for CrashLoopBackOff');
+            }
+        }
+
+        function addAlert(type, severity, title, description) {
+            const alertsList = document.getElementById('alertsList');
+            const alertDiv = document.createElement('div');
+            alertDiv.dataset.alertType = type;
+            
+            const severityColor = severity === 'critical' ? 'red' : 'yellow';
+            const severityIcon = severity === 'critical' ? '🚨' : '⚠️';
+            
+            alertDiv.className = `p-3 bg-${severityColor}-900/20 border border-${severityColor}-500/30 rounded-lg`;
+            alertDiv.innerHTML = `
+                <div class="flex items-start space-x-3">
+                    <span class="text-xl">${severityIcon}</span>
+                    <div>
+                        <h4 class="font-semibold text-${severityColor}-400">${title}</h4>
+                        <p class="text-sm text-gray-300">${description}</p>
+                        <span class="text-xs text-gray-500">${new Date().toLocaleTimeString()}</span>
+                    </div>
+                </div>
+            `;
+            
+            alertsList.appendChild(alertDiv);
+        }
+
+        /* Hook into the polling loop */
+        const _oldRenderCards = renderCards;
+        renderCards = function(data){ 
+            _oldRenderCards(data); 
+            updatePatternMinerHealth(data);
+            updateKillSwitchStatus(data);
+            pollExtra(data);
+        };
+
+        async function poll() {
+            const data = await fetchMetrics();
+            renderCards(data);
+        }
+
+        // Start polling every 5 seconds
+        setInterval(poll, 5000);
+        poll(); // Initial poll
+
+        // Original Extension Widgets (restored)
+        async function pollExtra(parsed) {
+            /* pattern heat-map */
+            const clusters = Object.entries(parsed)
+                .filter(([k]) => k.startsWith('pattern_clusters_total{cid='))
+                .map(([k,v]) => ({cid: k.match(/cid="(\d+)"/)?.[1] || 'unknown', v}));
+            
+            if (clusters.length && !heatChart) {
+                const heatCtx = document.getElementById('clusterHeat').getContext('2d');
+                const labels = clusters.map(c=>c.cid);
+                const data   = clusters.map(c=>c.v);
+                heatChart = new Chart(heatCtx, {
+                    type:'bar',
+                    data:{labels, datasets:[{data, label:'# Boards', borderWidth:0}]},
+                    options:{scales:{y:{beginAtZero:true}},plugins:{legend:{display:false}}}
+                });
+            } else if (heatChart) {
+                heatChart.data.datasets[0].data = clusters.map(c=>c.v);
+                heatChart.update();
+            }
+
+            /* per-agent cost bar */
+            const cost = ['o3','opus'].map(a => ({
+                agent:a,
+                val: parsed[`cost_usd_total{agent="${a}"}`]||0
+            }));
+            
+            if (!costChart) {
+                const costCtx = document.getElementById('costBar').getContext('2d');
+                costChart = new Chart(costCtx,{
+                    type:'bar',
+                    data:{labels:cost.map(c=>c.agent),
+                          datasets:[{data:cost.map(c=>c.val),
+                                     backgroundColor:['#10b981','#3b82f6']}]},
+                    options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
+                });
+            } else {
+                costChart.data.datasets[0].data = cost.map(c=>c.val);
+                costChart.update();
+            }
+
+            /* canary pill */
+            const pill = document.getElementById('canaryPill');
+            
+            // Use recording rule if available, fallback to raw metrics
+            const successRatio = parsed['canary:success_ratio'];
+            const canaryOK = successRatio !== undefined ? 
+                           successRatio > 0.9 :
+                           (parsed['swarm_canary_success_total'] > 0 && 
+                            (parsed['swarm_canary_fail_total'] || 0) === 0);
+            
+            pill.textContent = canaryOK ? 'Canary ON' : 'Canary OFF';
+            pill.className   = canaryOK
+                ? 'flex items-center justify-center h-full text-sm font-medium rounded-lg bg-ok/30 border border-ok/60'
+                : 'flex items-center justify-center h-full text-sm font-medium rounded-lg bg-warn/30 border border-warn/60';
+        }
+
+        // Kill-switch monitoring
+        async function updateKillSwitchStatus(parsed) {
+            const killSwitchState = parsed['killswitch_state'] || 0;
+            const statusEl = document.getElementById('killSwitchStatus');
+            const subtextEl = document.getElementById('killSwitchSubtext');
+            const panelEl = document.getElementById('killSwitchPanel');
+            const engageBtn = document.getElementById('engageBtn');
+            const disengageBtn = document.getElementById('disengageBtn');
+
+            if (killSwitchState === 1) {
+                // ENGAGED - Critical state
+                statusEl.textContent = 'ENGAGED';
+                statusEl.className = 'text-4xl font-bold text-center py-4 text-red-400';
+                subtextEl.textContent = 'All /orchestrate traffic blocked';
+                subtextEl.className = 'text-sm text-center text-red-400';
+                panelEl.className = 'col-span-2 p-6 bg-red-900/20 border border-red-500/50 rounded-lg animate-pulse';
+                
+                engageBtn.disabled = true;
+                engageBtn.className = 'px-4 py-2 bg-gray-600 text-gray-400 rounded font-medium cursor-not-allowed';
+                disengageBtn.disabled = false;
+                disengageBtn.className = 'px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-medium';
+
+                // Add critical alert
+                addAlert('killswitch-engaged', 'critical',
+                    '🚨 Kill-Switch ENGAGED',
+                    'All /orchestrate traffic is blocked until disengaged');
+            } else {
+                // NORMAL - Operational state
+                statusEl.textContent = 'NORMAL';
+                statusEl.className = 'text-4xl font-bold text-center py-4 text-green-400';
+                subtextEl.textContent = 'All systems operational';
+                subtextEl.className = 'text-sm text-center text-gray-400';
+                panelEl.className = 'col-span-2 p-6 bg-card/70 border border-gray-700 rounded-lg';
+                
+                engageBtn.disabled = false;
+                engageBtn.className = 'px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded font-medium';
+                disengageBtn.disabled = true;
+                disengageBtn.className = 'px-4 py-2 bg-gray-600 text-gray-400 rounded font-medium cursor-not-allowed';
+
+                // Clear kill-switch alerts
+                const existingAlerts = document.querySelectorAll('[data-alert-type="killswitch-engaged"]');
+                existingAlerts.forEach(alert => alert.remove());
+            }
+        }
+
+        // Kill-switch control function
+        async function toggleKillSwitch(state) {
+            try {
+                const response = await fetch(`/admin/killswitch?state=${state}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log(`Kill-switch ${result.engaged ? 'engaged' : 'disengaged'} at ${new Date(result.ts * 1000)}`);
+                    
+                    // Force immediate refresh
+                    setTimeout(() => poll(), 100);
+                } else {
+                    console.error('Failed to toggle kill-switch:', response.status);
+                    addAlert('killswitch-error', 'warning',
+                        'Kill-Switch Control Error',
+                        `Failed to ${state ? 'engage' : 'disengage'} kill-switch`);
+                }
+            } catch (error) {
+                console.error('Kill-switch control error:', error);
+                addAlert('killswitch-error', 'warning',
+                    'Kill-Switch Control Error',
+                    'Network error - check connection to admin API');
+            }
+        }
+    </script>
+</body>
+</html> 

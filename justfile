@@ -114,4 +114,47 @@ ci:
     just test
     just smoke
     just health
-    @echo "CI simulation complete! 🎉" 
+    @echo "CI simulation complete! 🎉"
+
+# 🚪 Soak test gates evaluation
+gates:
+    @echo "🚪 Evaluating soak test gates..."
+    python scripts/soak_gates.py
+
+# 🚪 Watch soak gates continuously
+gates-watch:
+    @echo "👀 Starting continuous gate monitoring..."
+    python scripts/soak_gates.py --watch
+
+# 🚪 Soak gates JSON output
+gates-json:
+    @echo "📄 Soak gates JSON report..."
+    python scripts/soak_gates.py --json
+
+# 🚪 Custom soak gate monitoring
+gates-custom INTERVAL="60" DURATION="3600":
+    @echo "⚙️  Custom gate monitoring ({{INTERVAL}}s interval, {{DURATION}}s duration)..."
+    python scripts/soak_gates.py --watch --interval {{INTERVAL}} --duration {{DURATION}}
+
+# 📅 Generate soak test calendar
+calendar-soak:
+    @echo "📅 Generating soak test calendar..."
+    python scripts/ics_generator.py --type soak --name "Weekly Soak Test" --duration 24
+
+# 📅 Generate deployment calendar
+calendar-deploy VERSION="v1.0.0":
+    @echo "📅 Generating deployment calendar..."
+    python scripts/ics_generator.py --type deployment --name "{{VERSION}}" --duration 1
+
+# 📅 Custom calendar event
+calendar-custom TYPE="soak" START="" NAME="" DURATION="24":
+    @echo "📅 Generating custom calendar event..."
+    python scripts/ics_generator.py --type {{TYPE}} --start "{{START}}" --name "{{NAME}}" --duration {{DURATION}}
+
+# 📅 Generate full test schedule
+calendar-schedule:
+    @echo "📅 Generating complete test schedule..."
+    python scripts/ics_generator.py --type soak --name "Soak Test #1" --start "2025-06-07 10:00" --duration 24
+    python scripts/ics_generator.py --type soak --name "Soak Test #2" --start "2025-06-14 10:00" --duration 24
+    python scripts/ics_generator.py --type soak --name "Soak Test #3" --start "2025-06-21 10:00" --duration 24
+    @echo "📅 Generated 3 weekly soak test events with 10-minute alarms" 

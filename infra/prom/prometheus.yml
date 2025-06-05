@@ -4,6 +4,7 @@ global:
 
 rule_files:
   - "alerts.yml"
+  - "api_alert.yml"
 
 alerting:
   alertmanagers:
@@ -18,33 +19,18 @@ scrape_configs:
 
   - job_name: 'api-main'
     static_configs:
-      - targets: ['api:9000']
+      - targets: ['host.docker.internal:8000']
     metrics_path: '/metrics'
     scrape_interval: 10s
 
   - job_name: 'api-canary'
     static_configs:
-      - targets: ['api-canary:9000']
+      - targets: ['host.docker.internal:8001']
     metrics_path: '/metrics'
     scrape_interval: 10s
 
-  - job_name: 'redis'
-    static_configs:
-      - targets: ['redis:6379']
-    scrape_interval: 30s
-
   - job_name: 'pushgateway'
     static_configs:
-      - targets: ['pushgw:9091']
+      - targets: ['host.docker.internal:9091']
     honor_labels: true
-
-  - job_name: 'trainer'
-    static_configs:
-      - targets: ['trainer:8080']
-    metrics_path: '/metrics'
-    scrape_interval: 60s
-
-  - job_name: 'node-exporter'
-    static_configs:
-      - targets: ['node-exporter:9100']
-    scrape_interval: 30s 
+    scrape_interval: 15s 
