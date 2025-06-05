@@ -1,39 +1,40 @@
 confidence_gate: 0.55
 priority:
-- local_mixtral
-- local_tinyllama
-- mistral
-- openai
+# ✅ AUTONOMOUS SPIRAL: Focus on one GPU model for pattern learning
+# - local_mixtral  # Disabled to preserve VRAM
+- local_tinyllama  # Single GPU model for cost reduction
+# - mistral  # Cloud disabled for local-first approach
+# - openai  # Cloud disabled for local-first approach
 
 providers:
-  # 🔧 LOCAL TRANSFORMERS PROVIDERS: Disabled until models are downloaded
-  local_mixtral:
-    type: transformers
-    model_path: microsoft/phi-2  # Use working model for RTX 4070
-    dtype: int4
-    device: auto  # cuda if available, cpu fallback
-    name: Local Mixtral (Transformers)
-    latency_target_ms: 500
-    pricing:
-      input_per_1k: 0.0001
-      output_per_1k: 0.0001
-    max_tokens: 512
-    temperature: 0.7
-    enabled: true  # ✅ ENABLED: CUDA now working
+  # 🔧 LOCAL TRANSFORMERS PROVIDERS: Only TinyLlama enabled for spiral
+  # local_mixtral:
+  #   type: transformers
+  #   model_path: microsoft/phi-2  # Use working model for RTX 4070
+  #   dtype: int4
+  #   device: auto  # cuda if available, cpu fallback
+  #   name: Local Mixtral (Transformers)
+  #   latency_target_ms: 500
+  #   pricing:
+  #     input_per_1k: 0.0001
+  #     output_per_1k: 0.0001
+  #   max_tokens: 512
+  #   temperature: 0.7
+  #   enabled: false  # ❌ DISABLED: Focusing on TinyLlama only
     
   local_tinyllama:
     type: transformers
-    model_path: microsoft/phi-1_5  # Use smaller model for fallback
+    model_path: microsoft/phi-1_5  # Use smaller model for spiral
     dtype: int4  
-    device: auto  # cuda if available, cpu fallback
+    device: cuda  # Force CUDA for GPU acceleration
     name: Local TinyLlama (Transformers)
     latency_target_ms: 300
     pricing:
-      input_per_1k: 0.0001
-      output_per_1k: 0.0001
+      input_per_1k: 0.00005  # Cheaper than cloud
+      output_per_1k: 0.00005
     max_tokens: 256
     temperature: 0.7
-    enabled: true  # ✅ ENABLED: CUDA now working
+    enabled: true  # ✅ ENABLED: Primary model for autonomous spiral
     
   # LEGACY: Keep old local for backwards compatibility
   local:

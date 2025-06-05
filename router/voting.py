@@ -392,18 +392,23 @@ async def vote(prompt: str, model_names: List[str] = None, top_k: int = 1, use_c
     def is_stub_response(text: str) -> bool:
         """Detect if response is a template stub that should be rejected"""
         if not text or len(text.strip()) < 10:
-            return True
+            # Import CloudRetryException here to avoid circular imports
+            from router.quality_filters import CloudRetryException
+            raise CloudRetryException("Template stub detected - response too short")
         
         text_lower = text.lower()
         
         # Check original stub markers
-        if any(marker.lower() in text_lower for marker in stub_markers):
-            return True
+        for marker in stub_markers:
+            if marker.lower() in text_lower:
+                from router.quality_filters import CloudRetryException
+                raise CloudRetryException(f"Template stub detected - contains marker: {marker}")
             
         # 🎯 Check enhanced stub patterns (regex-based)
         for pattern in STUB_PATTERNS:
             if re.search(pattern, text, re.IGNORECASE):
-                return True
+                from router.quality_filters import CloudRetryException
+                raise CloudRetryException(f"Template stub detected - matches pattern: {pattern}")
                 
         return False
     

@@ -1,15 +1,19 @@
 [Unit]
 Description=Agent-0 AutoGen Council
-After=network.target
-Wants=network.target
+After=network-online.target nvidia-persistenced.service
+Wants=network-online.target
+Requires=nvidia-persistenced.service
 
 [Service]
 Type=simple
 User=agent0
 Group=agent0
 Environment=SWARM_GPU_PROFILE=rtx4070
+Environment=PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
 Environment=PYTHONPATH=/opt/agent0
+Environment=AGENT0_SERVICE_MANAGED=true
 WorkingDirectory=/opt/agent0
+ExecStartPre=/usr/bin/python models/prefetch.py
 ExecStart=/usr/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level info
 Restart=on-failure
 RestartSec=10

@@ -144,6 +144,31 @@ async def lifespan(app: FastAPI):
     """Manage application lifespan - startup and shutdown"""
     global model_loading_summary
     
+    # Load environment variables from .env files before startup
+    try:
+        from dotenv import load_dotenv
+        
+        # Load from .env.swarm if it exists (preferred for production)
+        env_file = ".env.swarm"
+        if os.path.exists(env_file):
+            load_dotenv(env_file)
+            echo(f"[ENV] Loaded environment from {env_file}")
+        
+        # Also try .env
+        env_file = ".env"
+        if os.path.exists(env_file):
+            load_dotenv(env_file)
+            echo(f"[ENV] Loaded environment from {env_file}")
+            
+        # Set GPU allocator configuration to prevent fragmentation
+        os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "max_split_size_mb:128")
+        echo("[ENV] GPU allocator configuration set")
+            
+    except ImportError:
+        echo("[ENV] python-dotenv not available, using system environment only")
+    except Exception as e:
+        echo(f"[ENV] Environment loading warning: {e}")
+    
     # Startup
     echo("[STARTUP] SwarmAI FastAPI starting up...")
     profile = os.environ.get("SWARM_GPU_PROFILE", "rtx_4070")

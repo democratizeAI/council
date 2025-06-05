@@ -268,6 +268,15 @@ class MathSpecialist:
             
         except Exception as e:
             latency_ms = (time.perf_counter() - start_time) * 1000
+            
+            # Check for unsupported math operations that should trigger CloudRetry
+            error_msg = str(e).lower()
+            if any(unsupported in error_msg for unsupported in [
+                "unsupported number theory", "factorial unsupported", 
+                "prime checking not available", "gcd calculation not implemented"
+            ]):
+                raise CloudRetry(f"Math operation unsupported: {str(e)[:50]}")
+                
             return {
                 'text': f"Math computation failed: {str(e)[:100]}",
                 'provider': 'math_error',

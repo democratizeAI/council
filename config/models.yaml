@@ -178,6 +178,15 @@ loading_strategy:
     priority_order:
     - gpu_heads_optimized
     vram_limit_mb: 9500
+# Week 1 Foundation - Local GPU Model
+local_tinyllama:
+  provider: transformers
+  enabled: true
+  path: TinyLlama-1B-Chat-v0.6
+  device: cuda:0
+  dtype: q4_K_M
+  vram_mb: 1010
+
 local_providers:
 - math_specialist
 - code_specialist

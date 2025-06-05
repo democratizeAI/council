@@ -1,0 +1,42 @@
+# Week 1 Foundation - Specialist Configuration
+# Latency optimizations for single-GPU deployment
+
+# Default inference settings - Week 1 sane defaults
+default_settings:
+  batch_size: 2
+  max_new_tokens: 160
+  temperature: 0.1
+  top_p: 0.95
+  do_sample: true
+
+# Specialist configurations
+specialists:
+  math_specialist:
+    batch_size: 2
+    max_new_tokens: 160
+    temperature: 0.05  # Lower temperature for math accuracy
+    top_p: 0.9
+    
+  code_specialist:
+    batch_size: 2
+    max_new_tokens: 160
+    temperature: 0.1
+    top_p: 0.95
+    
+  logic_specialist:
+    batch_size: 2
+    max_new_tokens: 160
+    temperature: 0.1
+    top_p: 0.9
+    
+  knowledge_specialist:
+    batch_size: 2
+    max_new_tokens: 160
+    temperature: 0.2
+    top_p: 0.95
+
+# Performance targets - Week 1 goals
+performance_targets:
+  p95_latency_ms: 350
+  gpu_utilization_max: 55
+  concurrent_requests: 4 

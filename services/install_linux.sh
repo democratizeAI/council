@@ -67,13 +67,16 @@ mkdir -p "$PROJECT_DIR/data"
 chown -R agent0:agent0 "$PROJECT_DIR/logs"
 chown -R agent0:agent0 "$PROJECT_DIR/data"
 
-# Copy and install systemd service
-echo "⚙️ Installing systemd service..."
+# Copy and install systemd services
+echo "⚙️ Installing systemd services..."
 cp "$PROJECT_DIR/services/agent0.service" /etc/systemd/system/
+cp "$PROJECT_DIR/services/swarm_metrics.service" /etc/systemd/system/
 
-# Update service file with correct paths
+# Update service files with correct paths
 sed -i "s|/opt/agent0|$PROJECT_DIR|g" /etc/systemd/system/agent0.service
 sed -i "s|/usr/bin/python|$(which python3)|g" /etc/systemd/system/agent0.service
+sed -i "s|/opt/agent0|$PROJECT_DIR|g" /etc/systemd/system/swarm_metrics.service
+sed -i "s|/usr/bin/python|$(which python3)|g" /etc/systemd/system/swarm_metrics.service
 
 # Set environment variable
 echo "🔧 Setting environment variables..."
@@ -116,22 +119,36 @@ else
     exit 1
 fi
 
+# Run post-installation configuration
+echo "🔧 Running post-installation configuration..."
+if [ -f "$PROJECT_DIR/services/post_install.sh" ]; then
+    chmod +x "$PROJECT_DIR/services/post_install.sh"
+    "$PROJECT_DIR/services/post_install.sh"
+else
+    echo "⚠️ Post-install script not found, skipping system configuration"
+fi
+
 echo ""
 echo "🎉 Installation complete!"
 echo "📊 Service Info:"
 echo "   Name: agent0"
 echo "   User: agent0"
 echo "   Directory: $PROJECT_DIR"
-echo "   URL: http://localhost:8000"
+echo "   API: http://localhost:8000"
 echo "   Health: http://localhost:8000/health"
-echo "   Metrics: http://localhost:8000/metrics"
+echo "   Metrics: http://localhost:9091/metrics"
+echo "   WebSocket: ws://localhost:8765"
 echo ""
 echo "🔧 Management Commands:"
-echo "   Start:   sudo systemctl start agent0"
-echo "   Stop:    sudo systemctl stop agent0"
+echo "   Start:   sudo systemctl start agent0 swarm-metrics"
+echo "   Stop:    sudo systemctl stop agent0 swarm-metrics"
 echo "   Restart: sudo systemctl restart agent0"
 echo "   Status:  sudo systemctl status agent0"
 echo "   Logs:    sudo journalctl -u agent0 -f"
 echo ""
+echo "🔒 Security configured:"
+echo "   - Firewall ports opened (8000, 8765, 9091)"
+echo "   - SELinux policies applied"
+echo "   - Log rotation configured"
+echo ""
 echo "🔄 The service will now start automatically on boot!"
-echo "📋 Check logs: journalctl -u agent0 -f"

@@ -127,7 +127,40 @@ def get_reflection_context(session_id: str, limit: int = 2) -> str:
 
 # 🚫 GLOBAL KILL-SWITCH: Never emit the legacy AutoGen greeting again
 BLOCK_AUTOGEN_GREETING = True
-GREETING_RE = re.compile(r"hello!\s*i'?m your autogen council assistant", re.I)
+
+# 🚫 Week 1 Foundation - STUB_MARKERS (Enhanced for comprehensive filtering)
+STUB_MARKERS = [
+    "template", "todo", "custom_function", "unsupported number theory",
+    "placeholder", "not implemented", "coming soon", "under construction",
+    "example response", "mock response", "dummy text", "lorem ipsum",
+    "def stub()", "# TODO:", "FIXME:", "XXX:", "HACK:",
+    "NotImplementedError", "pass  # stub", "raise NotImplementedError"
+]
+
+def scrub(candidate: Dict[str, Any], query: str = "") -> Dict[str, Any]:
+    """
+    Week 1 Foundation - Stub scrub function (Enhanced per get-green script)
+    If any stub marker found in response text OR input query, set confidence to 0.0
+    """
+    response_text = candidate.get("text", "").lower()
+    query_text = query.lower()
+    
+    # Check both response and query for stub markers
+    for marker in STUB_MARKERS:
+        if marker in response_text:
+            logger.warning(f"🚫 Stub marker '{marker}' detected in response - confidence → 0.0")
+            candidate["confidence"] = 0.0
+            candidate["stub_detected"] = marker
+            candidate["stub_location"] = "response"
+            break
+        elif marker in query_text:
+            logger.warning(f"🚫 Stub marker '{marker}' detected in query - confidence → 0.0")
+            candidate["confidence"] = 0.0
+            candidate["stub_detected"] = marker
+            candidate["stub_location"] = "query"
+            break
+    
+    return candidate
 
 # 🚀 AGENT-0 FLAG PARSING: Extract confidence and escalation flags
 def extract_confidence(txt: str) -> float:
@@ -363,10 +396,24 @@ class RouterCascade:
         # Load specialist personalities
         self.specialist_prompts = self._load_specialist_prompts()
         
-        # Template stub detection patterns
+        # Extended stub detection markers to catch template responses
         self.stub_markers = [
-            'custom_function', 'TODO', 'pass', 'NotImplemented',
-            'placeholder', 'your_code_here', '# Add implementation'
+            "custom_function", "TODO", "pass", "placeholder", "template",
+            "def custom_function():", "```python\npass", "# TODO",
+            "Hello! I can help you with", "I am an AI language model", 
+            "How can I assist", "I'm here to help", "As an AI",
+            "I apologize, but I", "I don't have enough information",
+            "Unsupported number theory", "Not implemented yet",
+            "This is a placeholder", "Coming soon", "Under development",
+            "def function():\n    pass", "return None  # placeholder",
+            "# Placeholder implementation", "raise NotImplementedError",
+            "I cannot", "I'm unable to", "I don't understand",
+            "Could you please clarify", "I need more information",
+            "Sorry, I cannot", "I'm not sure", "I don't know",
+            "```\npass\n```", "def stub():", "Example response:",
+            # Math-specific stubs
+            "factorial unsupported", "prime checking not available",
+            "GCD calculation not implemented", "number theory unsupported"
         ]
         
         # Routing patterns for each skill
@@ -482,6 +529,21 @@ class RouterCascade:
                         return False
         except Exception as e:
             logger.warning(f"⚠️ LLM endpoint health check failed: {e}")
+            return False
+
+    def local_ready(self) -> bool:
+        """Return True if at least one CUDA model is resident."""
+        try:
+            # Import torch here to avoid import errors if not available
+            import torch
+            
+            return (
+                torch.cuda.is_available()
+                and hasattr(self, 'model_cache')
+                and self.model_cache
+                and len(getattr(self.model_cache, 'models_loaded', [])) > 0
+            )
+        except Exception:
             return False
 
     def _calculate_math_confidence(self, query: str) -> float:
@@ -800,6 +862,23 @@ class RouterCascade:
     async def _call_code_skill(self, query: str) -> Dict[str, Any]:
         """DeepSeek Coder skill - Fixed to provide real responses"""
         try:
+            # 🛡️ Template Guard: Check for stub input queries
+            query_lower = query.lower().strip()
+            if any(stub in query_lower for stub in [
+                "def custom_function():", "pass", "todo", "placeholder",
+                "template", "not implemented", "example response"
+            ]):
+                from router_cascade import CloudRetry
+                raise CloudRetry(f"Code template stub detected: {query[:50]}")
+            
+            # 🛡️ Template Guard: Check for stub input queries
+            query_lower = query.lower().strip()
+            if any(stub in query_lower for stub in [
+                "def custom_function():", "pass", "todo", "placeholder",
+                "template", "not implemented", "example response"
+            ]):
+                raise CloudRetry(f"Code template stub detected: {query[:50]}")
+            
             # Generate proper code responses instead of stubs
             if 'factorial' in query.lower():
                 code = """def factorial(n):
@@ -1083,6 +1162,11 @@ print(result)"""
                 flags = extract_flags(response_text)
                 clean_text = clean_agent0_response(response_text)
                 
+                # 🚫 Week 1 Foundation - Apply stub scrub function
+                temp_candidate = {"text": response_text, "confidence": confidence}
+                temp_candidate = scrub(temp_candidate, query)
+                confidence = temp_candidate["confidence"]
+                
                 logger.debug(f"🧩 Agent-0 parsed: confidence={confidence:.2f}, flags={flags}")
                 
                 # Convert to expected format
@@ -1114,40 +1198,44 @@ print(result)"""
         query_lower = query.lower()
         
         # 🧩 Manifest-aware responses with confidence and flags
-        if any(greeting in query_lower for greeting in ['hello', 'hi', 'hey']):
-            response = "Hi! How can I help you today? CONF=0.99"
-            confidence = 0.99
-            flags = []
-        elif re.search(r'\b\d+\s*[+\-*/^%]\s*\d+\b', query_lower):
+        # 🚀 REMOVED: greeting shortcut - ALL queries including greetings go through Agent-0 now
+        # This ensures Agent-0 ALWAYS speaks first per autonomous software spiral requirements
+        if re.search(r'\b\d+\s*[+\-*/^%]\s*\d+\b', query_lower):
             response = f"I can help with that calculation. CONF=0.25 FLAG_MATH"
             confidence = 0.25
             flags = ["FLAG_MATH"]
-        elif any(word in query_lower for word in ['function', 'code', 'python', 'javascript']):
+        elif any(word in query_lower for word in ['function', 'code', 'python', 'javascript', 'programming']):
             response = f"I can help with code. CONF=0.30 FLAG_CODE" 
             confidence = 0.30
             flags = ["FLAG_CODE"]
-        elif any(word in query_lower for word in ['prove', 'proof', 'logic']):
+        elif any(word in query_lower for word in ['prove', 'proof', 'logic', 'reasoning']):
             response = f"This requires logical reasoning. CONF=0.25 FLAG_LOGIC"
             confidence = 0.25
             flags = ["FLAG_LOGIC"]
-        elif any(word in query_lower for word in ['explain', 'what is', 'how does']) and len(query.split()) > 5:
+        elif any(word in query_lower for word in ['explain', 'what is', 'how does', 'describe']) and len(query.split()) > 4:
             response = f"This is a complex question. CONF=0.35 FLAG_KNOWLEDGE"
             confidence = 0.35
             flags = ["FLAG_KNOWLEDGE"]
-        elif any(word in query_lower for word in ['compare', 'analysis', 'protocols', 'depth', 'performance']):
+        elif any(word in query_lower for word in ['compare', 'analysis', 'protocols', 'depth', 'performance', 'comprehensive']):
             response = f"This requires comprehensive analysis. CONF=0.20 FLAG_COUNCIL"
             confidence = 0.20
             flags = ["FLAG_COUNCIL"]
-        elif 'thank' in query_lower:
-            response = "You're welcome! CONF=0.95"
-            confidence = 0.95
+        elif re.search(r'\b(thank|thanks)\b', query_lower):
+            response = "You're welcome! CONF=0.85"  # Lower confidence
+            confidence = 0.85
             flags = []
         else:
-            response = f"I understand your question. CONF=0.40"
-            confidence = 0.40
+            # 🎯 CRITICAL FIX: Much lower default confidence to enable escalation
+            response = f"I understand your question. CONF=0.30"  # Was 0.40, now 0.30
+            confidence = 0.30  # This will trigger escalation (< 0.60)
             flags = []
         
         clean_text = clean_agent0_response(response)
+        
+        # 🚫 Week 1 Foundation - Apply stub scrub function
+        temp_candidate = {"text": response, "confidence": confidence}
+        temp_candidate = scrub(temp_candidate, query)
+        confidence = temp_candidate["confidence"]
         
         return {
             "text": clean_text,
@@ -1178,15 +1266,30 @@ print(result)"""
         # 🔥 REMOVED greeting shortcut - let Agent-0 handle all greetings
         # This ensures Agent-0 ALWAYS speaks first as per single-path recipe
         
-        # 💰 CACHE CHECK: Look for identical prompts to save cost
-        cache_key = _get_cache_key(self.current_session_id, query)
-        cached_response = _get_cached_response(cache_key)
-        if cached_response:
-            logger.info(f"💰 Cache HIT - returning cached response for: {query[:50]}...")
-            # Update timestamp but keep original response
-            cached_response['timestamp'] = time.time()
-            cached_response['cached'] = True
-            return cached_response
+        # DISABLED: Old greeting detection that bypassed Agent-0
+        # if is_simple_greeting(query):
+        #     return greeting_response
+        
+        # 💰 SHALLOW CACHE CHECK: Look for identical prompts to save cost (NEW)
+        try:
+            from cache.shallow_cache import get_cached_response, estimate_cost_savings
+            cached_response = get_cached_response(query)
+            if cached_response:
+                logger.info(f"💰 SHALLOW CACHE HIT - saved ${cached_response.cost_saved_usd:.4f}: {query[:50]}...")
+                # Convert cached response to router format
+                return {
+                    'text': cached_response.text,
+                    'confidence': cached_response.confidence,
+                    'model': cached_response.model_used,
+                    'cached': True,
+                    'cost_saved_usd': cached_response.cost_saved_usd,
+                    'timestamp': time.time(),
+                    'cache_source': 'shallow_cache'
+                }
+        except ImportError:
+            logger.debug("💰 Shallow cache not available")
+        except Exception as e:
+            logger.debug(f"💰 Shallow cache error: {e}")
         
         # No cache - proceed with front-speaker Agent-0 routing
         if force_skill:
@@ -1196,14 +1299,26 @@ print(result)"""
             # 🚀 NEW: Front-speaker Agent-0 routing
             result = await self._route_agent0_first(query)
         
-        # 💰 CACHE STORE: Save response for future identical prompts
+        # 💰 SHALLOW CACHE STORE: Save high-confidence responses (NEW)
         try:
-            # Only cache successful responses with reasonable cost
-            if result.get('cost_usd', 0) > 0 and not result.get('error'):
-                _store_cached_response(cache_key, result)
-                logger.info(f"💰 Cached response for future use: {query[:30]}...")
+            from cache.shallow_cache import store_cached_response, estimate_cost_savings
+            
+            # Only cache if response meets quality criteria
+            confidence = result.get('confidence', 0.0)
+            if confidence >= 0.80 and not result.get('error') and not result.get('cached'):
+                # Estimate cost savings for this cached response
+                model_used = result.get('model', 'unknown')
+                response_length = len(result.get('text', ''))
+                cost_saved = estimate_cost_savings(model_used, response_length)
+                
+                # Store in shallow cache
+                stored = store_cached_response(query, result, cost_saved_usd=cost_saved)
+                if stored:
+                    logger.info(f"💰 Shallow cached for future: {query[:30]}... (saved ${cost_saved:.4f})")
+        except ImportError:
+            logger.debug("💰 Shallow cache not available for storage")
         except Exception as e:
-            logger.debug(f"Cache store error: {e}")
+            logger.debug(f"💰 Shallow cache store error: {e}")
         
         # 🧠 REFLECTION LOOP: Write self-improvement note after each turn
         try:
@@ -1352,11 +1467,30 @@ print(result)"""
         logger.info(f"⚙️ Escalating: {', '.join(escalation_reason)} → {wanted_specialists}")
         
         # 5️⃣ Start background refinement - may overwrite bubble (per recipe step 4)
-        background_task = asyncio.create_task(
-            self._background_refine_with_flags(query, self.current_session_id, draft, wanted_specialists, context_digests)
-        )
+        # 🔧 TESTING: Make this synchronous temporarily to see full pipeline
+        logger.info("🔧 TESTING MODE: Awaiting specialist refinement synchronously")
         
-        # Return Agent-0 draft immediately - specialists may improve later
+        try:
+            refined_result = await self._background_refine_with_flags(
+                query, self.current_session_id, draft, wanted_specialists, context_digests
+            )
+            
+            total_latency = (time.time() - start_time) * 1000
+            logger.info(f"🔧 TESTING: Total pipeline latency {total_latency:.1f}ms")
+            
+            # Return refined result if specialists improved it
+            if refined_result.get("text") != draft.get("text"):
+                logger.info("🔧 TESTING: Specialists improved response!")
+                refined_result["agent0_first"] = True
+                refined_result["total_latency_ms"] = total_latency
+                return refined_result
+            else:
+                logger.info("🔧 TESTING: Agent-0 draft was best")
+                
+        except Exception as e:
+            logger.error(f"🔧 TESTING: Specialist refinement failed: {e}")
+        
+        # Return Agent-0 draft as fallback
         return {
             "text": draft["text"],
             "raw_text": draft.get("raw_text", ""),
@@ -1370,10 +1504,9 @@ print(result)"""
             "flags_detected": flags,
             "wanted_specialists": list(wanted_specialists),
             "escalation_reason": " + ".join(escalation_reason),
-            "refinement_available": True,
-            "refinement_task": background_task,
+            "refinement_available": False,
             "agent0_first": True,
-            "refinement_status": "⚙️ escalating..."
+            "refinement_status": "🔧 testing_mode"
         }
 
     async def _background_refine_with_flags(self, prompt: str, session_id: str, agent0_draft: Dict[str, Any], wanted_specialists: Set[str], context_digests: List[Dict] = None) -> Dict[str, Any]:
@@ -1496,12 +1629,11 @@ print(result)"""
             
             logger.info(f"✨ Flag-based refinement complete: {refinement_latency:.1f}ms")
             
-            # 🛡️ Final escape check (per recipe step 5)
-            GREETING_RE = re.compile(r"^\s*(hi|hello|hey)[!,. ]", re.I)
-            if GREETING_RE.match(fused_result.get("text", "")):
-                logger.error("🚨 Stub escaped – investigate prompt cache!")
-                # Return Agent-0 draft instead of escaped greeting
-                return agent0_draft
+            # 🛡️ DISABLED: Final escape check - let Agent-0 handle all greetings naturally
+            # GREETING_RE = re.compile(r"^\s*(hi|hello|hey)[!,. ]", re.I)
+            # if GREETING_RE.match(fused_result.get("text", "")):
+            #     logger.error("🚨 Stub escaped – investigate prompt cache!")
+            #     return agent0_draft
             
             return fused_result
             

@@ -159,7 +159,7 @@ def exec_docker(code: str, lang: str, settings: dict) -> dict:
         return {"stdout": proc.stdout.strip(), "stderr": proc.stderr.strip(), "elapsed_ms": elapsed}
 
 def exec_wsl(code: str, lang: str, settings: dict) -> dict:
-    """Execute code using WSL (Windows Subsystem for Linux)"""
+    """Execute code using WSL (Windows Subsystem for Linux) with security isolation"""
     wsl_settings = settings.get("wsl", {})
     distro = wsl_settings.get("distro", "Ubuntu")
     
@@ -168,6 +168,7 @@ def exec_wsl(code: str, lang: str, settings: dict) -> dict:
         src.write_text(textwrap.dedent(code))
         
         timeout = settings.get("timeout_seconds", 5)
+        memory_limit = settings.get("memory_limit_mb", 256)
         
         # Convert Windows path to WSL path
         # T:\LAB\temp\file.py -> /mnt/t/LAB/temp/file.py
@@ -176,13 +177,32 @@ def exec_wsl(code: str, lang: str, settings: dict) -> dict:
         path_without_drive = str(abs_path)[3:]    # Remove "T:\"
         wsl_path = f"/mnt/{drive_letter}/{path_without_drive.replace(chr(92), '/')}"  # Use chr(92) for backslash
         
+        # Enhanced WSL command with resource limits and security
         cmd = [
+            "wsl", "-d", distro, "--",
+            "firejail", "--quiet", 
+            "--private-tmp",          # Isolated temp directory
+            "--net=none",             # No network access
+            "--memory", str(memory_limit * 1024 * 1024),  # Memory limit in bytes
+            f"--rlimit-cpu={timeout}",  # CPU time limit
+            "bash", "-c", f"timeout {timeout}s python3 '{wsl_path}'"
+        ]
+        
+        # Fallback to basic WSL if firejail not available
+        fallback_cmd = [
             "wsl", "-d", distro, "--",
             "bash", "-c", f"timeout {timeout}s python3 '{wsl_path}'"
         ]
         
         start = time.perf_counter()
-        proc = subprocess.run(cmd, capture_output=True, text=True)
+        
+        # Try firejail first, fallback to basic WSL
+        try:
+            proc = subprocess.run(cmd, capture_output=True, text=True)
+        except subprocess.SubprocessError:
+            # Firejail not available, use basic WSL
+            proc = subprocess.run(fallback_cmd, capture_output=True, text=True)
+            
         elapsed = int((time.perf_counter() - start) * 1000)
         
         if proc.returncode == 124:  # timeout

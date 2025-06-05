@@ -1,0 +1,30 @@
+[Unit]
+Description=Agent-0 Prometheus Metrics Exporter
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=agent0
+Group=agent0
+Environment=PYTHONPATH=/opt/agent0
+WorkingDirectory=/opt/agent0
+ExecStart=/usr/bin/python -m uvicorn monitoring.exporter:app --host 0.0.0.0 --port 9091 --log-level warning
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+LimitNOFILE=4096
+
+# Resource limits - metrics exporter is lightweight
+MemoryMax=256M
+CPUQuota=50%
+
+# Security settings
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/agent0/logs
+
+[Install]
+WantedBy=multi-user.target 

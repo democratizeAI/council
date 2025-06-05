@@ -1,0 +1,107 @@
+[
+  {
+    "prompt": "What is 2+2?",
+    "response": "2+2 equals 4",
+    "confidence": 0.95,
+    "model": "agent0",
+    "timestamp": 1749136000
+  },
+  {
+    "prompt": "Calculate 5 * 6",
+    "response": "5 * 6 equals 30",
+    "confidence": 0.92,
+    "model": "math_specialist",
+    "timestamp": 1749136060
+  },
+  {
+    "prompt": "What is 10 - 3?",
+    "response": "10 - 3 equals 7",
+    "confidence": 0.94,
+    "model": "agent0",
+    "timestamp": 1749136120
+  },
+  {
+    "prompt": "Compute 8 / 2",
+    "response": "8 / 2 equals 4",
+    "confidence": 0.93,
+    "model": "math_specialist",
+    "timestamp": 1749136180
+  },
+  {
+    "prompt": "Write a hello world function",
+    "response": "def hello_world():\n    print('Hello, World!')\n    return 'Hello, World!'",
+    "confidence": 0.88,
+    "model": "code_specialist",
+    "timestamp": 1749136240
+  },
+  {
+    "prompt": "Create a Python function to add two numbers",
+    "response": "def add_numbers(a, b):\n    return a + b",
+    "confidence": 0.90,
+    "model": "code_specialist",
+    "timestamp": 1749136300
+  },
+  {
+    "prompt": "How do I define a function in Python?",
+    "response": "In Python, you define a function using the 'def' keyword followed by the function name and parameters.",
+    "confidence": 0.87,
+    "model": "code_specialist",
+    "timestamp": 1749136360
+  },
+  {
+    "prompt": "Write a simple loop in Python",
+    "response": "for i in range(10):\n    print(i)",
+    "confidence": 0.85,
+    "model": "code_specialist",
+    "timestamp": 1749136420
+  },
+  {
+    "prompt": "What is artificial intelligence?",
+    "response": "Artificial intelligence (AI) is the simulation of human intelligence in machines that are programmed to think and learn.",
+    "confidence": 0.82,
+    "model": "knowledge_specialist",
+    "timestamp": 1749136480
+  },
+  {
+    "prompt": "Explain machine learning",
+    "response": "Machine learning is a subset of AI that enables computers to learn and improve from experience without being explicitly programmed.",
+    "confidence": 0.84,
+    "model": "knowledge_specialist",
+    "timestamp": 1749136540
+  },
+  {
+    "prompt": "What is deep learning?",
+    "response": "Deep learning is a subset of machine learning that uses neural networks with multiple layers to analyze data.",
+    "confidence": 0.83,
+    "model": "knowledge_specialist",
+    "timestamp": 1749136600
+  },
+  {
+    "prompt": "Describe neural networks",
+    "response": "Neural networks are computing systems inspired by biological neural networks, consisting of interconnected nodes that process information.",
+    "confidence": 0.85,
+    "model": "knowledge_specialist",
+    "timestamp": 1749136660
+  },
+  {
+    "prompt": "If A implies B and B implies C, what can we conclude?",
+    "response": "By the transitive property of logical implication, we can conclude that A implies C.",
+    "confidence": 0.91,
+    "model": "logic_specialist",
+    "timestamp": 1749136720
+  },
+  {
+    "prompt": "Is this statement logically valid: All cats are animals, Fluffy is a cat, therefore Fluffy is an animal?",
+    "response": "Yes, this is a valid syllogism. The conclusion follows logically from the premises using modus ponens.",
+    "confidence": 0.89,
+    "model": "logic_specialist",
+    "timestamp": 1749136780
+  },
+  {
+    "prompt": "Prove that if P and Q, then P",
+    "response": "This follows from the logical rule of conjunction elimination. If both P and Q are true, then P must be true.",
+    "confidence": 0.90,
+    "model": "logic_specialist",
+    "timestamp": 1749136840
+  }
+] 

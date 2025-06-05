@@ -1,0 +1,22 @@
+# Week 1 Foundation - Voting Configuration
+# Confidence thresholds to prevent low-quality responses
+
+# Main confidence floor - Week 1 requirement
+min_confidence: 0.75
+
+# Specialist thresholds
+specialist_thresholds:
+  math_specialist: 0.85
+  code_specialist: 0.80
+  logic_specialist: 0.75
+  knowledge_specialist: 0.70
+
+# Voting behavior
+require_consensus: false
+allow_abstention: true
+fallback_confidence: 0.60
+
+# Week 1 Stub filtering
+stub_filtering:
+  enabled: true
+  confidence_override: 0.0  # Force zero confidence for stub responses 

@@ -1,0 +1,73 @@
+router_settings:
+  # 💰 AUTONOMOUS SPIRAL: Cost control and local-first routing
+  max_cloud_cost_per_day: 0.10  # Maximum $0.10/day in cloud costs
+  cloud_cost_tracking_window: 86400  # 24 hours in seconds
+  
+  # Agent-0 first routing configuration
+  agent0_confidence_gate: 0.60    # Confidence threshold for Agent-0 success
+  agent0_timeout_ms: 2000         # Max Agent-0 response time
+  
+  # Specialist escalation settings
+  specialist_confidence_boost: 0.15  # Confidence boost when using specialists
+  max_specialists_per_query: 2       # Limit specialist count for cost control
+  
+  # Local model prioritization
+  local_model_preference: 0.9      # Strong preference for local models
+  cloud_fallback_threshold: 0.95   # Only use cloud for very low confidence
+  
+  # Pattern specialist integration
+  pattern_specialist_enabled: true    # Enable learned pattern specialists
+  pattern_confidence_threshold: 0.75 # Minimum confidence for pattern matches
+  
+cost_tracking:
+  # Daily budget enforcement
+  daily_budget_usd: 0.10
+  budget_reset_hour: 0  # Reset budget at midnight
+  
+  # Cost per provider (estimated)
+  provider_costs:
+    openai: 0.002      # $0.002 per 1K tokens average
+    mistral: 0.004     # $0.004 per 1K tokens  
+    claude: 0.015      # $0.015 per 1K tokens
+    local_tinyllama: 0.0     # Free local model
+    pattern_specialist: 0.0  # Free pattern matching
+    
+  # Emergency stops
+  emergency_stop_threshold: 0.08  # Stop cloud calls at 80% of budget
+  warn_threshold: 0.05            # Warn at 50% of budget
+  
+routing_priority:
+  # Autonomous spiral routing order (cost-optimized)
+  - pattern_specialist   # Instant 5ms response from learned patterns
+  - agent0_local        # Local Agent-0 reasoning  
+  - local_tinyllama     # Local TinyLlama GPU model
+  - cache_hit           # Shallow cache responses
+  - cloud_tier3_only    # Emergency cloud fallback only
+
+pattern_learning:
+  # Pattern mining and synthetic specialist settings
+  min_pattern_confidence: 0.80     # Only use high-confidence patterns
+  pattern_cache_ttl: 604800        # 7 days pattern cache
+  auto_pattern_mining: true        # Auto-mine patterns nightly
+  pattern_usage_tracking: true     # Track pattern specialist usage
+  
+local_first:
+  # Local-first autonomous settings
+  prefer_local_over_cloud: true    # Always try local first
+  cloud_hit_rate_threshold: 0.10  # Retire cloud provider if <10% hit rate
+  local_model_warmup: true         # Keep local models warm
+  gpu_memory_limit_mb: 6000        # VRAM limit for RTX 4070
+  
+performance_targets:
+  # Response time targets for autonomous spiral
+  pattern_specialist_target_ms: 5     # Pattern matching target
+  agent0_target_ms: 250               # Agent-0 first token target  
+  local_model_target_ms: 800          # Local model target
+  cloud_fallback_target_ms: 2000     # Cloud fallback target
+  
+monitoring:
+  # Cost and performance monitoring
+  track_cost_savings: true          # Track savings from patterns/cache
+  track_hit_rates: true             # Track hit rates per specialist
+  daily_cost_reports: true          # Generate daily cost reports
+  pattern_effectiveness_tracking: true  # Track pattern learning effectiveness 
