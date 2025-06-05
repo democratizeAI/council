@@ -44,7 +44,7 @@ def test_vote_endpoint():
         
         try:
             response = requests.post(
-                "http://localhost:8000/vote",
+                "http://localhost:8001/vote",
                 json={
                     "prompt": test_case["prompt"],
                     "candidates": ["math", "code", "logic", "knowledge"],
@@ -94,7 +94,7 @@ def test_vote_endpoint():
     print(f"\n🔍 COMPARISON: Testing /hybrid endpoint")
     try:
         response = requests.post(
-            "http://localhost:8000/hybrid",
+            "http://localhost:8001/hybrid",
             json={"prompt": "hi"},
             timeout=5
         )
