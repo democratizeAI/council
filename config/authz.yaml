@@ -1,0 +1,6 @@
+# which bot can touch which globs (min wildcards)
+robot-o3:
+  - "src/**"
+  - "docker/**"
+robot-opus:
+  - "infra/**" 
