@@ -178,14 +178,17 @@ loading_strategy:
     priority_order:
     - gpu_heads_optimized
     vram_limit_mb: 9500
-# Week 1 Foundation - Local GPU Model
+# Week 2-1 Foundation - ExLlama V2 Local GPU Model (upgraded from transformers)
 local_tinyllama:
-  provider: transformers
+  provider: exllama2
   enabled: true
-  path: TinyLlama-1B-Chat-v0.6
+  path: /models/tinyllama/TinyLlama-1B-chat-q4_k_m.gguf
   device: cuda:0
-  dtype: q4_K_M
-  vram_mb: 1010
+  dtype: q4_k_m
+  vram_mb: 785              # ExLlama V2 more efficient than transformers
+  max_context: 4096
+  batch_size: 2
+  cache_8bit: true
 
 local_providers:
 - math_specialist

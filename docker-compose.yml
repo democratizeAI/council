@@ -25,26 +25,31 @@ services:
         max-size: "50m"
         max-file: "3"
 
-  # Main Council API - Stable traffic
+  # Main Council API - Stable traffic (Week 2-1: ExLlama V2 enabled)
   council-api:
     build: 
       context: .
       dockerfile: Dockerfile
     ports:
-      - "9000:9000"
+      - "8000:8000"
     environment:
       - SWARM_COUNCIL_ENABLED=true
       - COUNCIL_POCKET_MODE=true
       - GPU_MEMORY_FRACTION=0.8
       - CUDA_VISIBLE_DEVICES=0
+      # Week 2-1: ExLlama V2 configuration
+      - EXLLAMA_ENABLED=true
+      - MODEL_PROVIDER=exllama2
+      - EXLLAMA_MODEL_PATH=/models/tinyllama/TinyLlama-1B-chat-q4_k_m.gguf
     volumes:
       - ./memory:/app/memory
       - ./logs:/app/logs
+      - ./models:/models  # Week 2-1: Mount models directory for ExLlama V2
     
     # 🚀 HARDENING: Restart & Health Check
     restart: on-failure:5  # Restart on failure, max 5 attempts
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s        # Check every 30 seconds
       timeout: 5s          # 5 second timeout
       retries: 3           # Fail after 3 consecutive failures
@@ -222,6 +227,29 @@ services:
     labels:
       - "traefik.enable=true"
 
+  # WebSocket Chat Service (aligned with run-book port 8765)
+  websocket-chat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: websocket-chat
+    ports:
+      - "8765:8765"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - COUNCIL_API_URL=http://council-api:8000
+      - WEBSOCKET_PORT=8765
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      - council-api
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8765/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # Static Web Interface
   static-web:
     image: nginx:alpine
@@ -235,6 +263,33 @@ services:
     depends_on:
       - council-api
     restart: unless-stopped
+
+  # Swarm metrics exporter (aligned with run-book port 9091)
+  swarm-metrics:
+    image: python:3.11-slim
+    container_name: swarm-metrics
+    ports:
+      - "9091:9091"
+    volumes:
+      - ./monitoring:/app/monitoring
+    environment:
+      - PYTHONUNBUFFERED=1
+      - REDIS_URL=redis://redis:6379
+      - COUNCIL_API_URL=http://council-api:8000
+    command: >
+      sh -c "
+        pip install prometheus_client redis requests fastapi uvicorn psutil &&
+        python /app/monitoring/swarm_metrics_exporter.py
+      "
+    depends_on:
+      - redis
+      - council-api
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9091/metrics"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   # Prometheus monitoring with enhanced config
   prometheus:

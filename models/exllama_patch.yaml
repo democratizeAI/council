@@ -1,0 +1,35 @@
+# Week 2-1: ExLlama V2 TinyLlama Override
+# Drop-in replacement for transformers → exllama2 with Q4_K_M quantization
+
+version: '3.8'
+
+# Override the API service to use ExLlama V2
+services:
+  api:
+    environment:
+      - EXLLAMA_MODEL_PATH=/models/tinyllama/TinyLlama-1B-chat-q4_k_m.gguf
+      - EXLLAMA_ENABLED=true
+      - MODEL_PROVIDER=exllama2
+
+# Model configuration override
+x-model-config:
+  local_tinyllama:
+    provider: exllama2
+    dtype: q4_k_m
+    path: /models/tinyllama/TinyLlama-1B-chat-q4_k_m.gguf
+    hf_repo_id: null          # not pulled at runtime
+    enabled: true
+    device: cuda:0
+    vram_mb: 785              # ExLlama V2 is more efficient
+    rope_scaling: linear      # optional, keeps ≤4k ctx
+    max_context: 4096
+    batch_size: 2             # Week 1 optimized setting
+    cache_8bit: true          # ExLlama V2 feature for memory efficiency
+    
+    # ExLlama V2 specific optimizations
+    exllama_config:
+      max_input_len: 4096
+      max_batch_size: 2
+      cache_8bit: true
+      matmul_fused_remap: true
+      no_flash_attn: false    # Use flash attention when available 
