@@ -1,0 +1,135 @@
+version: '3.8'
+
+services:
+  # Core application services
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+  swarm-api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - MAX_ADAPTERS=3
+      - BASE_MODEL_PATH=/models/tinyllama
+      - REDIS_CLUSTER_PREFIX=pattern:cluster:
+      - CANARY_MODE=true
+      - CUDA_VISIBLE_DEVICES=0
+    volumes:
+      - ./loras:/loras:ro
+      - ./models:/models:ro
+      - ./config:/app/config:ro
+      - ./logs:/app/logs
+      - ./lineage:/app/lineage
+    depends_on:
+      - redis
+
+  # IPFS daemon for artifact storage
+  ipfs:
+    image: ipfs/kubo:latest
+    ports:
+      - "4001:4001"  # P2P port
+      - "5001:5001"  # API port
+      - "8080:8080"  # Gateway port
+    volumes:
+      - ipfs_data:/data/ipfs
+    environment:
+      - IPFS_PROFILE=server
+    command: |
+      sh -c "
+        ipfs init --profile server &&
+        ipfs config --json API.HTTPHeaders.Access-Control-Allow-Origin '[\"*\"]' &&
+        ipfs config --json API.HTTPHeaders.Access-Control-Allow-Methods '[\"GET\", \"POST\"]' &&
+        ipfs daemon --enable-gc
+      "
+
+  # Prometheus with lineage alerts
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/lineage_alerts.yml:/etc/prometheus/lineage_alerts.yml:ro
+      - ./monitoring/ensemble_alerts.yml:/etc/prometheus/ensemble_alerts.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+      - '--storage.tsdb.retention.time=30d'
+
+  # Pushgateway for lineage metrics
+  pushgateway:
+    image: prom/pushgateway:latest
+    ports:
+      - "9091:9091"
+    command:
+      - '--web.enable-admin-api'
+      - '--persistence.file=/data/pushgateway.db'
+      - '--persistence.interval=5m'
+    volumes:
+      - pushgateway_data:/data
+
+  # Alertmanager for notifications
+  alertmanager:
+    image: prom/alertmanager:latest
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    environment:
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+
+  # Grafana with lineage dashboard
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=swarm-ops
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-worldmap-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/lineage_dashboard.json:/var/lib/grafana/dashboards/lineage_dashboard.json:ro
+
+  # IPFS gateway health checker
+  ipfs-monitor:
+    image: prom/blackbox-exporter:latest
+    ports:
+      - "9115:9115"
+    volumes:
+      - ./monitoring/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    command:
+      - '--config.file=/etc/blackbox_exporter/config.yml'
+
+  # Lineage web viewer (optional)
+  lineage-viewer:
+    build:
+      context: .
+      dockerfile: Dockerfile.lineage-viewer
+    ports:
+      - "8081:8080"
+    environment:
+      - IPFS_GATEWAY=http://ipfs:8080
+      - LINEAGE_LOG_PATH=/app/lineage/lineage_log.jsonl
+    volumes:
+      - ./lineage:/app/lineage:ro
+    depends_on:
+      - ipfs
+
+volumes:
+  redis_data:
+  ipfs_data:
+  prometheus_data:
+  pushgateway_data:
+  grafana_data: 

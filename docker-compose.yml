@@ -154,6 +154,8 @@ services:
       - data-lora:/app/data/lora
       - ./tools:/app/tools
       - ./scripts:/app/scripts
+      - ./deploy/cron/snapshot_prune:/etc/cron.d/lumina-snapshot-prune:ro
+      - /var/lib/node_exporter/textfile_collector:/var/lib/node_exporter/textfile_collector
     environment:
       - PYTHONUNBUFFERED=1
       - AGENT0_URL=http://agent0-runner:8080
@@ -163,6 +165,8 @@ services:
         apt-get update && apt-get install -y cron curl python3-pip &&
         pip install requests redis faiss-cpu &&
         echo '0 2 * * * cd /app && python /app/tools/harvest_failures.py' | crontab - &&
+        chmod 644 /etc/cron.d/lumina-snapshot-prune &&
+        mkdir -p /snapshots &&
         cron -f
       "
     depends_on:
@@ -292,6 +296,44 @@ services:
       options:
         max-size: "50m"
         max-file: "3"
+
+  # VRAM metrics exporter (hybrid implementation - metrics only)
+  scheduler:
+    build: ./scheduler
+    ports:
+      - "9108:8000"
+    restart: unless-stopped
+    environment:
+      - PROMETHEUS_PORT=8000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/metrics"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Trainer container (managed by host systemd timer)
+  trainer:
+    image: trainer:latest
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    volumes:
+      - ./models:/models
+      - ./data:/data
+
+  # Node exporter for textfile collector
+  node_exporter:
+    image: prom/node-exporter:latest
+    ports:
+      - "9100:9100"
+    volumes:
+      - /var/lib/node_exporter/textfile_collector:/var/lib/node_exporter/textfile_collector:ro
+    restart: unless-stopped
 
 volumes:
   models:        # Static GGUF/Q4_K_M files

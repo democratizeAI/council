@@ -1,0 +1,20 @@
+[Unit]
+Description=Run VRAM guard every 30 seconds (hybrid implementation)
+Documentation=https://github.com/luminainterface/council/wiki/VRAM-Guard
+Requires=vram-guard.service
+
+[Timer]
+# Start 15 seconds after boot
+OnBootSec=15sec
+
+# Run every 30 seconds after the last execution
+OnUnitActiveSec=30sec
+
+# Ensure timer stays active even if service fails
+Persistent=true
+
+# Distribute timer events to avoid thundering herd
+AccuracySec=5sec
+
+[Install]
+WantedBy=timers.target 

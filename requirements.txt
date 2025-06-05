@@ -2,7 +2,7 @@
 # Production-ready multi-agent AI system dependencies
 
 # Core ML/AI Libraries - Week 1 Lock-in
-torch==2.3.0+cu121
+torch==2.3.0
 transformers==4.41.0
 sentencepiece>=0.1.97
 sentence-transformers==3.2.0
@@ -17,8 +17,8 @@ pydantic==2.5.1
 # Performance Boosters - Week 1 Lock-in
 faiss-cpu>=1.7.3          # For vector search (use faiss-gpu if you have CUDA)
 accelerate>=0.20.0        # For faster model loading
-flash-attn==2.3.6         # Flash Attention for latency optimization
-xformers==0.0.37          # Memory-efficient transformers
+# flash-attn==2.3.6         # Flash Attention for latency optimization  
+# xformers==0.0.37          # Memory-efficient transformers
 
 # Logic Programming (Optional)
 # pyswip>=0.2.10          # Uncomment if SWI-Prolog is installed
@@ -49,7 +49,7 @@ structlog==23.2.0
 
 # Configuration
 python-dotenv==1.0.0
-pyyaml>=6.0
+pyyaml>=5.1
 
 # Development
 black==23.11.0
@@ -71,4 +71,4 @@ locust>=2.17.0            # Load testing framework
 
 # Docker and containerization support
 docker>=6.1.0             # Docker SDK for Python
-docker-compose>=1.29.2    # Docker Compose support 
+# docker-compose>=1.29.2    # Docker Compose support (conflicts) 

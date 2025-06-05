@@ -1,0 +1,73 @@
+# Weighted adapter selection per cluster
+# Format: cluster_id -> {adapter_name: weight, ...}
+# Weights will be normalized to probabilities by random.choices()
+
+clusters:
+  # Programming/Code clusters
+  c_programming:
+    code-specialist-v2: 0.7
+    base: 0.2
+    lora-2048: 0.1
+
+  c_python:
+    code-specialist-v2: 0.8
+    base: 0.2
+
+  c_javascript:
+    code-specialist-v2: 0.6
+    base: 0.4
+
+  # Game-specific clusters  
+  "2048-game":
+    lora-2048: 0.9
+    base: 0.1
+
+  chess-analysis:
+    chess-master-v1: 0.8
+    base: 0.2
+
+  # Creative writing clusters
+  c_creative:
+    creative-writer-v3: 0.7
+    base: 0.3
+
+  storytelling:
+    creative-writer-v3: 0.8
+    base: 0.2
+
+  # Default fallback for unmapped clusters
+  default:
+    base: 0.6
+    code-specialist-v2: 0.25
+    lora-2048: 0.15
+
+# Adapter metadata for reference
+adapters:
+  base:
+    type: base_model
+    vram_mb: 0
+    description: "TinyLLaMA base model"
+    
+  code-specialist-v2:
+    type: lora
+    vram_mb: 40
+    rank: 64
+    description: "LoRA specialized for programming tasks"
+    
+  lora-2048:
+    type: lora
+    vram_mb: 40
+    rank: 64
+    description: "LoRA trained on 2048 game strategies"
+    
+  chess-master-v1:
+    type: lora
+    vram_mb: 40
+    rank: 64
+    description: "LoRA for chess analysis and moves"
+    
+  creative-writer-v3:
+    type: lora
+    vram_mb: 40
+    rank: 64
+    description: "LoRA optimized for creative writing" 

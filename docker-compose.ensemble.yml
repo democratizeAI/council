@@ -23,6 +23,7 @@ services:
     volumes:
       - ./loras:/loras:ro  # LoRA adapters read-only mount
       - ./models:/models:ro  # Base models read-only mount
+      - ./config:/app/config:ro  # Weight configuration mount
       - ./logs:/app/logs
     depends_on:
       - redis

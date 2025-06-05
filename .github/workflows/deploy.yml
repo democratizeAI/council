@@ -1,0 +1,182 @@
+name: Deploy Swarm
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+        pip install pytest pytest-asyncio
+    
+    - name: Run tests
+      run: |
+        pytest tests/ -v
+        python -m pytest tests/test_weighted_ensemble.py -v
+    
+    - name: Validate ensemble configuration
+      run: |
+        python -c "
+        import yaml
+        config = yaml.safe_load(open('config/adapter_weights.yaml'))
+        clusters = config['clusters']
+        assert 'default' in clusters, 'Missing default cluster'
+        for cluster_id, weights in clusters.items():
+            total = sum(weights.values())
+            assert total > 0, f'Cluster {cluster_id} has zero weight'
+        print('✓ Ensemble config validated')
+        "
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+      image-tags: ${{ steps.build.outputs.tags }}
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+    
+    - name: Build and push
+      id: build
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+    
+    - name: Export image for lineage
+      if: github.ref == 'refs/heads/main'
+      run: |
+        mkdir -p docker
+        # Export multi-arch image metadata
+        docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest > docker/image_manifest.json
+        echo "${{ steps.build.outputs.digest }}" > docker/image_digest.txt
+        echo "${{ steps.meta.outputs.tags }}" > docker/image_tags.txt
+
+  deploy-staging:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+    
+    steps:
+    - name: Deploy to staging
+      run: |
+        echo "🚀 Deploying to staging..."
+        echo "Image: ${{ needs.build.outputs.image-tags }}"
+        echo "Digest: ${{ needs.build.outputs.image-digest }}"
+
+  deploy-production:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - name: Checkout for lineage
+      uses: actions/checkout@v4
+    
+    - name: Deploy to production
+      run: |
+        echo "🚀 Deploying to production..."
+        echo "Image: ${{ needs.build.outputs.image-tags }}"
+        echo "Digest: ${{ needs.build.outputs.image-digest }}"
+    
+    - name: Install dependencies for lineage
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y jq curl
+    
+    - name: Push lineage to IPFS
+      if: github.ref == 'refs/heads/main'
+      run: |
+        chmod +x lineage/push_lineage.sh
+        ./lineage/push_lineage.sh
+      env:
+        SLACK_LINEAGE_WEBHOOK: ${{ secrets.SLACK_LINEAGE_WEBHOOK }}
+        ENVIRONMENT: production
+        GITHUB_SHA: ${{ github.sha }}
+        GITHUB_REF_NAME: ${{ github.ref_name }}
+    
+    - name: Validate lineage push
+      if: github.ref == 'refs/heads/main'
+      run: |
+        # Verify lineage log was updated
+        if [ -f "lineage/lineage_log.jsonl" ]; then
+          LAST_ENTRY=$(tail -1 lineage/lineage_log.jsonl)
+          CID=$(echo "$LAST_ENTRY" | jq -r '.cid')
+          echo "✓ Lineage recorded: $CID"
+          
+          # Verify CID format
+          if [[ "$CID" =~ ^(Qm[1-9A-HJ-NP-Za-km-z]{44}|bafy[0-9a-z]{55})$ ]]; then
+            echo "✓ Valid CID format"
+          else
+            echo "❌ Invalid CID format: $CID"
+            exit 1
+          fi
+        else
+          echo "❌ Lineage log not found"
+          exit 1
+        fi
+
+  security-scan:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+    
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif' 

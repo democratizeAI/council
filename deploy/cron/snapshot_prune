@@ -1,0 +1,11 @@
+# Lumina Snapshot GDPR Purge Job (Ticket #207)
+# Runs daily at 02:10 UTC to delete snapshots older than 30 days
+# 
+# This file should be mounted into /etc/cron.d/ on the host or in a cron container
+# e.g. docker run -v ./deploy/cron/snapshot_prune:/etc/cron.d/lumina-snapshot-prune:ro
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+# Run snapshot prune daily at 02:10 UTC  
+10 2 * * * root /opt/lumina/tools/snapshot_prune.py >> /var/log/snapshot_prune.log 2>&1 

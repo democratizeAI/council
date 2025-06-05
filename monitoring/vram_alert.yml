@@ -1,0 +1,25 @@
+groups:
+  - name: gpu_memory_alerts
+    rules:
+      - alert: GPUMemoryPressure
+        expr: gpu_vram_used_mb{gpu="0"} > 10240
+        for: 5m
+        labels:
+          severity: warning
+          component: gpu
+          squad: infrastructure
+        annotations:
+          summary: "GPU memory pressure detected"
+          description: "GPU {{ $labels.gpu }} ({{ $labels.name }}) VRAM usage is {{ $value }}MB, exceeding 10GB threshold for 5+ minutes. Trainer should be auto-paused by systemd guard."
+          runbook_url: "https://github.com/luminainterface/council/wiki/VRAM-Guard"
+          
+      - alert: GPUMemoryCritical
+        expr: gpu_vram_used_mb{gpu="0"} > 14336  # 14GB - near OOM
+        for: 1m
+        labels:
+          severity: critical
+          component: gpu
+          squad: infrastructure
+        annotations:
+          summary: "GPU memory critically high"
+          description: "GPU {{ $labels.gpu }} VRAM usage is {{ $value }}MB (>14GB). Risk of OOM crash. Verify trainer is paused and check for memory leaks." 
