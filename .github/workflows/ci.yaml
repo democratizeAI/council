@@ -2,9 +2,9 @@ name: SwarmAI CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, linting-fixes-clean-pr ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop ]
 
 env:
   SWARM_GPU_PROFILE: quick_test     # Use lightweight profile for CI
