@@ -20,14 +20,15 @@ def call(prompt):
             "messages": [
                 {"role": "user", "content": prompt}
             ],
-            "preferred_models": []
+            "preferred_models": [],
+            "max_tokens": 4  # Keep responses short for CI speed
         }
         print(f"🔍 DEBUG: Sending payload: {json.dumps(payload)}")
         
         r = requests.post(
             f"{API}/hybrid",
             json=payload, 
-            timeout=10,
+            timeout=30,  # Increased timeout for cold model loading
             headers={"Content-Type": "application/json"}
         )
         
@@ -79,6 +80,25 @@ def main():
             else:
                 print(f"⏳ Health check attempt {attempt}/{max_retries} failed, retrying in 2s...")
                 time.sleep(2)
+    
+    # Warm-up ping to trigger model loading
+    print(f"\n🔥 Warming up models with ping request...")
+    try:
+        warmup_payload = {
+            "messages": [{"role": "system", "content": "ping"}],
+            "max_tokens": 1
+        }
+        warmup_response = requests.post(
+            f"{API}/hybrid",
+            json=warmup_payload,
+            timeout=30,  # Allow time for cold model loading
+            headers={"Content-Type": "application/json"}
+        )
+        warmup_response.raise_for_status()
+        print("✅ Model warm-up completed successfully")
+    except Exception as e:
+        print(f"⚠️ Model warm-up failed: {e}")
+        print("🔄 Continuing with tests anyway...")
     
     # Test 1: Simple prompts should use smart routing (local_smart)
     print("\n📊 SIMPLE PROMPTS (should use local_smart):")
