@@ -3,6 +3,7 @@
 
 # Core ML/AI Libraries - Week 1 Lock-in
 torch==2.3.0
+torchvision==0.18.0
 transformers==4.41.0
 sentencepiece>=0.1.97
 sentence-transformers==3.2.0
@@ -27,6 +28,9 @@ accelerate>=0.20.0        # For faster model loading
 pytest==7.4.3
 pytest-asyncio==0.21.1
 pytest-cov==4.1.0
+
+# Essential test dependencies
+psutil>=5.9.0
 
 # Utilities
 python-dateutil>=2.8.0
