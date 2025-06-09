@@ -1,10 +1,5 @@
-# 🔥 AutoGen Council v2.7.0 • Complete Desktop OS Assistant with Enhanced Admin Interface
-
-![Graduation Suite](https://img.shields.io/badge/Graduation%20Suite-✅%20PASSED-brightgreen)
-## From Production API to Memory-Powered Code-Executing Intelligent Companion
-*Built through 90 Days of Architectural Blueprinting + 48 Hours of Human-AI Collaborative Development*
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/) [![CUDA](https://img.shields.io/badge/CUDA-RTX_4070-green.svg)](https://developer.nvidia.com/cuda-downloads) [![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen.svg)](https://github.com/luminainterface/council)
+# 🔥 Round Table Cloud Council v10.3-δ-stable • Enterprise AI Decision Platform
+![CI](https://github.com/democratizeAI/council/actions/workflows/swarm-ci.yml/badge.svg?branch=v10.3-δ-stable)
 
 ---
 
