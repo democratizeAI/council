@@ -36,8 +36,6 @@ _canary_metrics = {
 
 def record_canary(request_path: str, status_code: int, response_time_ms: float):
     """Record canary deployment metrics"""
-    global _canary_metrics
-    
     _canary_metrics["requests_count"] += 1
     _canary_metrics["last_activity"] = time.time()
     

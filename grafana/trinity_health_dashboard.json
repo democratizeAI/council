@@ -1,0 +1,275 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "🔥 Trinity Council Health Board",
+    "description": "Single-pane overview of Trinity infrastructure health - Sunday Verification style",
+    "tags": ["trinity", "council", "health", "monitoring"],
+    "style": "dark",
+    "timezone": "browser",
+    "editable": true,
+    "hideControls": false,
+    "graphTooltip": 1,
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h", "2h", "1d"],
+      "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d", "30d"]
+    },
+    "refresh": "10s",
+    "version": 1,
+    "panels": [
+      {
+        "id": 1,
+        "title": "🏥 Service Health Overview",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "count(up == 1)",
+            "refId": "A",
+            "legendFormat": "Services Up",
+            "instant": true
+          },
+          {
+            "expr": "count(up == 0)",
+            "refId": "B", 
+            "legendFormat": "Services Down",
+            "instant": true
+          },
+          {
+            "expr": "count(up)",
+            "refId": "C",
+            "legendFormat": "Total Services",
+            "instant": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "red", "value": null },
+                { "color": "yellow", "value": 1 },
+                { "color": "green", "value": 3 }
+              ]
+            },
+            "unit": "short",
+            "decimals": 0
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "horizontal",
+          "colorMode": "value",
+          "textMode": "value_and_name",
+          "graphMode": "none"
+        },
+        "gridPos": { "h": 4, "w": 24, "x": 0, "y": 0 }
+      },
+      {
+        "id": 2,
+        "title": "📊 Trinity Service Status",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "up",
+            "refId": "A",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "displayMode": "color-background",
+              "filterable": true
+            },
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "red", "value": 0 },
+                { "color": "green", "value": 1 }
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "byName", "options": "job" },
+              "properties": [
+                { "id": "custom.width", "value": 200 },
+                { "id": "displayName", "value": "Service Name" }
+              ]
+            },
+            {
+              "matcher": { "id": "byName", "options": "instance" },
+              "properties": [
+                { "id": "custom.width", "value": 150 },
+                { "id": "displayName", "value": "Instance" }
+              ]
+            },
+            {
+              "matcher": { "id": "byName", "options": "Value" },
+              "properties": [
+                { "id": "custom.width", "value": 80 },
+                { "id": "displayName", "value": "Status" },
+                { "id": "unit", "value": "bool_on_off" }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "showHeader": true,
+          "sortBy": [
+            { "displayName": "Status", "desc": true }
+          ]
+        },
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Time": true,
+                "__name__": true
+              },
+              "indexByName": {
+                "job": 0,
+                "instance": 1,
+                "Value": 2
+              }
+            }
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 }
+      },
+      {
+        "id": 3,
+        "title": "🎯 Key Trinity Metrics (When Available)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "router_p95_latency_ms or vector(0)",
+            "refId": "A",
+            "legendFormat": "P95 Latency (ms)"
+          },
+          {
+            "expr": "(gpu_vram_used_bytes / 1e9) or vector(0)",
+            "refId": "B",
+            "legendFormat": "GPU VRAM (GB)"
+          },
+          {
+            "expr": "cost_usd_today or vector(0)",
+            "refId": "C",
+            "legendFormat": "Cost Today ($)"
+          },
+          {
+            "expr": "count(up{job=~\".*council.*|.*api.*|.*svc.*\"} == 1) or vector(0)",
+            "refId": "D",
+            "legendFormat": "Council Services Up"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute", 
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 1 },
+                { "color": "red", "value": 2 }
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "byName", "options": "P95 Latency (ms)" },
+              "properties": [
+                { "id": "unit", "value": "ms" },
+                { "id": "thresholds", "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "green", "value": null },
+                    { "color": "yellow", "value": 400 },
+                    { "color": "red", "value": 600 }
+                  ]
+                }}
+              ]
+            },
+            {
+              "matcher": { "id": "byName", "options": "GPU VRAM (GB)" },
+              "properties": [
+                { "id": "unit", "value": "bytes" },
+                { "id": "decimals", "value": 1 },
+                { "id": "thresholds", "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "green", "value": null },
+                    { "color": "yellow", "value": 10 },
+                    { "color": "red", "value": 11 }
+                  ]
+                }}
+              ]
+            },
+            {
+              "matcher": { "id": "byName", "options": "Cost Today ($)" },
+              "properties": [
+                { "id": "unit", "value": "currencyUSD" },
+                { "id": "thresholds", "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "green", "value": null },
+                    { "color": "yellow", "value": 0.20 },
+                    { "color": "red", "value": 0.50 }
+                  ]
+                }}
+              ]
+            },
+            {
+              "matcher": { "id": "byName", "options": "Council Services Up" },
+              "properties": [
+                { "id": "thresholds", "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "red", "value": null },
+                    { "color": "yellow", "value": 2 },
+                    { "color": "green", "value": 3 }
+                  ]
+                }}
+              ]
+            }
+          ]
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"] },
+          "orientation": "vertical",
+          "colorMode": "value",
+          "textMode": "value_and_name"
+        },
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 }
+      },
+      {
+        "id": 4,
+        "title": "⚡ Sunday Verification Status",
+        "type": "text",
+        "options": {
+          "mode": "markdown",
+          "content": "## 🔍 Trinity Health Board - Sunday Verification Protocol\n\n**Current Status:** Prometheus operational, core metrics collection in progress.\n\n### Available Metrics:\n- ✅ **Service Health**: Monitoring 12 Trinity services\n- ⚠️ **Performance Metrics**: Awaiting council-api data\n- ⚠️ **Cost Tracking**: Awaiting expense metric exporters\n- ⚠️ **GPU Monitoring**: Awaiting VRAM metric exporters\n\n### Trust But Verify:\n- **Services Monitored**: Real count from Prometheus\n- **Health Status**: Concrete up/down state per service  \n- **Data Quality**: Only showing verified metrics\n\n*Dashboard will expand as metric exporters come online.*\n\n**Next Steps**: Start missing services to populate full traffic-light board."
+        },
+        "gridPos": { "h": 6, "w": 24, "x": 0, "y": 12 }
+      }
+    ]
+  },
+  "overwrite": true
+} 

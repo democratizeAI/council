@@ -1,3 +1,4 @@
+# Prometheus Configuration for Trinity Council
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
@@ -66,15 +67,15 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
-      # NVML VRAM metrics exporter
-    - job_name: 'gpu-vram-exporter'
-      static_configs:
-        - targets: ['localhost:9108']
-      scrape_interval: 5s
-      metrics_path: '/metrics'
+  # NVML VRAM metrics exporter
+  - job_name: 'gpu-vram-exporter'
+    static_configs:
+      - targets: ['localhost:9108']
+    scrape_interval: 5s
+    metrics_path: '/metrics'
 
-    # AlertManager metrics
-    - job_name: 'alertmanager'
+  # AlertManager metrics
+  - job_name: 'alertmanager'
     static_configs:
       - targets: ['alertmanager:9093']
 

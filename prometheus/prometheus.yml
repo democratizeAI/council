@@ -16,9 +16,9 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
-  - job_name: 'api'
+  - job_name: 'council-api'
     static_configs:
-      - targets: ['host.docker.internal:8000']
+      - targets: ['council-api:9000']
     metrics_path: '/metrics'
     scrape_interval: 10s
 
@@ -31,6 +31,7 @@ scrape_configs:
   - job_name: 'pushgateway'
     static_configs:
       - targets: ['host.docker.internal:9091']
+    metrics_path: '/metrics'
     scrape_interval: 15s
 
   - job_name: 'redis'
@@ -52,6 +53,12 @@ scrape_configs:
 
   - job_name: 'patchctl'
     static_configs:
-      - targets: ['patchctl:9000']
+      - targets: ['patchctl:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'tiny-svc'
+    static_configs:
+      - targets: ['tiny-svc:8005']
     metrics_path: '/metrics'
     scrape_interval: 30s 

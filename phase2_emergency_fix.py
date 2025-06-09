@@ -13,7 +13,10 @@ import hashlib
 from pathlib import Path
 sys.path.append('.')
 
-# Emergency in-memory storage to replace failed Redis/Qdrant
+# Global monitoring control
+monitoring_active = True
+gpu_data = []
+
 class EmergencyMemorySystem:
     """Lightweight in-memory replacement for Redis/Qdrant"""
     
@@ -22,6 +25,7 @@ class EmergencyMemorySystem:
         self.semantic_cache = {}
         self.conversation_history = []
         self.max_history = 10
+        self.max_entries = 100  # Limit memory usage
         print("🧠 Emergency memory system initialized")
     
     def store_memory(self, session_id: str, content: str, metadata: dict = None):
@@ -88,6 +92,9 @@ class EmergencyMemorySystem:
                 char_count += len(content)
         
         return " | ".join(context_parts) if context_parts else ""
+
+# Emergency memory system instance
+EMERGENCY_MEMORY = EmergencyMemorySystem()
 
 def emergency_memory_dump():
     """Emergency memory dump without using global"""
