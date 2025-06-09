@@ -16,11 +16,21 @@ def call(prompt):
     """Make a hybrid API call and return timing and routing info"""
     t0 = time.perf_counter()
     try:
+        payload = {"prompt": prompt, "preferred_models": []}
+        print(f"🔍 DEBUG: Sending payload: {json.dumps(payload)}")
+        
         r = requests.post(
             f"{API}/hybrid",
-            json={"prompt": prompt, "preferred_models": []}, 
-            timeout=10
+            json=payload, 
+            timeout=10,
+            headers={"Content-Type": "application/json"}
         )
+        
+        print(f"🔍 DEBUG: Response status: {r.status_code}")
+        if r.status_code != 200:
+            print(f"🔍 DEBUG: Response headers: {dict(r.headers)}")
+            print(f"🔍 DEBUG: Response body: {r.text[:500]}")
+        
         r.raise_for_status()
         latency = (time.perf_counter() - t0) * 1000
         
@@ -35,12 +45,35 @@ def call(prompt):
         
     except Exception as e:
         print(f"ERROR calling API: {e}")
+        print(f"🔍 DEBUG: Full exception details: {type(e).__name__}: {str(e)}")
+        if hasattr(e, 'response') and e.response is not None:
+            print(f"🔍 DEBUG: Error response status: {e.response.status_code}")
+            print(f"🔍 DEBUG: Error response body: {e.response.text[:500]}")
         sys.exit(1)
 
 def main():
     """Run smoke tests for smart routing behavior"""
     print("🧪 Smart Routing Smoke Test")
     print("=" * 60)
+    
+    # Health check first
+    print(f"\n🔍 Checking server health at {API}...")
+    max_retries = 10
+    for attempt in range(1, max_retries + 1):
+        try:
+            health_response = requests.get(f"{API}/health", timeout=5)
+            health_response.raise_for_status()
+            print(f"✅ Server health check passed (attempt {attempt})")
+            break
+        except Exception as e:
+            if attempt == max_retries:
+                print(f"❌ Server health check failed after {max_retries} attempts: {e}")
+                print(f"💡 Make sure the server is running at {API}")
+                print(f"🔍 Last error details: {type(e).__name__}: {str(e)}")
+                sys.exit(1)
+            else:
+                print(f"⏳ Health check attempt {attempt}/{max_retries} failed, retrying in 2s...")
+                time.sleep(2)
     
     # Test 1: Simple prompts should use smart routing (local_smart)
     print("\n📊 SIMPLE PROMPTS (should use local_smart):")
