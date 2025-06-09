@@ -5,6 +5,29 @@ services:
     # No environment overrides - use defaults for real TinyLlama loading
     environment: {}
 
+  # Guardian service for queue monitoring and auto-restart
+  guardian:
+    image: python:3.11-slim
+    container_name: guardian
+    command: >
+      sh -c "
+        pip install requests pyyaml &&
+        python /app/guardian.py
+      "
+    environment:
+      PROM_URL: "http://prometheus:9090"
+      RULE_FILE: "/rules/self_repair_protocol.yaml"
+      SLEEP_SECONDS: "15"
+    volumes:
+      - ./rules:/rules
+      - ./guardian.py:/app/guardian.py
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    networks:
+      - default
+
   mock-api:
     image: python:3.11-slim
     command: sh -c "pip install fastapi uvicorn && python /app/mockfast.py"

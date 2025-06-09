@@ -42,8 +42,34 @@ jobs:
     - name: Start server for smoke tests
       run: |
         echo "Starting SwarmAI server..."
-        python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
-        sleep 10  # Wait for startup
+        # Create minimal .env file for CI
+        echo "SWARM_GPU_PROFILE=ci_minimal" > .env
+        echo "SWARM_COUNCIL_ENABLED=false" >> .env
+        echo "PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128" >> .env
+        
+        # Start server in background with proper logging
+        python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level info &
+        SERVER_PID=$!
+        echo "Server started with PID: $SERVER_PID"
+        
+        # Wait for server to be ready
+        echo "Waiting for server to start..."
+        for i in {1..30}; do
+          if curl -f http://localhost:8000/health >/dev/null 2>&1; then
+            echo "✅ Server is ready after ${i} seconds"
+            break
+          fi
+          echo "⏳ Waiting... (${i}/30)"
+          sleep 1
+        done
+        
+        # Verify server is responding
+        curl -f http://localhost:8000/health || {
+          echo "❌ Server health check failed after 30 seconds"
+          echo "Server logs:"
+          jobs -p | xargs -r ps -o pid,ppid,cmd
+          exit 1
+        }
         
     - name: Run smoke tests
       run: |

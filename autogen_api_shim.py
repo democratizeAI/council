@@ -13,7 +13,7 @@ import time
 import logging
 from typing import Dict, Any, Optional, List, Union
 from fastapi import FastAPI, HTTPException, Query, Response, Request
-from fastapi.responses import StreamingResponse, RedirectResponse, JSONResponse
+from fastapi.responses import StreamingResponse, RedirectResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -482,7 +482,7 @@ async def get_stats():
         "timestamp": time.time()
     }
 
-@app.get("/metrics")
+@app.get("/metrics", response_class=PlainTextResponse)
 async def get_metrics():
     """Prometheus-compatible metrics"""
     uptime_seconds = time.time() - stats["uptime_start"]
