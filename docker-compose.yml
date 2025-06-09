@@ -59,6 +59,11 @@ services:
       - COUNCIL_POCKET_MODE=true
       - GPU_MEMORY_FRACTION=0.8
       - CUDA_VISIBLE_DEVICES=0
+      # Slack Integration
+      - SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET}
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_WEBHOOK_ALERTS=${SLACK_WEBHOOK_ALERTS}
+      - SLACK_WEBHOOK_PATCHES=${SLACK_WEBHOOK_PATCHES}
     volumes:
       - ./memory:/app/memory
       - ./logs:/app/logs
