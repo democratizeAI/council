@@ -113,5 +113,35 @@ def initialize_baseline_metrics():
     except Exception as e:
         print(f"Warning: Could not initialize baseline metrics: {e}")
 
+# Cost-aware router metrics (B-05)
+cost_today_usd = Gauge(
+    "cost_today_usd",
+    "Current spend in USD (24h rolling window)"
+)
+
+budget_exhausted_total = Counter(
+    "budget_exhausted_total",
+    "Number of times budget threshold was hit"
+)
+
+cost_per_request_usd = Histogram(
+    "cost_per_request_usd", 
+    "Cost per request in USD",
+    buckets=[0.0001, 0.001, 0.01, 0.05, 0.1, 0.5, 1.0, float('inf')]
+)
+
+# Helper functions for cost metrics
+def record_request_cost(cost_usd: float):
+    """Record the cost of a request"""
+    cost_per_request_usd.observe(cost_usd)
+
+def update_daily_cost(total_cost_usd: float):
+    """Update the daily cost gauge"""
+    cost_today_usd.set(total_cost_usd)
+
+def record_budget_exhausted():
+    """Record when budget is exhausted"""
+    budget_exhausted_total.inc()
+
 # Auto-initialize when module is imported
 initialize_baseline_metrics() 
