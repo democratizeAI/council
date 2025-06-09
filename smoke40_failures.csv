@@ -1,0 +1,6 @@
+Method,Name,Error,Occurrences
+GET,/health,CatchResponseError('Health check failed: 429'),54
+POST,/council,"CatchResponseError('HTTP 404: {""detail"":""Not Found""}')",2107
+POST,/council,"CatchResponseError('HTTP 429: {""detail"":""Rate limit exceeded""}')",150
+GET,/council/status,CatchResponseError('Council status endpoint failed: 429'),27
+GET,/council/status,CatchResponseError('Council status endpoint failed: 404'),384

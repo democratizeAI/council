@@ -1,0 +1,10 @@
+name: sbom
+on: [pull_request]
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install syft
+      - run: syft . -o table | tee sbom.txt
+      - run: syft . -q --fail-on high 

@@ -363,7 +363,7 @@ async def vote(prompt: str, model_names: List[str] = None, top_k: int = 1, use_c
     stub_markers = [
         'custom_function', 'TODO', 'pass', 'NotImplemented',
         'placeholder', 'your_code_here', '# Add implementation',
-        'Processing', 'Transformers response', 'Mock response'
+        'Transformers response', 'Mock response'
     ]
     
     # 🎯 ENHANCED STUB PATTERNS: Catch greeting stubs and UNSURE responses

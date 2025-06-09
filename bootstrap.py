@@ -11,6 +11,7 @@ This eliminates the "loading FAISS" performance penalty on every request.
 """
 
 import logging
+import os
 import time
 from typing import Optional
 
@@ -21,7 +22,7 @@ MEMORY: Optional[object] = None
 
 def initialize_memory(memory_path: str = "memory") -> object:
     """
-    Initialize FAISS memory singleton.
+    Initialize FAISS memory singleton with robust error handling.
     
     This loads the index once at startup instead of on every request,
     eliminating the ~100-400ms "loading FAISS" penalty.
@@ -36,17 +37,56 @@ def initialize_memory(memory_path: str = "memory") -> object:
         logger.info("🧠 Initializing FAISS memory singleton...")
         start_time = time.time()
         
-        from faiss_memory import FaissMemory
-        MEMORY = FaissMemory(memory_path)
-        
-        # Warm up the embedding model to avoid first-request lag
-        logger.info("🔥 Warming up embedding model...")
+        # Try to import with better error handling
         try:
-            # Dummy query to JIT the embedding model on GPU/CPU
-            warmup_results = MEMORY.query("dummy warmup query", k=1)
-            logger.info(f"🔥 Embedding model warmed up: {len(warmup_results)} results")
-        except Exception as e:
-            logger.warning(f"Warmup query failed (expected for empty index): {e}")
+            from faiss_memory import FaissMemory
+            MEMORY = FaissMemory(memory_path)
+            logger.info("✅ FAISS memory with embeddings initialized successfully")
+        except ImportError as e:
+            if "transformers" in str(e) or "sentence_transformers" in str(e):
+                logger.warning(f"⚠️ Transformers/sentence-transformers import failed: {e}")
+                logger.info("🔄 Creating fallback memory implementation...")
+                # Create a minimal fallback memory that doesn't require transformers
+                class FallbackMemory:
+                    def __init__(self, memory_path):
+                        self.memory_path = memory_path
+                        self.data = []
+                        self.meta = []
+                        logger.info("📦 Fallback memory initialized (no embeddings)")
+                    
+                    def query(self, text, k=3):
+                        # Simple text matching fallback
+                        results = []
+                        for i, item in enumerate(self.data):
+                            if any(word.lower() in item.lower() for word in text.lower().split()):
+                                results.append({
+                                    "id": f"fallback_{i}",
+                                    "text": item,
+                                    "score": 0.5,
+                                    "fallback": True
+                                })
+                        return results[:k]
+                    
+                    def add(self, text, metadata=None):
+                        self.data.append(text)
+                        self.meta.append(metadata or {})
+                        return f"fallback_{len(self.data)-1}"
+                
+                MEMORY = FallbackMemory(memory_path)
+            else:
+                raise
+        
+        # Warm up the embedding model if available
+        if hasattr(MEMORY, '_embed'):
+            logger.info("🔥 Warming up embedding model...")
+            try:
+                # Dummy query to JIT the embedding model on GPU/CPU
+                warmup_results = MEMORY.query("dummy warmup query", k=1)
+                logger.info(f"🔥 Embedding model warmed up: {len(warmup_results)} results")
+            except Exception as e:
+                logger.warning(f"Warmup query failed (expected for empty index): {e}")
+        else:
+            logger.info("ℹ️ No embedding model to warm up (fallback mode)")
         
         # 🔥 Seed FAISS with sample data for immediate retrieval
         logger.info("🌱 Seeding memory with sample conversations...")
@@ -114,19 +154,25 @@ def initialize_memory(memory_path: str = "memory") -> object:
         logger.info(f"🌱 Memory seeded with {len(seed_data)} sample conversations")
         
         init_time = (time.time() - start_time) * 1000
-        logger.info(f"✅ FAISS memory initialized in {init_time:.1f}ms")
-        logger.info(f"📚 Current memory size: {len(MEMORY.data)} entries")
+        logger.info(f"✅ Memory initialized in {init_time:.1f}ms")
+        logger.info(f"📚 Current memory size: {len(MEMORY.meta)} entries")
         
         return MEMORY
         
     except Exception as e:
-        logger.error(f"❌ Failed to initialize FAISS memory: {e}")
+        logger.error(f"❌ Failed to initialize memory system: {e}")
         # Create a dummy memory object to prevent crashes
         class DummyMemory:
+            def __init__(self):
+                self.meta = []
+                self.data = []
             def query(self, text, k=3):
                 return []
             def add(self, text, metadata=None):
-                pass
+                self.data.append(text)
+                self.meta.append(metadata or {})
+                return f"dummy_{len(self.data)-1}"
+                
         MEMORY = DummyMemory()
         return MEMORY
 
@@ -148,18 +194,39 @@ def get_memory() -> object:
 
 # Initialize on import for direct usage
 if MEMORY is None:
-    # 🚀 PHASE 2: Re-enable memory initialization with lazy loading
-    logger.info("🧠 Re-initializing FAISS memory system for Phase 2...")
-    try:
-        MEMORY = FaissMemory()
-        logger.info("✅ FAISS memory system initialized successfully")
-    except Exception as e:
-        logger.warning(f"⚠️ FAISS initialization failed, using dummy: {e}")
+    # 🚀 B-01: Enable FAISS memory backend
+    memory_backend = os.getenv("MEMORY_BACKEND", "faiss")
+    logger.info(f"🧠 Initializing memory backend: {memory_backend}")
+    
+    if memory_backend == "faiss":
+        try:
+            MEMORY = initialize_memory()
+            logger.info("✅ Memory system initialized successfully")
+        except Exception as e:
+            logger.warning(f"⚠️ Memory initialization failed, using minimal fallback: {e}")
+            class MinimalMemory:
+                def __init__(self):
+                    self.meta = []
+                    self.data = []
+                def query(self, text, k=3):
+                    return []
+                def add(self, text, metadata=None):
+                    self.data.append(text)
+                    self.meta.append(metadata or {})
+                    return f"minimal_{len(self.data)-1}"
+            MEMORY = MinimalMemory()
+    else:
+        logger.info(f"🔄 Using alternative memory backend: {memory_backend}")
         class DummyMemory:
+            def __init__(self):
+                self.meta = []
+                self.data = []
             def query(self, text, k=3):
                 return []
             def add(self, text, metadata=None):
-                pass
+                self.data.append(text)
+                self.meta.append(metadata or {})
+                return f"dummy_{len(self.data)-1}"
         MEMORY = DummyMemory()
 
-logger.info(f"🧠 Global memory initialized at: {type(MEMORY).__name__}") 
+logger.info(f"🧠 Global memory initialized: {type(MEMORY).__name__}") 
