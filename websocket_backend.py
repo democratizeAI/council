@@ -1,7 +1,9 @@
 import asyncio
 import json
+import logging
 from typing import List
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from concurrent.futures import ThreadPoolExecutor
 
 # Note: These would normally be imported from your main app
 # from your_main_app import app, vote
