@@ -43,10 +43,22 @@ try:
         'First token latency for streaming requests',
         buckets=(0.025, 0.050, 0.080, 0.100, 0.200, 0.500, 1.0, float('inf'))
     )
+    
+    # Import Round Table metrics for Grafana dashboard
+    from router.roundtable_metrics import (
+        record_roundtable_latency, record_cloud_win, record_local_win,
+        record_scratch_update, update_scratch_pad_sizes
+    )
+    
 except Exception as e:
     print(f"Warning: Prometheus metrics not available: {e}")
     PROMETHEUS_AVAILABLE = False
     stream_first_token_latency = None
+    record_roundtable_latency = lambda x: None
+    record_cloud_win = lambda: None
+    record_local_win = lambda x: None
+    record_scratch_update = lambda x: None
+    update_scratch_pad_sizes = lambda: None
 
 # Add the AutoGen path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'fork', 'swarm_autogen'))
@@ -291,6 +303,21 @@ async def orchestrate_endpoint(request: OrchestrateRequest) -> OrchestrateRespon
     except Exception as e:
         logger.error(f"❌ Orchestrate processing error: {e}")
         raise HTTPException(status_code=500, detail=f"Orchestrate processing failed: {str(e)}")
+
+@app.middleware("http")
+async def roundtable_metrics_middleware(request: Request, call_next):
+    """Middleware to record Round Table metrics"""
+    start_time = time.time()
+    
+    response = await call_next(request)
+    
+    # Record latency for main endpoints
+    if request.url.path in ["/hybrid", "/orchestrate", "/vote"]:
+        latency = time.time() - start_time
+        if PROMETHEUS_AVAILABLE:
+            record_roundtable_latency(latency)
+    
+    return response
 
 @app.post("/hybrid")
 async def hybrid_endpoint(request: QueryRequest, stream: bool = Query(False)):

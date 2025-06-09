@@ -1,0 +1,76 @@
+# Provider Pricing Configuration for Cost-Aware Router
+# Prices in USD per 1K tokens (input + output averaged)
+
+cloud_providers:
+  # OpenAI Models
+  gpt-4o:
+    input_per_1k: 0.005
+    output_per_1k: 0.015
+    average_per_1k: 0.010
+    
+  gpt-4o-mini:
+    input_per_1k: 0.00015
+    output_per_1k: 0.0006
+    average_per_1k: 0.0004
+    
+  gpt-4-turbo:
+    input_per_1k: 0.01
+    output_per_1k: 0.03
+    average_per_1k: 0.02
+    
+  # Anthropic Models
+  claude-3-opus:
+    input_per_1k: 0.015
+    output_per_1k: 0.075
+    average_per_1k: 0.045
+    
+  claude-3-sonnet:
+    input_per_1k: 0.003
+    output_per_1k: 0.015
+    average_per_1k: 0.009
+    
+  claude-3-haiku:
+    input_per_1k: 0.00025
+    output_per_1k: 0.00125
+    average_per_1k: 0.0007
+    
+  # Mistral Models
+  mistral-large:
+    input_per_1k: 0.008
+    output_per_1k: 0.024
+    average_per_1k: 0.016
+    
+  mistral-medium:
+    input_per_1k: 0.0027
+    output_per_1k: 0.0081
+    average_per_1k: 0.0054
+    
+  mistral-small:
+    input_per_1k: 0.002
+    output_per_1k: 0.006
+    average_per_1k: 0.004
+
+# Local model costs (GPU electricity + amortization)
+# Based on RTX 4070 at $0.12/kWh electricity + hardware depreciation
+local_models:
+  tinyllama_1b: 0.00001      # Extremely cheap
+  mistral_0.5b: 0.00002      # Very cheap
+  qwen2_0.5b: 0.00002        # Very cheap
+  codellama_0.7b: 0.00003    # Cheap
+  math_specialist_0.8b: 0.00004  # Cheap
+  phi2_2.7b: 0.00008         # Low cost
+  mistral_7b_instruct: 0.0002  # Medium cost
+  llama2_70b_chat: 0.002     # High cost (when loaded)
+  mixtral_8x7b: 0.0015       # High cost (when loaded)
+
+# Budget thresholds for automatic routing decisions
+budget_config:
+  daily_limit_usd: 0.20       # Match nightly soak budget
+  warning_threshold: 0.80     # Alert at 80% of budget
+  emergency_threshold: 0.95   # Hard stop at 95% of budget
+  
+  # Fallback routing when budget exceeded
+  fallback_strategy: "local_only"  # or "cheapest_cloud"
+  
+  # Reset schedule
+  reset_schedule: "daily_at_midnight_et" 
