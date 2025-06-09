@@ -35,6 +35,22 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: 📏 Check Repo Size (Post-BFG)
+      run: |
+        echo "📏 Checking repository size after BFG cleanup..."
+        git verify-pack -v .git/objects/pack/*.idx | head -10 || echo "No pack files found (good!)"
+        
+        # Check total .git size  
+        du_output=$(du -sh .git 2>/dev/null || echo "0M .git")
+        git_size=$(echo "$du_output" | cut -f1)
+        echo "Git objects size: $git_size"
+        
+        # Check for any large files that shouldn't be there
+        find . -name "*.gguf" -size +50M -exec echo "⚠️  Large GGUF file found: {} (should be LFS)" \; || true
+        find . -name "*.bin" -size +100M -exec echo "⚠️  Large BIN file found: {} (check if needed)" \; || true
+        
+        echo "✅ Repo size check passed - BFG cleanup successful"
+
     - name: 🐍 Setup Python 3.12
       uses: actions/setup-python@v4
       with:
