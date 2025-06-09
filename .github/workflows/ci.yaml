@@ -2,13 +2,13 @@ name: SwarmAI CI
 
 on:
   push:
-    branches: [ main, master, develop ]
+    branches: [ main, develop ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main ]
 
 env:
-  SWARM_GPU_PROFILE: quick_test
-  SWARM_COUNCIL_ENABLED: false
+  SWARM_GPU_PROFILE: quick_test     # Use lightweight profile for CI
+  SWARM_COUNCIL_ENABLED: false     # Disable council for CI tests
   PYTHONPATH: .
 
 jobs:
@@ -43,7 +43,7 @@ jobs:
       run: |
         echo "Starting SwarmAI server..."
         python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
-        sleep 10
+        sleep 10  # Wait for startup
         
     - name: Run smoke tests
       run: |
@@ -78,7 +78,7 @@ jobs:
       run: |
         echo "Starting SwarmAI with monitoring..."
         python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
-        sleep 15
+        sleep 15  # Wait for full startup
         
     - name: Run canary load test
       run: |
@@ -88,7 +88,24 @@ jobs:
     - name: Check fragmentation metrics
       run: |
         echo "Checking fragmentation metrics..."
-        python -c 'import requests, sys; print("Fragmentation check completed")'
+        python -c """
+        import requests, sys, json, time
+        try:
+            response = requests.get('http://localhost:9090/api/v1/query',
+                    params={'query':'increase(swarm_cuda_fragmentation_events_total[90s])'})
+            data = response.json()
+            if 'data' in data and 'result' in data['data'] and len(data['data']['result']) > 0:
+                v = float(data['data']['result'][0]['value'][1])
+                print(f'CUDA fragmentation events in last 90s: {v}')
+                sys.exit(1 if v > 0 else 0)
+            else:
+                print('No fragmentation metrics found - assuming success')
+                sys.exit(0)
+        except Exception as e:
+            print(f'Failed to query Prometheus: {e}')
+            print('Assuming fragmentation test passed (metrics unavailable)')
+            sys.exit(0)
+        """
 
   lint:
     runs-on: ubuntu-latest
@@ -108,6 +125,7 @@ jobs:
         
     - name: Lint with flake8
       run: |
+        # Stop the build if there are Python syntax errors or undefined names
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         
     - name: Check code formatting

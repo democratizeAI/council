@@ -12,6 +12,18 @@ class ChatReq(BaseModel):
 def health():
     return {"status": "ok"}
 
+@app.get("/models")
+def models():
+    return {
+        "models": [
+            "tinyllama_1b",
+            "mistral_7b_instruct", 
+            "phi2_2.7b",
+            "math_specialist_0.8b"
+        ],
+        "status": "mock_loaded"
+    }
+
 @app.post("/orchestrate")
 @app.post("/vote") 
 @app.post("/hybrid/stream")

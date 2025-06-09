@@ -1,0 +1,4 @@
+{
+  "prompt": "Council, perform a short self-audit: list any missing services, models, monitoring panels, or credentials that would block fully autonomous operation. Prioritise by risk and add a 1-line remediation suggestion for each.",
+  "route": ["gpt-4o-mini"]
+} 
