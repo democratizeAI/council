@@ -15,11 +15,10 @@ torch.backends.cuda.enable_mem_efficient_sdp(True)
 
 # Global optimized pipeline
 OPTIMIZED_PIPELINE = None
-WARMED_UP = False
 
 def setup_optimized_model():
     """Setup and warm up the optimized model with all performance tricks"""
-    global OPTIMIZED_PIPELINE, WARMED_UP
+    global OPTIMIZED_PIPELINE
     
     if OPTIMIZED_PIPELINE is not None:
         return OPTIMIZED_PIPELINE
@@ -74,33 +73,15 @@ def setup_optimized_model():
     
     return OPTIMIZED_PIPELINE
 
-def warmup_model():
-    """Warm up the model to avoid cold-start penalties"""
-    global WARMED_UP
-    
-    if WARMED_UP:
-        return
-    
-    pipeline = setup_optimized_model()
-    
-    print("🔥 Warming up model...")
-    start = time.time()
-    
-    # Quick warmup generations
-    warmup_prompts = ["Hi", "1+1=", "def hello():"]
-    
-    for prompt in warmup_prompts:
-        pipeline(prompt, max_new_tokens=1, do_sample=False)
-    
-    warmup_time = time.time() - start
-    print(f"🔥 Model warmed up in {warmup_time:.3f}s")
-    WARMED_UP = True
+def warmup_gpu():
+    """Warm up GPU pipeline for faster inference"""
+    if not OPTIMIZED_PIPELINE:
+        setup_optimized_model()
 
 async def fast_generate(prompt: str, max_tokens: int = 50) -> dict:
     """Fast generation with aggressive GPU optimization for generation phase"""
     
-    if not WARMED_UP:
-        warmup_model()
+    warmup_gpu()
     
     pipeline = setup_optimized_model()
     

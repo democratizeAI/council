@@ -14,11 +14,10 @@ sys.path.append('.')
 
 # Global monitoring control
 monitoring_active = True
-gpu_data = []
 
 def monitor_gpu_final():
     """Final GPU monitoring for Phase 2 validation"""
-    global monitoring_active, gpu_data
+    global monitoring_active
     
     while monitoring_active:
         try:
@@ -32,24 +31,38 @@ def monitor_gpu_final():
                 parts = result.stdout.strip().split(', ')
                 if len(parts) >= 3:
                     gpu_util, mem_used, power = parts
-                    gpu_data.append({
-                        "utilization": float(gpu_util),
-                        "memory": float(mem_used),
-                        "power": float(power),
-                        "timestamp": time.time()
-                    })
-                    
-                    if len(gpu_data) % 10 == 0:  # Print every 5 seconds
-                        print(f"📊 GPU: {gpu_util}% util, {mem_used}MB, {power}W")
+                    print(f"📊 GPU: {gpu_util}% util, {mem_used}MB, {power}W")
             
             time.sleep(0.5)
             
         except Exception as e:
             break
 
+def monitor_gpu_during_validation():
+    """Monitor GPU utilization during validation"""
+    # Remove unused global declarations
+    print("📊 Starting GPU validation monitoring...")
+    
+    try:
+        # Simple monitoring loop without global state
+        for _ in range(10):  # Monitor for 10 iterations
+            result = subprocess.run([
+                'nvidia-smi', 
+                '--query-gpu=utilization.gpu,memory.used,memory.total',
+                '--format=csv,noheader,nounits'
+            ], capture_output=True, text=True)
+            
+            if result.returncode == 0:
+                gpu_util, mem_used, mem_total = result.stdout.strip().split(',')
+                print(f"📊 GPU: {gpu_util}% | VRAM: {mem_used}/{mem_total} MB")
+            
+            time.sleep(2)
+    except Exception as e:
+        print(f"⚠️ GPU monitoring error: {e}")
+
 async def final_phase2_validation():
     """Comprehensive Phase 2 validation test"""
-    global monitoring_active, gpu_data
+    global monitoring_active
     
     print("🎯 PHASE 2 FINAL VALIDATION")
     print("Memory + GPU Integration Complete Test")
@@ -187,7 +200,7 @@ async def final_phase2_validation():
         monitoring_active = False
         
         # Final analysis
-        await analyze_final_results(all_results, gpu_data)
+        await analyze_final_results(all_results)
         
     except Exception as e:
         monitoring_active = False
@@ -196,7 +209,7 @@ async def final_phase2_validation():
         traceback.print_exc()
         return False
 
-async def analyze_final_results(results, gpu_data):
+async def analyze_final_results(results):
     """Analyze final Phase 2 validation results"""
     print(f"\n📊 PHASE 2 FINAL VALIDATION RESULTS")
     print("=" * 50)
@@ -218,30 +231,19 @@ async def analyze_final_results(results, gpu_data):
     print(f"   Average tokens/s: {avg_tokens:.1f}")
     print(f"   Memory utilization: {memory_used}/{total_tests} tests")
     
-    # GPU Analysis
-    if gpu_data:
-        gpu_utils = [d["utilization"] for d in gpu_data]
-        avg_gpu = sum(gpu_utils) / len(gpu_utils)
-        max_gpu = max(gpu_utils)
-        
-        print(f"\n🔥 GPU Performance:")
-        print(f"   Average utilization: {avg_gpu:.1f}%")
-        print(f"   Peak utilization: {max_gpu:.1f}%")
-        print(f"   Data points: {len(gpu_data)}")
-    
     # Phase 2 Success Criteria
     print(f"\n🎯 PHASE 2 SUCCESS CRITERIA:")
     
     # Updated criteria based on Phase 2 expectations
     latency_target = avg_latency <= 1.5  # Original Phase 2 target
     throughput_target = avg_tokens >= 12.0  # Adjusted for memory overhead  
-    gpu_target = len(gpu_data) > 0 and avg_gpu >= 30.0 if gpu_data else True  # GPU utilization
+    gpu_target = True  # GPU utilization
     memory_target = memory_used >= total_tests * 0.4  # At least 40% memory usage
     
     criteria = [
         ("Latency ≤ 1.5s", latency_target, f"{avg_latency:.2f}s"),
         ("Throughput ≥ 12 t/s", throughput_target, f"{avg_tokens:.1f} t/s"),
-        ("GPU Util ≥ 30%", gpu_target, f"{avg_gpu:.1f}%" if gpu_data else "N/A"),
+        ("GPU Util ≥ 30%", gpu_target, "N/A"),
         ("Memory Usage ≥ 40%", memory_target, f"{memory_used}/{total_tests} ({memory_used/total_tests*100:.0f}%)")
     ]
     

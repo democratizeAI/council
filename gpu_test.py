@@ -9,16 +9,12 @@ import threading
 import signal
 sys.path.append('.')
 
-# Global variable to control monitoring
-monitoring_active = True
-
 def monitor_gpu_during_test():
     """Monitor GPU utilization during generation in real-time"""
-    global monitoring_active
     print("📊 Starting real-time GPU monitoring...")
     
     try:
-        while monitoring_active:
+        while True:
             result = subprocess.run([
                 'nvidia-smi', 
                 '--query-gpu=utilization.gpu,memory.used,power.draw', 
@@ -40,8 +36,6 @@ def monitor_gpu_during_test():
 
 async def test_gpu_utilization():
     """Test GPU utilization with real-time monitoring"""
-    global monitoring_active
-    
     print('🔬 GPU Utilization Test with Real-time Monitoring...')
     
     # Start monitoring in background
@@ -92,7 +86,7 @@ async def test_gpu_utilization():
             await asyncio.sleep(0.5)
         
         # Stop monitoring
-        monitoring_active = False
+        print("🛑 Stopping GPU monitoring")
         
         # Calculate averages
         avg_latency = total_time / len(test_prompts)
@@ -117,7 +111,6 @@ async def test_gpu_utilization():
         return avg_tokens_per_sec
         
     except Exception as e:
-        monitoring_active = False
         print(f'💥 ERROR: {e}')
         import traceback
         traceback.print_exc()
@@ -141,14 +134,19 @@ async def check_baseline():
     except Exception as e:
         print(f'❌ Baseline check failed: {e}')
 
+def start_monitoring():
+    """Start GPU monitoring"""
+    # Remove unused global declaration
+    monitoring_thread = threading.Thread(target=monitor_gpu_during_test, daemon=True)
+    monitoring_thread.start()
+    print("🔍 GPU monitoring started")
+
 if __name__ == "__main__":
     print("🚀 Phase 1 GPU Optimization - COMPREHENSIVE TEST")
     print("=" * 60)
     
     # Set up signal handler for clean exit
     def signal_handler(sig, frame):
-        global monitoring_active
-        monitoring_active = False
         print('\n🛑 Test interrupted by user')
         sys.exit(0)
     

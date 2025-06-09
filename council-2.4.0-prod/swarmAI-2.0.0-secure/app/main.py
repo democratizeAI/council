@@ -34,6 +34,12 @@ ROUTER_REQUESTS = Counter(
     "Total router requests"
 )
 
+# Council requests metric
+COUNCIL_REQUESTS_TOTAL = Counter(
+    "council_requests_total",
+    "Total council requests"
+)
+
 # Pydantic models for API
 class OrchestrateRequest(BaseModel):
     prompt: str

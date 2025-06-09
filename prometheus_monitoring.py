@@ -1,6 +1,11 @@
-
-from prometheus_client import Histogram, Counter, generate_latest
 import time
+import logging
+from fastapi import FastAPI
+from fastapi.responses import Response
+from prometheus_client import Histogram, Counter, generate_latest
+
+app = FastAPI()
+logger = logging.getLogger(__name__)
 
 # Metrics
 REQUEST_LATENCY = Histogram('chat_request_duration_seconds', 

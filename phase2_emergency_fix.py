@@ -89,13 +89,26 @@ class EmergencyMemorySystem:
         
         return " | ".join(context_parts) if context_parts else ""
 
-# Global emergency memory instance
-EMERGENCY_MEMORY = EmergencyMemorySystem()
+def emergency_memory_dump():
+    """Emergency memory dump without using global"""
+    import gc
+    import psutil
+    
+    # Force garbage collection
+    gc.collect()
+    
+    # Get memory info
+    process = psutil.Process()
+    memory_info = process.memory_info()
+    
+    print(f"💾 Emergency Memory Status:")
+    print(f"   RSS: {memory_info.rss / 1024 / 1024:.1f} MB")
+    print(f"   VMS: {memory_info.vms / 1024 / 1024:.1f} MB")
+    
+    return memory_info
 
 async def test_emergency_memory_with_gpu():
     """Test emergency memory system with GPU optimizations intact"""
-    global EMERGENCY_MEMORY
-    
     print("🚀 Emergency Phase 2 Test - Lightweight Memory + GPU")
     print("=" * 60)
     

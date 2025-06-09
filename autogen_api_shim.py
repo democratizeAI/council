@@ -24,6 +24,9 @@ import json
 import signal
 from contextlib import asynccontextmanager
 
+# Import RouterCascade at top level to avoid F821 undefined name errors
+from router_cascade import RouterCascade
+
 # Pre-import everything at startup to avoid cold start delays
 try:
     from loader.deterministic_loader import astream
@@ -239,7 +242,6 @@ async def startup_event():
     else:
         try:
             # Import RouterCascade only when not in bypass mode to prevent TinyLlama loading
-            from router_cascade import RouterCascade
             router = RouterCascade()
             logger.info("✅ Router initialized successfully")
         except Exception as e:
@@ -639,7 +641,6 @@ async def budget_endpoint():
 @app.post("/admin/cloud/{enabled}")
 async def admin_cloud_toggle(enabled: bool):
     """Toggle cloud fallback functionality"""
-    global router
     if router:
         router.cloud_enabled = enabled
         logger.info(f"☁️ Cloud fallback {'enabled' if enabled else 'disabled'}")
@@ -649,7 +650,6 @@ async def admin_cloud_toggle(enabled: bool):
 @app.post("/admin/cap/{budget_usd}")
 async def admin_budget_cap(budget_usd: float):
     """Update budget cap for cloud usage"""
-    global router
     if router:
         router.budget_usd = budget_usd
         logger.info(f"💰 Budget cap updated to ${budget_usd}")
@@ -659,7 +659,6 @@ async def admin_budget_cap(budget_usd: float):
 @app.get("/admin/status")
 async def admin_status():
     """Get current admin configuration"""
-    global router
     if router:
         return {
             "cloud_enabled": getattr(router, 'cloud_enabled', False),

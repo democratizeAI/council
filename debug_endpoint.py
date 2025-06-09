@@ -1,3 +1,16 @@
+import time
+from fastapi import FastAPI, Form, Query
+from router.voting import vote
+
+app = FastAPI()
+
+def extract_token_counts(result):
+    """Extract token counts from result"""
+    return result.get("token_counts", {})
+
+def extract_confidences(result):
+    """Extract confidence scores from result"""
+    return result.get("confidence_scores", {})
 
 @app.post("/chat")
 async def chat(

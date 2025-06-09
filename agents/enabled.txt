@@ -1,0 +1,5 @@
+# Enabled Trinity Agents
+council_primary
+scratch_pad
+tiny_llama
+echo_agent 

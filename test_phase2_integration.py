@@ -13,19 +13,18 @@ import signal
 import json
 sys.path.append('.')
 
-# Global monitoring control
-monitoring_active = True
+# Global test state
 test_results = {
-    "gpu_utilization": [],
+    "latencies": [],
     "tokens_per_sec": [],
+    "gpu_utilization": [],
     "memory_hits": 0,
-    "memory_writes": 0,
-    "latencies": []
+    "memory_writes": 0
 }
+monitoring_active = True
 
 def monitor_gpu_phase2():
     """Enhanced GPU monitoring for Phase 2"""
-    global monitoring_active
     
     while monitoring_active:
         try:
@@ -50,7 +49,6 @@ def monitor_gpu_phase2():
 
 async def test_memory_and_gpu_integration():
     """Test memory system integration while preserving GPU performance"""
-    global monitoring_active
     
     print("🚀 Phase 2 Integration Test: Memory + GPU")
     print("=" * 60)
@@ -232,6 +230,13 @@ async def analyze_phase2_results(total_time):
     else:
         print("🔴 PHASE 2 ISSUES: Significant problems detected")
         return False
+
+def start_integration_monitoring():
+    """Start monitoring for integration test"""
+    # Remove unused global declaration
+    monitor_thread = threading.Thread(target=monitor_gpu_phase2, daemon=True)
+    monitor_thread.start()
+    print("📊 Integration monitoring started")
 
 if __name__ == "__main__":
     print("🚀 Phase 2 Integration Test")

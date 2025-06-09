@@ -1,11 +1,13 @@
 # AutoGen Council v2.4.0 Requirements
 # Production-ready multi-agent AI system dependencies
 
-# Core ML/AI Libraries - Week 1 Lock-in
-torch==2.3.0
-torchvision==0.18.0
-transformers==4.41.0
-sentencepiece>=0.1.97
+# Core ML/AI Libraries - Updated for TinyLlama stability  
+torch==2.2.2+cu121
+torchvision==0.17.2+cu121
+transformers==0.22.0         # Pinned for TinyLlama stability
+sentencepiece==0.1.99        # Required for TinyLlama tokenization
+bitsandbytes==0.42.0          # For 8-bit model loading (optional)
+spacy==3.7.4                  # For entity enhancement
 sentence-transformers==3.2.0
 sympy>=1.11.0
 numpy>=1.24.0
