@@ -17,7 +17,6 @@ monitoring_active = True
 
 def monitor_gpu_final():
     """Final GPU monitoring for Phase 2 validation"""
-    global monitoring_active
     
     while monitoring_active:
         try:
