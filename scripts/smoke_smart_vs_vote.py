@@ -16,7 +16,12 @@ def call(prompt):
     """Make a hybrid API call and return timing and routing info"""
     t0 = time.perf_counter()
     try:
-        payload = {"prompt": prompt, "preferred_models": []}
+        payload = {
+            "messages": [
+                {"role": "user", "content": prompt}
+            ],
+            "preferred_models": []
+        }
         print(f"🔍 DEBUG: Sending payload: {json.dumps(payload)}")
         
         r = requests.post(
