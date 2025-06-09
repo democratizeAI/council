@@ -1,0 +1,41 @@
+# O3-Bridge Configuration
+# GitHub Integration for o3 Commands
+
+bridge:
+  name: "o3-github-bridge"
+  version: "1.0.0"
+  port: 8000
+  health_port: 8001
+
+github:
+  api_url: "https://api.github.com"
+  repository_owner: "democratizeAI"
+  repository_name: "council"
+  webhook_port: 8054
+
+redis:
+  url: "redis://redis:6379/0"
+  connection_pool_size: 10
+  timeout_seconds: 30
+
+o3_integration:
+  enabled: true
+  command_prefix: "/o3"
+  response_timeout: 30
+  max_concurrent_requests: 5
+
+security:
+  hmac_enabled: true
+  hmac_key_path: "/app/secrets/o3_hmac.key"
+  allowed_agents: ["o3", "gatekeeper"]
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  max_file_size: "50MB"
+  backup_count: 3
+
+monitoring:
+  prometheus_enabled: true
+  metrics_port: 8001
+  health_check_interval: 15 
