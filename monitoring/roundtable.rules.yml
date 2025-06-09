@@ -1,0 +1,29 @@
+groups:
+  - name: roundtable
+    rules:
+      - alert: RoundtableLatencyHigh
+        expr: histogram_quantile(0.95, rate(roundtable_latency_seconds_bucket[5m])) > 8
+        for: 2m
+        labels:
+          severity: "page"
+        annotations:
+          summary: "Round-table p95 latency > 8 s"
+          description: "Round table deliberation taking longer than 8 seconds (p95)"
+
+      - alert: RoundtableNoSamples
+        expr: absent(rate(roundtable_latency_seconds_bucket[1m]))
+        for: 2m
+        labels:
+          severity: "page"
+        annotations:
+          summary: "No round-table metrics for 2 m (exporter down?)"
+          description: "Round table metrics haven't been updated in 2 minutes"
+
+      - alert: ScratchPadNotUpdating
+        expr: rate(scratch_updates_total[5m]) == 0
+        for: 5m
+        labels:
+          severity: "warning"
+        annotations:
+          summary: "Scratch-pad not being updated"
+          description: "No scratch-pad updates detected in 5 minutes" 
