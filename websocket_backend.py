@@ -1,6 +1,10 @@
-
-from fastapi import WebSocket, WebSocketDisconnect
+import asyncio
 import json
+from typing import List
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+
+# Note: These would normally be imported from your main app
+# from your_main_app import app, vote
 
 class ConnectionManager:
     def __init__(self):
@@ -17,6 +21,13 @@ class ConnectionManager:
         await websocket.send_text(json.dumps(message))
 
 manager = ConnectionManager()
+
+# Placeholder for app - should be imported from main module
+app = FastAPI()
+
+async def vote(prompt: str):
+    """Placeholder vote function - should be imported from router"""
+    return {"text": f"Response to: {prompt}", "voting_stats": {}}
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

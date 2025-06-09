@@ -25,7 +25,7 @@ test_results = {
 
 def monitor_gpu_phase2():
     """Enhanced GPU monitoring for Phase 2"""
-    global monitoring_active, test_results
+    global monitoring_active
     
     while monitoring_active:
         try:
@@ -50,7 +50,7 @@ def monitor_gpu_phase2():
 
 async def test_memory_and_gpu_integration():
     """Test memory system integration while preserving GPU performance"""
-    global monitoring_active, test_results
+    global monitoring_active
     
     print("🚀 Phase 2 Integration Test: Memory + GPU")
     print("=" * 60)
@@ -159,7 +159,7 @@ async def test_memory_and_gpu_integration():
 
 async def analyze_phase2_results(total_time):
     """Analyze Phase 2 test results against targets"""
-    global test_results
+    # test_results is a module-level variable, no need for global
     
     print(f"\n📊 PHASE 2 RESULTS ANALYSIS")
     print("=" * 40)

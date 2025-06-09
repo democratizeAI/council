@@ -21,7 +21,7 @@ from app.router_intent import route, health_check
 from router.voting import vote
 from router.cost_tracking import debit, get_budget_status, get_cost_breakdown, downgrade_route
 from router.hybrid import hybrid_route, smart_orchestrate
-from router.council import council_route  # 🌌 Council integration
+from router.council import council_route, COUNCIL_REQUESTS_TOTAL  # 🌌 Council integration
 from router.traffic_controller import traffic_controller  # 🚦 Traffic controller
 from api.whiteboard import wb  # 🗒️ Whiteboard API
 
