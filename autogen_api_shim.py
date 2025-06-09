@@ -238,6 +238,8 @@ async def startup_event():
         logger.info("✅ Mock router initialized successfully")
     else:
         try:
+            # Import RouterCascade only when not in bypass mode to prevent TinyLlama loading
+            from router_cascade import RouterCascade
             router = RouterCascade()
             logger.info("✅ Router initialized successfully")
         except Exception as e:

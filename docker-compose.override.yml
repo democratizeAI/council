@@ -1,6 +1,21 @@
 version: '3.8'
 
 services:
+  council-api:
+    # No environment overrides - use defaults for real TinyLlama loading
+    environment: {}
+
+  mock-api:
+    image: python:3.11-slim
+    command: sh -c "pip install fastapi uvicorn && python /app/mockfast.py"
+    volumes:
+      - ./mockfast.py:/app/mockfast.py
+    ports:
+      - "9000:8000"
+    environment:
+      UVICORN_TIMEOUT_KEEP_ALIVE: "5"
+    profiles: ["bypass"]
+
   # --- Canary service (5% traffic on GPU-1) ---
   api-canary:
     build: 

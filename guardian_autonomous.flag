@@ -1,0 +1,14 @@
+# Guardian Autonomous Mode Flag
+# Created: $(date)
+# 
+# This flag enables:
+# - Canary → soak → tag → canary-deploy → prod-deploy (zero-click)
+# - Auto-rollback if p95 > 400ms or queue > 200 for 5min
+# - Gemini audit authority maintained
+#
+# Builder Swarm v10.3-ε-autonomous ACTIVATED
+AUTONOMOUS_MODE=true
+ROLLBACK_P95_THRESHOLD_MS=400
+ROLLBACK_QUEUE_THRESHOLD=200
+ROLLBACK_QUEUE_DURATION_SEC=300
+GEMINI_AUDIT_AUTHORITY=true 

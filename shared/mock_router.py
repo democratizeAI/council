@@ -1,8 +1,9 @@
 """
-Mock router for bypass testing - provides immediate responses
+Mock router for bypass testing - provides immediate responses without model loading
 """
 import time
 import asyncio
+import os
 from typing import Dict, List, Optional, Any
 
 
@@ -11,7 +12,8 @@ class MockRouterCascade:
     
     def __init__(self, **kwargs):
         self.initialized = True
-        print("✅ Mock router initialized successfully")
+        print("✅ Mock router initialized successfully (bypassing TinyLlama)")
+        print(f"🚀 SKIP_MODEL_LOAD={os.getenv('SKIP_MODEL_LOAD', 'false')}")
     
     async def route_request(self, prompt: str, **kwargs) -> Dict[str, Any]:
         """Return mock response immediately"""
@@ -23,19 +25,20 @@ class MockRouterCascade:
             "model_used": "MockRouter",
             "confidence": 0.85,
             "latency_ms": 50.0,
-            "cost_cents": 0.0,
-            "flags": [],
-            "skill_type": "mock"
+            "context_used": False,
+            "provider": "mock",
+            "timestamp": time.time()
         }
     
-    async def process_request_with_context(self, prompt: str, context: Optional[List[Dict]] = None, **kwargs) -> Dict[str, Any]:
-        """Mock processing with context"""
+    async def route_query(self, prompt: str, **kwargs) -> Dict[str, Any]:
+        """Alias for route_request"""
         return await self.route_request(prompt, **kwargs)
     
     def get_stats(self) -> Dict[str, Any]:
-        """Return mock stats"""
+        """Return mock statistics"""
         return {
             "total_requests": 0,
-            "avg_latency_ms": 50.0,
-            "mock_mode": True
+            "average_latency": 50.0,
+            "mock_mode": True,
+            "models_loaded": 0
         } 
