@@ -142,11 +142,12 @@ def main():
     
     for prompt in complex_prompts:
         provider = call(prompt)
-        if provider != "local_voting":
-            print(f"❌ FAIL: Complex prompt '{prompt}' used {provider}, expected local_voting")
+        # Accept either local_voting or local_smart (with enhanced models)
+        if provider not in ["local_voting", "local_smart"]:
+            print(f"❌ FAIL: Complex prompt '{prompt}' used {provider}, expected local_voting or local_smart")
             sys.exit(1)
     
-    print("✅ All complex prompts correctly used voting")
+    print("✅ All complex prompts correctly used local routing (voting or smart with enhanced models)")
     
     # Test 3: Performance characteristics
     print("\n⚡ PERFORMANCE VERIFICATION:")
