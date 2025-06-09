@@ -3,7 +3,7 @@ import yaml
 import pathlib
 import logging
 from typing import Dict, Any, Optional
-from ..metrics import adapter_select_total
+from api.metrics import adapter_select_total
 
 logger = logging.getLogger(__name__)
 
