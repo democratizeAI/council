@@ -12,12 +12,17 @@ Hardened intent classification with:
 Replaces flaky regex-only routing with production-grade classification.
 """
 
-import re
 import os
-import logging
+import re
 import time
+import logging
 from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass
+
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
 logger = logging.getLogger(__name__)
 
@@ -148,7 +153,6 @@ class EnhancedIntentClassifier:
         """Load optional MiniLM classifier for production accuracy"""
         try:
             import onnxruntime as ort
-            import numpy as np
             
             # Load pre-trained classifier (384-dim MiniLM embeddings)
             classifier_path = "models/intent_classifier.onnx"

@@ -131,7 +131,6 @@ def is_summary_needed(text: str, threshold: int = 100) -> bool:
 # Performance monitoring
 def get_summarizer_stats() -> dict:
     """Get summarizer performance statistics"""
-    global _summarizer
     return {
         "available": _summarizer is not None and _summarizer is not False,
         "model_loaded": _summarizer is not None,

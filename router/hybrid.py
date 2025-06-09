@@ -126,7 +126,7 @@ LOADED_MODELS = {}
 
 def load_provider_config():
     """Load provider configuration from YAML with transformers support and model caching"""
-    global LOADED_MODELS, PROVIDER_MAP
+    global LOADED_MODELS
     
     # Initialize with empty map
     PROVIDER_MAP.clear()
