@@ -23,7 +23,7 @@ scrape_configs:
   # Mock Round Table metrics for dashboard testing
   - job_name: 'pushgateway'
     static_configs:
-      - targets: ['pushgateway:9091']
+      - targets: ['host.docker.internal:9091']
     scrape_interval: 15s
     metrics_path: '/metrics'
 
