@@ -10,25 +10,25 @@ scrape_configs:
 
   - job_name: 'council-api'
     static_configs:
-      - targets: ['host.docker.internal:9000']
+      - targets: ['council-api:9000']
     scrape_interval: 10s
     metrics_path: '/metrics'
 
   - job_name: 'guardian'
     static_configs:
-      - targets: ['host.docker.internal:8000']
+      - targets: ['guardian:8000']
     scrape_interval: 15s
     metrics_path: '/metrics'
 
   - job_name: 'tiny-svc'
     static_configs:
-      - targets: ['host.docker.internal:8005']
+      - targets: ['tiny-svc:8005']
     scrape_interval: 30s
     metrics_path: '/metrics'
 
   - job_name: 'pushgateway'
     static_configs:
-      - targets: ['host.docker.internal:9091']
+      - targets: ['pushgateway:9091']
     scrape_interval: 15s
     metrics_path: '/metrics'
 
@@ -36,4 +36,4 @@ alerting:
   alertmanagers:
     - static_configs:
         - targets:
-          - host.docker.internal:9093 
+          - alertmanager:9093 
