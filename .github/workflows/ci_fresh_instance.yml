@@ -1,0 +1,214 @@
+name: Fresh Instance Stack CI (BC-110 + BC-120)
+
+on:
+  push:
+    branches: [ main, baseline-cert-fresh-instance ]
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'compose/fresh-instance.yml'
+      - 'services/mission_validator/**'
+      - 'tests/test_fresh_instance.py'
+      - 'Makefile'
+
+env:
+  DOCKER_BUILDKIT: 1
+  COMPOSE_DOCKER_CLI_BUILD: 1
+
+jobs:
+  fresh-instance-test:
+    name: Fresh Instance Stack Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install docker pytest requests
+        pip install -r services/mission_validator/requirements.txt
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Create required directories
+      run: |
+        mkdir -p logs
+        mkdir -p compose/config
+
+    - name: Create minimal Prometheus config
+      run: |
+        cat > compose/config/prometheus.yml << EOF
+        global:
+          scrape_interval: 15s
+        scrape_configs:
+          - job_name: 'prometheus'
+            static_configs:
+              - targets: ['localhost:9090']
+          - job_name: 'mission-validator'
+            static_configs:
+              - targets: ['mission-validator:8080']
+            metrics_path: '/metrics'
+        EOF
+
+    - name: Create minimal API Dockerfile
+      run: |
+        mkdir -p api
+        cat > api/Dockerfile << EOF
+        FROM python:3.11-slim
+        WORKDIR /app
+        RUN pip install flask requests
+        COPY . .
+        EXPOSE 8000
+        CMD ["python", "-c", "
+        from flask import Flask, jsonify
+        import os
+        app = Flask(__name__)
+        @app.route('/health')
+        def health():
+            return jsonify({
+                'status': 'healthy',
+                'environment': os.getenv('ENVIRONMENT', 'unknown'),
+                'genesis_mandate': os.getenv('GENESIS_MANDATE_001', 'not_set')
+            })
+        app.run(host='0.0.0.0', port=8000)
+        "]
+        EOF
+
+    - name: Create minimal Guardian service
+      run: |
+        mkdir -p services/guardian
+        cat > services/guardian/Dockerfile << EOF
+        FROM python:3.11-slim
+        WORKDIR /app
+        RUN pip install flask
+        EXPOSE 9093
+        CMD ["python", "-c", "
+        from flask import Flask
+        app = Flask(__name__)
+        @app.route('/-/healthy')
+        def healthy():
+            return 'OK'
+        app.run(host='0.0.0.0', port=9093)
+        "]
+        EOF
+
+    - name: Validate compose file
+      run: |
+        cd compose
+        docker-compose -f fresh-instance.yml config
+
+    - name: Run fresh instance stack test
+      run: |
+        make baseline-up
+      timeout-minutes: 5
+
+    - name: Check service health
+      run: |
+        echo "Checking service health..."
+        curl -f http://localhost:8000/health
+        curl -f http://localhost:8080/health  
+        curl -f http://localhost:9090/-/healthy
+
+    - name: Check mission validator metrics
+      run: |
+        echo "Checking mission validator metrics..."
+        curl -s http://localhost:8080/metrics | grep -E "(mission_ingest_ok_total|mission_validator_health)"
+
+    - name: Wait for mission validation
+      run: |
+        echo "Waiting for mission validation..."
+        timeout=120
+        start_time=$(date +%s)
+        
+        while [ $(($(date +%s) - start_time)) -lt $timeout ]; do
+          if curl -s http://localhost:8080/metrics | grep -q "mission_ingest_ok_total.*[1-9]"; then
+            echo "✅ Mission validation successful!"
+            curl -s http://localhost:8080/metrics | grep mission_ingest_ok_total
+            exit 0
+          fi
+          echo "⏳ Waiting for mission validation..."
+          sleep 10
+        done
+        
+        echo "❌ Mission validation timeout"
+        echo "Final metrics:"
+        curl -s http://localhost:8080/metrics | grep mission || echo "No mission metrics found"
+        exit 1
+
+    - name: Run pytest tests
+      run: |
+        python -m pytest tests/test_fresh_instance.py -v --tb=short
+      if: always()
+
+    - name: Collect logs on failure
+      if: failure()
+      run: |
+        echo "=== Docker containers ==="
+        docker ps -a
+        echo "=== Compose logs ==="
+        cd compose && docker-compose -f fresh-instance.yml logs
+        echo "=== Mission validator logs ==="
+        docker logs fresh-mission-validator || echo "No mission validator logs"
+
+    - name: Cleanup
+      if: always()
+      run: |
+        cd compose && docker-compose -f fresh-instance.yml down -v
+        docker system prune -f
+
+  makefile-targets:
+    name: Test Makefile Targets
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Test Makefile syntax
+      run: |
+        make --dry-run baseline-up || echo "Dry run completed"
+
+    - name: Verify baseline targets exist
+      run: |
+        grep -q "baseline-up:" Makefile
+        grep -q "baseline-down:" Makefile
+        grep -q "baseline-logs:" Makefile
+
+  compose-validation:
+    name: Compose File Validation
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Validate compose syntax
+      run: |
+        # Create minimal config for validation
+        mkdir -p compose/config
+        echo "global: {}" > compose/config/prometheus.yml
+        
+        cd compose
+        docker-compose -f fresh-instance.yml config --quiet
+
+    - name: Check compose structure
+      run: |
+        cd compose
+        # Verify all required services are defined
+        docker-compose -f fresh-instance.yml config | grep -E "(redis|prometheus|council-api|guardian|mission-validator)"
+
+    - name: Validate healthchecks
+      run: |
+        cd compose  
+        # Check that services have healthchecks
+        docker-compose -f fresh-instance.yml config | grep -q "healthcheck" 

@@ -1,0 +1,45 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # Load rules from mounted rules directory
+  # - "/etc/prometheus/rules/*.yml"
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Council-API
+  - job_name: 'council-api'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['council-api:8000']
+    metrics_path: '/metrics'
+    scrape_timeout: 5s
+
+  # Mission Validator 
+  - job_name: 'mission-validator'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['mission-validator:8080']
+    metrics_path: '/metrics'
+    scrape_timeout: 5s
+
+  # Guardian
+  - job_name: 'guardian'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['guardian:9093']
+    metrics_path: '/metrics'
+    scrape_timeout: 5s
+
+  # Redis Exporter (if available)
+  - job_name: 'redis'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['redis:6379']
+    metrics_path: '/metrics'
+    scrape_timeout: 5s 

@@ -1,0 +1,16 @@
+model_version: v1.0
+model_type: lora_adapter
+base_model: titan-base
+adapter_config:
+  rank: 64
+  alpha: 16
+  dropout: 0.1
+  target_modules:
+    - q_proj
+    - v_proj
+    - k_proj
+    - o_proj
+deployment:
+  max_memory: 8GB
+  batch_size: 32
+  inference_mode: canary 

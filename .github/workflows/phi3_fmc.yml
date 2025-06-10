@@ -1,0 +1,70 @@
+name: First-Mate Certification
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  phi3-certification:
+    runs-on: ubuntu-latest
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest httpx pyyaml
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          
+      - name: Start Council API
+        run: |
+          docker-compose up -d council-api redis
+          sleep 30  # Allow services to start
+          
+      - name: Wait for Council API
+        run: |
+          timeout 60s bash -c 'until curl -f http://localhost:9010/health; do sleep 2; done'
+          
+      - name: First-Mate Certification
+        run: |
+          pytest -q tests/phi3_fmc/infrastructure_harness.py
+          
+      - name: Display certification status
+        if: success()
+        run: |
+          echo "🎉 FIRST-MATE CERTIFICATION: PASSED"
+          echo "✅ Phi-3 agent infrastructure ready for Streamlit UI"
+          
+      - name: Display certification failure
+        if: failure()
+        run: |
+          echo "❌ FIRST-MATE CERTIFICATION: FAILED"
+          echo "🔧 Infrastructure needs attention before Streamlit deployment"
+          exit 1
+          
+      - name: Upload certification report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phi3-certification-report
+          path: tests/phi3_fmc/CERTIFICATION_REPORT.md 

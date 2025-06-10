@@ -25,6 +25,17 @@ echo "=============================================" | tee -a "$DEPLOYMENT_LOG"
 echo "📅 Timestamp: $(date)" | tee -a "$DEPLOYMENT_LOG"
 echo "📂 LoRA Directory: $LORA_DIR" | tee -a "$DEPLOYMENT_LOG"
 
+# Load environment configuration
+if [ -f ".env" ]; then
+    export $(grep -v '^#' .env | xargs)
+fi
+
+# Gauntlet hook - INERT by default (GAUNTLET_ENABLED=false)
+GAUNTLET_ENABLED=${GAUNTLET_ENABLED:-false}
+
+echo "=== LoRA Deployment Pipeline ==="
+echo "Gauntlet Enabled: $GAUNTLET_ENABLED"
+
 # Validation Phase
 echo "🔍 Phase 1: Pre-deployment validation..." | tee -a "$DEPLOYMENT_LOG"
 
@@ -98,6 +109,98 @@ else
     
     echo "📈 Pre-deployment success rate: $PRE_SUCCESS_RATE" | tee -a "$DEPLOYMENT_LOG"
     echo "⚡ Pre-deployment avg latency: ${PRE_AVG_LATENCY}ms" | tee -a "$DEPLOYMENT_LOG"
+fi
+
+# Gauntlet execution (only when enabled)
+if [ "$GAUNTLET_ENABLED" = "true" ]; then
+    echo "🔥 GAUNTLET ENABLED - Running Titanic Gauntlet..."
+    
+    # A2A event: Gauntlet begin
+    if command -v python3 &> /dev/null; then
+        python3 -c "
+import os
+import json
+import requests
+from datetime import datetime
+
+if os.getenv('A2A_ENABLED', 'false') == 'true':
+    try:
+        event = {
+            'event_type': 'GAUNTLET_BEGIN',
+            'timestamp': datetime.utcnow().isoformat() + 'Z',
+            'source': 'deploy_lora.sh',
+            'metadata': {
+                'pipeline': 'lora_deployment',
+                'mode': 'canary'
+            }
+        }
+        requests.post('http://localhost:8080/events', json=event, timeout=5)
+    except:
+        pass  # Non-blocking
+" 2>/dev/null || true
+    fi
+    
+    # Run the gauntlet with canary mode
+    if ./run_titanic_gauntlet.py --mode canary; then
+        echo "✅ GAUNTLET_PASS - Proceeding with deployment"
+        
+        # A2A event: Gauntlet pass
+        python3 -c "
+import os
+import json
+import requests
+from datetime import datetime
+
+if os.getenv('A2A_ENABLED', 'false') == 'true':
+    try:
+        event = {
+            'event_type': 'GAUNTLET_PASS',
+            'timestamp': datetime.utcnow().isoformat() + 'Z',
+            'source': 'deploy_lora.sh',
+            'metadata': {
+                'pipeline': 'lora_deployment',
+                'duration_seconds': int(os.getenv('GAUNTLET_DURATION', '0'))
+            }
+        }
+        requests.post('http://localhost:8080/events', json=event, timeout=5)
+    except:
+        pass
+" 2>/dev/null || true
+        
+    else
+        echo "❌ GAUNTLET_FAIL - Triggering rollback"
+        
+        # A2A event: Gauntlet fail
+        python3 -c "
+import os
+import json
+import requests
+from datetime import datetime
+
+if os.getenv('A2A_ENABLED', 'false') == 'true':
+    try:
+        event = {
+            'event_type': 'GAUNTLET_FAIL',
+            'timestamp': datetime.utcnow().isoformat() + 'Z',
+            'source': 'deploy_lora.sh',
+            'metadata': {
+                'pipeline': 'lora_deployment',
+                'failure_reason': 'canary_test_failed'
+            }
+        }
+        requests.post('http://localhost:8080/events', json=event, timeout=5)
+    except:
+        pass
+" 2>/dev/null || true
+        
+        # Trigger rollback handler
+        if [ -f "./action_handlers/rollback_handler.py" ]; then
+            ./action_handlers/rollback_handler.py "gauntlet_fail"
+        fi
+        exit 1
+    fi
+else
+    echo "⚪ Gauntlet disabled - Skipping titanic tests"
 fi
 
 # Deployment Phase

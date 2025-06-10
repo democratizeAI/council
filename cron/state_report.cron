@@ -1,0 +1,21 @@
+# State-of-Titan Report Cron Configuration (BC-190)
+# Runs reports at 24h and 72h marks using croniter for precise scheduling
+
+# Daily report at midnight UTC (24h intervals)
+0 0 * * * cd /app && python scripts/generate_state_report.py --period 24h
+
+# 72-hour report every 3 days at 1 AM UTC
+0 1 */3 * * cd /app && python scripts/generate_state_report.py --period 72h
+
+# Backup daily report at 6 AM UTC (fallback)
+0 6 * * * cd /app && python scripts/generate_state_report.py --period 24h --dry-run
+
+# Environment variables for production
+PROMETHEUS_URL=http://prometheus:9090
+REDIS_URL=redis://redis:6379
+REPORTS_DIR=/reports
+TEMPLATE_DIR=/reports
+
+# Weekly cleanup of old timestamped reports (keep last 14 days)
+0 2 * * 0 find /reports -name "state-of-titan-*_*.html" -mtime +14 -delete
+0 2 * * 0 find /reports -name "state-of-titan-*_*.json" -mtime +14 -delete 

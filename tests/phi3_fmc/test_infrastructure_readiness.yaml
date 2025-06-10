@@ -1,0 +1,6 @@
+prompt: |
+  System status check for infrastructure readiness
+expect:
+  response_contains: "response"
+  has_model_field: true
+  latency_reasonable: true 

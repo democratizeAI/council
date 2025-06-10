@@ -1,0 +1,7 @@
+prompt: |
+  I've been thinking about the titan.exe local-first goal and our BCI ambitions…
+  Sketch out a plan for the council to investigate this.
+expect:
+  epic_title: "UI/UX Evolution: BCI-Readiness & Predictive Interface"
+  subtasks: 4
+  owner: "Opus" 

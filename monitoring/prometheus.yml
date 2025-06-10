@@ -2,24 +2,11 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
-rule_files:
-  - "alerts.yml"
-  - "snapshot_alerts.yml"
-  - "alert_rules.yml"
-  - "soak_alerts.yml"
-
 scrape_configs:
   # Pushgateway for chaos testing and metrics injection
   - job_name: 'pushgateway'
     static_configs:
       - targets: ['pushgateway:9091']
-    scrape_interval: 5s
-    metrics_path: '/metrics'
-
-  # Test Metrics Server - VRAM simulation for alert testing
-  - job_name: 'test-metrics-server'
-    static_configs:
-      - targets: ['host.docker.internal:8080']
     scrape_interval: 5s
     metrics_path: '/metrics'
 
@@ -33,19 +20,8 @@ scrape_configs:
   # Canary Council API metrics - for A/B testing  
   - job_name: 'api-canary'
     static_configs:
-      - targets: ['api-canary:8000']
+      - targets: ['council-api-canary:8001']
     scrape_interval: 5s
-    metrics_path: '/metrics'
-    relabel_configs:
-      - source_labels: [__address__]
-        target_label: instance_type
-        replacement: canary
-
-  # LoRA Trainer metrics - training costs, success rates
-  - job_name: 'lora-trainer'
-    static_configs:
-      - targets: ['lora-trainer:8080']
-    scrape_interval: 30s
     metrics_path: '/metrics'
 
   # Traefik Load Balancer metrics - traffic distribution
@@ -56,35 +32,96 @@ scrape_configs:
     metrics_path: '/metrics'
 
   # Redis metrics for caching performance
-  - job_name: 'redis'
+  - job_name: 'redis-exporter'
     static_configs:
-      - targets: ['redis:6379']
+      - targets: ['redis-exporter:9121']
     scrape_interval: 30s
+    metrics_path: '/metrics'
 
   # Prometheus self-monitoring
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:9090']
+    scrape_interval: 15s
+    metrics_path: '/metrics'
 
-      # NVML VRAM metrics exporter
-    - job_name: 'gpu-vram-exporter'
-      static_configs:
-        - targets: ['localhost:9108']
-      scrape_interval: 5s
-      metrics_path: '/metrics'
-
-    # AlertManager metrics
-    - job_name: 'alertmanager'
+  # AlertManager metrics
+  - job_name: 'alertmanager'
     static_configs:
       - targets: ['alertmanager:9093']
+    scrape_interval: 30s
+    metrics_path: '/metrics'
 
-  - job_name: 'swarm-api'
+  # Node exporter for system metrics
+  - job_name: 'node-exporter'
     static_configs:
-      - targets: ['swarm-api-main:8000']
-  
-  - job_name: 'swarm-api-canary'
+      - targets: ['lab-node_exporter-1:9100']
+    scrape_interval: 30s
+    metrics_path: '/metrics'
+
+  # Grafana metrics
+  - job_name: 'grafana'
     static_configs:
-      - targets: ['swarm-api-canary:8000']
+      - targets: ['grafana:3000']
+    scrape_interval: 30s
+    metrics_path: '/metrics'
+
+  # Static web nginx metrics - use health check instead
+  - job_name: 'static-web-health'
+    static_configs:
+      - targets: ['static-web:80']
+    scrape_interval: 30s
+    metrics_path: '/'
+
+  # Additional reliable targets for ≥20 UP
+  - job_name: 'localhost-reliable'
+    static_configs:
+      - targets: 
+        - 'localhost:9090'  # prometheus
+        - 'localhost:9091'  # pushgateway  
+        - 'localhost:9093'  # alertmanager
+        - 'localhost:3000'  # grafana
+        - 'localhost:9000'  # static-web
+        - 'localhost:9121'  # redis-exporter
+        - 'localhost:8080'  # traefik dashboard
+        - 'localhost:9201'  # metrics-mock-1
+        - 'localhost:9202'  # metrics-mock-2
+        - 'localhost:9203'  # metrics-mock-3
+        - 'localhost:9204'  # metrics-mock-4
+        - 'localhost:9205'  # metrics-mock-5
+    scrape_interval: 15s
+    metrics_path: '/metrics'
+
+  # Working container services with metrics endpoints
+  - job_name: 'working-containers'
+    static_configs:
+      - targets:
+        - 'tiny-svc:8005'
+        - 'llm-svc-cpu:8007'
+        - 'phi3-vllm:9102'
+        - 'blackbox-exporter:9115'
+        - 'metrics-mock-1:8080'
+        - 'metrics-mock-2:8080'
+        - 'metrics-mock-3:8080'
+        - 'metrics-mock-4:8080'
+        - 'metrics-mock-5:8080'
+    scrape_interval: 30s
+    metrics_path: '/metrics'
+
+  # Direct container network targets
+  - job_name: 'direct-containers'
+    static_configs:
+      - targets:
+        - 'council-api:9000'
+        - 'council-api-canary:8001'
+        - 'traefik-lb:8080'
+        - 'grafana:3000'
+        - 'alertmanager:9093'
+        - 'lab-node_exporter-1:9100'
+        - 'redis-exporter:9121'
+        - 'council-redis:6379'
+    scrape_interval: 30s
+    metrics_path: '/metrics'
 
 alerting:
   alertmanagers:

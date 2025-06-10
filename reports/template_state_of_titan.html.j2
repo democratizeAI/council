@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>State of Titan Report - {{ period }}</title>
+    <style>
+        /* Dark Mode State-of-Titan Report Styling */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a3a 100%);
+            color: #e0e0e0;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            padding: 40px 0;
+            border-bottom: 2px solid #2d2d5f;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            color: #00d4aa;
+            text-shadow: 0 0 20px rgba(0, 212, 170, 0.3);
+            margin-bottom: 10px;
+        }
+
+        .header .subtitle {
+            font-size: 1.2em;
+            color: #a0a0a0;
+            margin-bottom: 20px;
+        }
+
+        .timestamp {
+            background: rgba(0, 212, 170, 0.1);
+            border: 1px solid #00d4aa;
+            border-radius: 8px;
+            padding: 10px 20px;
+            display: inline-block;
+            font-family: 'Courier New', monospace;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .metric-card {
+            background: rgba(45, 45, 95, 0.3);
+            border: 1px solid #2d2d5f;
+            border-radius: 12px;
+            padding: 25px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 212, 170, 0.1);
+        }
+
+        .metric-title {
+            font-size: 1.1em;
+            color: #00d4aa;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .metric-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #ffffff;
+            margin-bottom: 10px;
+        }
+
+        .metric-unit {
+            font-size: 0.9em;
+            color: #a0a0a0;
+        }
+
+        .metric-status {
+            margin-top: 10px;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .status-healthy {
+            background: rgba(0, 255, 100, 0.2);
+            color: #00ff64;
+            border: 1px solid #00ff64;
+        }
+
+        .status-warning {
+            background: rgba(255, 165, 0, 0.2);
+            color: #ffa500;
+            border: 1px solid #ffa500;
+        }
+
+        .status-critical {
+            background: rgba(255, 69, 58, 0.2);
+            color: #ff453a;
+            border: 1px solid #ff453a;
+        }
+
+        .section {
+            background: rgba(45, 45, 95, 0.2);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border-left: 4px solid #00d4aa;
+        }
+
+        .section h2 {
+            color: #00d4aa;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #2d2d5f;
+        }
+
+        .data-table th {
+            background: rgba(0, 212, 170, 0.1);
+            color: #00d4aa;
+            font-weight: bold;
+        }
+
+        .data-table tr:hover {
+            background: rgba(45, 45, 95, 0.3);
+        }
+
+        .icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            display: inline-block;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 30px 0;
+            border-top: 1px solid #2d2d5f;
+            margin-top: 40px;
+            color: #a0a0a0;
+        }
+
+        .health-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .health-green { background: #00ff64; }
+        .health-yellow { background: #ffa500; }
+        .health-red { background: #ff453a; }
+
+        .trend-up { color: #00ff64; }
+        .trend-down { color: #ff453a; }
+        .trend-stable { color: #ffa500; }
+
+        @media (max-width: 768px) {
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .metric-value {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🛡️ State of Titan</h1>
+            <div class="subtitle">Operational Health Report - {{ period.upper() }}</div>
+            <div class="timestamp">
+                📅 Generated: {{ timestamp }}
+            </div>
+        </div>
+
+        <!-- Key Metrics Grid -->
+        <div class="metrics-grid">
+            <!-- Council Router Latency -->
+            <div class="metric-card">
+                <div class="metric-title">
+                    <span class="icon">⚡</span>
+                    Council Router P95 Latency
+                </div>
+                <div class="metric-value">{{ router_p95_latency | round(1) }}</div>
+                <div class="metric-unit">milliseconds</div>
+                <div class="metric-status {{ 'status-healthy' if router_p95_latency < 50 else 'status-warning' if router_p95_latency < 100 else 'status-critical' }}">
+                    {% if router_p95_latency < 50 %}✅ Excellent{% elif router_p95_latency < 100 %}⚠️ Acceptable{% else %}🚨 Degraded{% endif %}
+                </div>
+            </div>
+
+            <!-- GPU Utilization -->
+            <div class="metric-card">
+                <div class="metric-title">
+                    <span class="icon">🎮</span>
+                    GPU Utilization
+                </div>
+                <div class="metric-value">{{ gpu_utilization | round(1) }}</div>
+                <div class="metric-unit">percent</div>
+                <div class="metric-status {{ 'status-healthy' if gpu_utilization > 70 else 'status-warning' if gpu_utilization > 40 else 'status-critical' }}">
+                    {% if gpu_utilization > 70 %}✅ High{% elif gpu_utilization > 40 %}⚠️ Moderate{% else %}🚨 Low{% endif %}
+                </div>
+            </div>
+
+            <!-- VRAM Peak -->
+            <div class="metric-card">
+                <div class="metric-title">
+                    <span class="icon">💾</span>
+                    VRAM Peak Usage
+                </div>
+                <div class="metric-value">{{ (vram_peak_bytes / 1024 / 1024 / 1024) | round(1) }}</div>
+                <div class="metric-unit">GB</div>
+                <div class="metric-status {{ 'status-healthy' if vram_peak_bytes < 8589934592 else 'status-warning' if vram_peak_bytes < 10737418240 else 'status-critical' }}">
+                    {% if vram_peak_bytes < 8589934592 %}✅ Normal{% elif vram_peak_bytes < 10737418240 %}⚠️ High{% else %}🚨 Critical{% endif %}
+                </div>
+            </div>
+
+            <!-- Cost Spend -->
+            <div class="metric-card">
+                <div class="metric-title">
+                    <span class="icon">💰</span>
+                    Cost Spend (24h)
+                </div>
+                <div class="metric-value">${{ cost_spend_24h | round(2) }}</div>
+                <div class="metric-unit">USD</div>
+                <div class="metric-status {{ 'status-healthy' if cost_spend_24h < 10 else 'status-warning' if cost_spend_24h < 25 else 'status-critical' }}">
+                    {% if cost_spend_24h < 10 %}✅ Low{% elif cost_spend_24h < 25 %}⚠️ Moderate{% else %}🚨 High{% endif %}
+                </div>
+            </div>
+
+            <!-- Rollback Count -->
+            <div class="metric-card">
+                <div class="metric-title">
+                    <span class="icon">🔄</span>
+                    Rollback Count
+                </div>
+                <div class="metric-value">{{ rollback_count }}</div>
+                <div class="metric-unit">deployments</div>
+                <div class="metric-status {{ 'status-healthy' if rollback_count == 0 else 'status-warning' if rollback_count < 3 else 'status-critical' }}">
+                    {% if rollback_count == 0 %}✅ Stable{% elif rollback_count < 3 %}⚠️ Some Issues{% else %}🚨 Unstable{% endif %}
+                </div>
+            </div>
+
+            <!-- A2A Pending -->
+            <div class="metric-card">
+                <div class="metric-title">
+                    <span class="icon">📨</span>
+                    A2A Queue Peak
+                </div>
+                <div class="metric-value">{{ a2a_pending_max }}</div>
+                <div class="metric-unit">messages</div>
+                <div class="metric-status {{ 'status-healthy' if a2a_pending_max < 100 else 'status-warning' if a2a_pending_max < 500 else 'status-critical' }}">
+                    {% if a2a_pending_max < 100 %}✅ Normal{% elif a2a_pending_max < 500 %}⚠️ Busy{% else %}🚨 Backlogged{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Quantization Decisions Section -->
+        <div class="section">
+            <h2>🔧 Quantization Decisions (BC-180)</h2>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-title">Models Kept</div>
+                    <div class="metric-value">{{ quant_decisions.kept | default(0) }}</div>
+                    <div class="metric-unit">decisions</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Models Rejected</div>
+                    <div class="metric-value">{{ quant_decisions.rejected | default(0) }}</div>
+                    <div class="metric-unit">decisions</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Success Rate</div>
+                    <div class="metric-value">
+                        {% set total = (quant_decisions.kept | default(0)) + (quant_decisions.rejected | default(0)) %}
+                        {% if total > 0 %}
+                            {{ ((quant_decisions.kept | default(0)) / total * 100) | round(1) }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </div>
+                    <div class="metric-unit">percent</div>
+                </div>
+            </div>
+            
+            {% if quant_history %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Model</th>
+                        <th>Decision</th>
+                        <th>Original (t/s)</th>
+                        <th>Quantized (t/s)</th>
+                        <th>Drop %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for decision in quant_history %}
+                    <tr>
+                        <td>{{ decision.timestamp | strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>{{ decision.model_name }}</td>
+                        <td>
+                            <span class="health-indicator {{ 'health-green' if decision.decision == 'kept' else 'health-red' }}"></span>
+                            {{ decision.decision | title }}
+                        </td>
+                        <td>{{ decision.original_throughput | round(1) }}</td>
+                        <td>{{ decision.quantized_throughput | round(1) }}</td>
+                        <td>{{ decision.throughput_drop_percent | round(1) }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+        </div>
+
+        <!-- System Health Section -->
+        <div class="section">
+            <h2>🏥 System Health Overview</h2>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Component</th>
+                        <th>Status</th>
+                        <th>Uptime</th>
+                        <th>Last Check</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Council Router</td>
+                        <td>
+                            <span class="health-indicator {{ 'health-green' if router_p95_latency < 100 else 'health-yellow' if router_p95_latency < 200 else 'health-red' }}"></span>
+                            {{ 'Healthy' if router_p95_latency < 100 else 'Degraded' if router_p95_latency < 200 else 'Critical' }}
+                        </td>
+                        <td>{{ system_uptime | default('N/A') }}</td>
+                        <td>{{ timestamp }}</td>
+                    </tr>
+                    <tr>
+                        <td>GPU Resources</td>
+                        <td>
+                            <span class="health-indicator {{ 'health-green' if vram_peak_bytes < 8589934592 else 'health-yellow' if vram_peak_bytes < 10737418240 else 'health-red' }}"></span>
+                            {{ 'Healthy' if vram_peak_bytes < 8589934592 else 'Stressed' if vram_peak_bytes < 10737418240 else 'Critical' }}
+                        </td>
+                        <td>{{ gpu_uptime | default('N/A') }}</td>
+                        <td>{{ timestamp }}</td>
+                    </tr>
+                    <tr>
+                        <td>Cost Management</td>
+                        <td>
+                            <span class="health-indicator {{ 'health-green' if cost_spend_24h < 10 else 'health-yellow' if cost_spend_24h < 25 else 'health-red' }}"></span>
+                            {{ 'Healthy' if cost_spend_24h < 10 else 'Elevated' if cost_spend_24h < 25 else 'High' }}
+                        </td>
+                        <td>24h tracking</td>
+                        <td>{{ timestamp }}</td>
+                    </tr>
+                    <tr>
+                        <td>A2A Message Bus</td>
+                        <td>
+                            <span class="health-indicator {{ 'health-green' if a2a_pending_max < 100 else 'health-yellow' if a2a_pending_max < 500 else 'health-red' }}"></span>
+                            {{ 'Healthy' if a2a_pending_max < 100 else 'Busy' if a2a_pending_max < 500 else 'Backlogged' }}
+                        </td>
+                        <td>{{ a2a_uptime | default('N/A') }}</td>
+                        <td>{{ timestamp }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Recent Events Section -->
+        {% if recent_events %}
+        <div class="section">
+            <h2>📋 Recent Events</h2>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Event Type</th>
+                        <th>Source</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for event in recent_events %}
+                    <tr>
+                        <td>{{ event.timestamp | strftime('%H:%M:%S') }}</td>
+                        <td>{{ event.event_type }}</td>
+                        <td>{{ event.source }}</td>
+                        <td>{{ event.description | truncate(60) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>
+                🛡️ State of Titan Report v{{ version | default('BC-190') }} | 
+                Generated by Titan Monitoring System | 
+                Report Period: {{ period }} | 
+                Next Update: {{ next_update | default('24h') }}
+            </p>
+        </div>
+    </div>
+</body>
+</html> 

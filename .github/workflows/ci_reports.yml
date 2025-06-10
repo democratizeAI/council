@@ -1,0 +1,290 @@
+name: CI Reports (BC-190)
+
+on:
+  push:
+    paths:
+      - 'scripts/generate_state_report.py'
+      - 'reports/template_state_of_titan.html.j2'
+      - 'tests/test_state_report.py'
+      - 'cron/state_report.cron'
+      - '.github/workflows/ci_reports.yml'
+  pull_request:
+    paths:
+      - 'scripts/generate_state_report.py'
+      - 'reports/template_state_of_titan.html.j2'
+      - 'tests/test_state_report.py'
+
+jobs:
+  test-state-report:
+    runs-on: ubuntu-latest
+    name: Test State-of-Titan Report Generator
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install jinja2 redis requests croniter
+          pip install pytest pytest-cov
+      
+      - name: Validate template syntax
+        run: |
+          python -c "
+          import jinja2
+          env = jinja2.Environment(loader=jinja2.FileSystemLoader('reports'))
+          template = env.get_template('template_state_of_titan.html.j2')
+          print('✅ Template syntax valid')
+          "
+      
+      - name: Run unit tests
+        run: |
+          python -m pytest tests/test_state_report.py -v --tb=short
+      
+      - name: Generate report (dry run)
+        run: |
+          python scripts/generate_state_report.py --dry-run --verbose
+      
+      - name: Verify dry run output
+        run: |
+          if [ ! -f /tmp/state-of-titan-24h.html ]; then
+            echo "❌ HTML file not generated"
+            exit 1
+          fi
+          
+          if [ ! -f /tmp/state-of-titan-24h.json ]; then
+            echo "❌ JSON file not generated"
+            exit 1
+          fi
+          
+          # Check HTML contains required elements
+          if ! grep -q "State of Titan" /tmp/state-of-titan-24h.html; then
+            echo "❌ HTML missing title"
+            exit 1
+          fi
+          
+          # Check JSON is valid
+          if ! python -m json.tool /tmp/state-of-titan-24h.json > /dev/null; then
+            echo "❌ Invalid JSON output"
+            exit 1
+          fi
+          
+          echo "✅ All output files validated"
+      
+      - name: Test template rendering performance
+        run: |
+          python -c "
+          import time
+          import sys
+          sys.path.append('.')
+          from scripts.generate_state_report import TitanReportGenerator
+          
+          # Test render time requirement (<3s)
+          generator = TitanReportGenerator()
+          metrics = {
+              'router_p95_latency': 25.3,
+              'gpu_utilization': 72.5,
+              'vram_peak': 6442450944,
+              'cost_spend_24h': 8.50,
+              'rollback_count': 0,
+              'a2a_pending_max': 12,
+              'quant_decisions': {'kept': 2, 'rejected': 1},
+              'timestamp': '2024-01-15 12:30:45 UTC',
+              'period': '24h'
+          }
+          
+          start = time.time()
+          html = generator.render_report(metrics)
+          duration = time.time() - start
+          
+          if duration >= 3.0:
+              print(f'❌ Render time {duration:.1f}s exceeds 3s requirement')
+              exit(1)
+          
+          print(f'✅ Render time {duration:.3f}s meets <3s requirement')
+          "
+      
+      - name: Validate cron syntax
+        run: |
+          # Basic cron validation
+          grep -E '^[0-9\*\-,/]+ [0-9\*\-,/]+ [0-9\*\-,/]+ [0-9\*\-,/]+ [0-9\*\-,/]+ ' cron/state_report.cron
+          echo "✅ Cron syntax valid"
+      
+      - name: Test A2A event structure (mock)
+        run: |
+          python -c "
+          import sys
+          sys.path.append('.')
+          from scripts.generate_state_report import TitanReportGenerator
+          from pathlib import Path
+          
+          generator = TitanReportGenerator()
+          
+          # Mock A2A event payload structure
+          html_path = Path('/tmp/test.html')
+          metrics = {'router_p95_latency': 25.3, 'period': '24h'}
+          
+          # Test event payload creation (without actual publishing)
+          event_payload = {
+              'event_type': 'REPORT_READY',
+              'period': generator.period,
+              'url': f'/reports/{html_path.name}',
+              'report_version': 'BC-190'
+          }
+          
+          required_keys = ['event_type', 'period', 'url', 'report_version']
+          for key in required_keys:
+              if key not in event_payload:
+                  print(f'❌ Missing required key: {key}')
+                  exit(1)
+          
+          print('✅ A2A event payload structure valid')
+          "
+      
+      - name: Archive test artifacts
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-reports
+          path: |
+            /tmp/state-of-titan-*.html
+            /tmp/state-of-titan-*.json
+          retention-days: 7
+
+  test-cron-schedule:
+    runs-on: ubuntu-latest
+    name: Test Cron Scheduling
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      
+      - name: Install croniter
+        run: pip install croniter
+      
+      - name: Test cron scheduling logic
+        run: |
+          python -c "
+          from croniter import croniter
+          from datetime import datetime
+          
+          # Test 24h schedule (daily at midnight)
+          cron_24h = croniter('0 0 * * *', datetime.now())
+          next_24h = cron_24h.get_next(datetime)
+          print(f'Next 24h report: {next_24h}')
+          
+          # Test 72h schedule (every 3 days at 1 AM)
+          cron_72h = croniter('0 1 */3 * *', datetime.now())
+          next_72h = cron_72h.get_next(datetime)
+          print(f'Next 72h report: {next_72h}')
+          
+          print('✅ Cron scheduling works correctly')
+          "
+
+  validate-acceptance-gates:
+    runs-on: ubuntu-latest
+    name: Validate BC-190 Acceptance Gates
+    needs: [test-state-report, test-cron-schedule]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      
+      - name: Install dependencies
+        run: |
+          pip install jinja2 redis requests croniter
+      
+      - name: Gate 1 - Cron writes HTML & JSON
+        run: |
+          python scripts/generate_state_report.py --dry-run
+          
+          if [ ! -f /tmp/state-of-titan-24h.html ] || [ ! -f /tmp/state-of-titan-24h.json ]; then
+            echo "❌ Gate 1 FAILED: Files not generated"
+            exit 1
+          fi
+          
+          echo "✅ Gate 1 PASSED: HTML & JSON files generated"
+      
+      - name: Gate 2 - Render time < 3s
+        run: |
+          python -c "
+          import time
+          import sys
+          sys.path.append('.')
+          from scripts.generate_state_report import TitanReportGenerator
+          
+          generator = TitanReportGenerator()
+          start = time.time()
+          result = generator.generate_report()
+          duration = time.time() - start
+          
+          if duration >= 3.0:
+              print(f'❌ Gate 2 FAILED: Render time {duration:.1f}s >= 3s')
+              exit(1)
+          
+          print(f'✅ Gate 2 PASSED: Render time {duration:.1f}s < 3s')
+          "
+      
+      - name: Gate 3 - HTML references latest timestamp
+        run: |
+          python scripts/generate_state_report.py --dry-run
+          
+          # Check for timestamp in HTML header area
+          if ! head -50 /tmp/state-of-titan-24h.html | grep -q "Generated:"; then
+            echo "❌ Gate 3 FAILED: No timestamp in HTML header"
+            exit 1
+          fi
+          
+          echo "✅ Gate 3 PASSED: Timestamp found in HTML header"
+      
+      - name: Gate 4 - QUANT_DECISION section matches metrics
+        run: |
+          python -c "
+          import json
+          
+          # Load generated JSON
+          with open('/tmp/state-of-titan-24h.json', 'r') as f:
+              data = json.load(f)
+          
+          # Load generated HTML
+          with open('/tmp/state-of-titan-24h.html', 'r') as f:
+              html = f.read()
+          
+          kept = data['quant_decisions']['kept']
+          rejected = data['quant_decisions']['rejected']
+          
+          # Check if values appear in HTML
+          if f'Kept: {kept}' not in html:
+              print(f'❌ Gate 4 FAILED: Kept count {kept} not in HTML')
+              exit(1)
+          
+          if f'Rejected: {rejected}' not in html:
+              print(f'❌ Gate 4 FAILED: Rejected count {rejected} not in HTML')
+              exit(1)
+          
+          print(f'✅ Gate 4 PASSED: QUANT_DECISION section matches (kept={kept}, rejected={rejected})')
+          "
+      
+      - name: All Gates Summary
+        run: |
+          echo "🎉 ALL BC-190 ACCEPTANCE GATES PASSED"
+          echo "✅ Gate 1: Cron writes HTML & JSON files"
+          echo "✅ Gate 2: Render time < 3s"
+          echo "✅ Gate 3: HTML references latest timestamp"
+          echo "✅ Gate 4: QUANT_DECISION section matches metrics" 

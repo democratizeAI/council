@@ -1,0 +1,6 @@
+alert: |
+  CRITICAL: router_cascade p95 > 900 ms (5 m). Suspect LoRA deploy.
+expect:
+  priority: "CRITICAL"
+  playbook: "rollback_lora.sh"
+  follow_up_ticket: true 

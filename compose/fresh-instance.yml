@@ -1,0 +1,192 @@
+version: '3.8'
+
+# Fresh Instance Stack (BC-110)
+# Minimal compose stack for QA testing and Gauntlet verification
+# Includes only essential services with clean state
+
+networks:
+  monitoring:
+    driver: bridge
+    name: monitoring_network
+
+volumes:
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+
+services:
+  # Redis - Core data store
+  redis:
+    image: redis:7-alpine
+    container_name: fresh-redis
+    restart: unless-stopped
+    networks:
+      - monitoring
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # Prometheus - Metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: fresh-prometheus
+    restart: unless-stopped
+    networks:
+      - monitoring
+    ports:
+      - "9090:9090"
+    volumes:
+      - prometheus_data:/prometheus
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--storage.tsdb.retention.time=7d'
+      - '--web.enable-lifecycle'
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # Council-API - Core API service
+  council-api:
+    build:
+      context: ../api
+      dockerfile: Dockerfile
+    container_name: fresh-council-api
+    restart: unless-stopped
+    networks:
+      - monitoring
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - ENVIRONMENT=fresh_instance
+      - GENESIS_MANDATE_001=acknowledged
+      - LOG_LEVEL=INFO
+      - ENABLE_METRICS=true
+    volumes:
+      - ../logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 45s
+    depends_on:
+      redis:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+
+  # Guardian - Alert manager
+  guardian:
+    build:
+      context: ../services/guardian
+      dockerfile: Dockerfile
+    container_name: fresh-guardian
+    restart: unless-stopped
+    networks:
+      - monitoring
+    ports:
+      - "9093:9093"
+    environment:
+      - PROMETHEUS_URL=http://prometheus:9090
+      - REDIS_URL=redis://redis:6379
+      - ENVIRONMENT=fresh_instance
+    volumes:
+      - ../rules:/app/rules:ro
+      - ../logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9093/-/healthy"]
+      interval: 20s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    depends_on:
+      council-api:
+        condition: service_healthy
+
+  # Mission Validator - Validates GENESIS_MANDATE_001 acknowledgment
+  mission-validator:
+    build:
+      context: ../services/mission_validator
+      dockerfile: Dockerfile
+    container_name: fresh-mission-validator
+    restart: unless-stopped
+    networks:
+      - monitoring
+    ports:
+      - "8080:8080"
+    environment:
+      - COUNCIL_API_URL=http://council-api:8000
+      - LOG_LEVEL=INFO
+      - VALIDATION_TIMEOUT=300
+    volumes:
+      - ../logs:/app/logs:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      council-api:
+        condition: service_healthy
+
+# Health check aggregator for overall stack status
+  healthcheck:
+    image: alpine:latest
+    container_name: fresh-healthcheck
+    networks:
+      - monitoring
+    command: |
+      sh -c '
+        echo "Fresh Instance Stack Health Checker"
+        apk add --no-cache curl
+        while true; do
+          echo "Checking stack health at $(date)"
+          
+          # Check all services
+          redis_health=$$(curl -sf http://redis:6379 >/dev/null 2>&1 && echo "✅" || echo "❌")
+          prom_health=$$(curl -sf http://prometheus:9090/-/healthy >/dev/null 2>&1 && echo "✅" || echo "❌")
+          api_health=$$(curl -sf http://council-api:8000/health >/dev/null 2>&1 && echo "✅" || echo "❌")
+          guardian_health=$$(curl -sf http://guardian:9093/-/healthy >/dev/null 2>&1 && echo "✅" || echo "❌")
+          validator_health=$$(curl -sf http://mission-validator:8080/health >/dev/null 2>&1 && echo "✅" || echo "❌")
+          
+          echo "Stack Status:"
+          echo "  Redis: $$redis_health"
+          echo "  Prometheus: $$prom_health"  
+          echo "  Council-API: $$api_health"
+          echo "  Guardian: $$guardian_health"
+          echo "  Mission Validator: $$validator_health"
+          
+          # Overall health
+          if [ "$$redis_health$$prom_health$$api_health$$guardian_health$$validator_health" = "✅✅✅✅✅" ]; then
+            echo "🟢 FRESH INSTANCE STACK HEALTHY"
+          else
+            echo "🟡 Stack still initializing..."
+          fi
+          
+          sleep 30
+        done
+      '
+    depends_on:
+      mission-validator:
+        condition: service_healthy 

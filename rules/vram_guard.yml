@@ -1,0 +1,192 @@
+# VRAM Guard Rules - BC-150
+# Guardian rules for GPU memory exhaustion detection and safe shutdown
+
+groups:
+  - name: vram_guard
+    rules:
+      # Main VRAM cap breach alert (10.5 GB threshold)
+      - alert: VRAMCapBreach
+        expr: gpu_mem_used_bytes > 1.05e10
+        for: 30s
+        labels:
+          severity: critical
+          action: safe_shutdown
+          team: ml_ops
+          guardrail: "BC-150"
+          resource_type: "gpu_memory"
+        annotations:
+          summary: "GPU memory usage has exceeded capacity threshold"
+          description: "VRAM usage {{ $value | humanizeBytes }} exceeds 10.5GB threshold for 30s"
+          action_command: "scale_down_nonessential"
+          
+      # Critical VRAM exhaustion (near OOM)
+      - alert: VRAMCriticalExhaustion
+        expr: gpu_mem_usage_percent > 95
+        for: 15s
+        labels:
+          severity: critical
+          action: emergency_shutdown
+          team: ml_ops
+          guardrail: "BC-150"
+          resource_type: "gpu_memory"
+        annotations:
+          summary: "GPU memory critically exhausted - OOM imminent"
+          description: "VRAM usage {{ $value }}% exceeds 95% for 15s - OOM risk"
+          action_command: "emergency_scale_down"
+          
+      # VRAM usage spike detection
+      - alert: VRAMUsageSpike
+        expr: increase(gpu_mem_used_bytes[5m]) > 2147483648  # 2GB increase in 5 minutes
+        for: 0s
+        labels:
+          severity: warning
+          action: monitor
+          team: ml_ops
+          guardrail: "BC-150"
+          resource_type: "gpu_memory"
+        annotations:
+          summary: "Rapid VRAM usage increase detected"
+          description: "VRAM increased by {{ $value | humanizeBytes }} in 5 minutes"
+          
+      # VRAM fragmentation detection
+      - alert: VRAMFragmentation
+        expr: gpu_mem_free_bytes < 1073741824 and gpu_mem_usage_percent < 80  # <1GB free but <80% used
+        for: 60s
+        labels:
+          severity: warning
+          action: monitor
+          team: ml_ops
+          guardrail: "BC-150"
+          resource_type: "gpu_memory"
+        annotations:
+          summary: "GPU memory fragmentation detected"
+          description: "Only {{ $value | humanizeBytes }} free despite {{ query \"gpu_mem_usage_percent\" | first | value }}% usage"
+          
+      # VRAM guard health check
+      - alert: VRAMGuardDown
+        expr: vram_guard_active == 0 or absent(vram_guard_active)
+        for: 60s
+        labels:
+          severity: warning
+          action: restart
+          team: ml_ops
+          guardrail: "BC-150"
+          resource_type: "monitoring"
+        annotations:
+          summary: "VRAM guard monitoring is down"
+          description: "VRAM guard has not reported status for 60s"
+          action_command: "restart_vram_guard"
+          
+      # VRAM recovery detection
+      - alert: VRAMRecovered
+        expr: gpu_mem_used_bytes < 8589934592  # Below 8GB
+        for: 30s
+        labels:
+          severity: info
+          action: notify
+          team: ml_ops
+          guardrail: "BC-150"
+          resource_type: "gpu_memory"
+        annotations:
+          summary: "GPU memory usage has returned to safe levels"
+          description: "VRAM usage {{ $value | humanizeBytes }} back below 8GB threshold"
+
+# Recording rules for VRAM metrics
+  - name: vram_metrics
+    interval: 15s
+    rules:
+      # Calculate VRAM pressure score (0-1)
+      - record: vram_pressure_score
+        expr: |
+          (
+            (gpu_mem_usage_percent / 100) * 0.6 +
+            (gpu_mem_used_bytes > 1.05e10) * 0.3 +
+            (rate(gpu_mem_used_bytes[5m]) > 0) * 0.1
+          )
+        labels:
+          metric_type: "pressure_score"
+          
+      # Track VRAM usage trend
+      - record: vram_usage_trend_5m
+        expr: rate(gpu_mem_used_bytes[5m])
+        labels:
+          metric_type: "usage_trend"
+          
+      # Calculate VRAM efficiency (used/allocated ratio)
+      - record: vram_efficiency_ratio
+        expr: gpu_mem_used_bytes / gpu_mem_total_bytes
+        labels:
+          metric_type: "efficiency"
+          
+      # VRAM breach events counter
+      - record: vram_breach_events_total
+        expr: increase(ALERTS{alertname="VRAMCapBreach"}[1h])
+        labels:
+          metric_type: "breach_frequency"
+          
+      # Available VRAM margin
+      - record: vram_available_margin_bytes
+        expr: gpu_mem_total_bytes - gpu_mem_used_bytes
+        labels:
+          metric_type: "available_margin"
+
+# VRAM escalation rules
+  - name: vram_escalation
+    rules:
+      # Multiple VRAM breaches in short time
+      - alert: VRAMBreachFlapping
+        expr: increase(vram_breach_events_total[15m]) >= 3
+        for: 0s
+        labels:
+          severity: critical
+          action: emergency_shutdown
+          team: ml_ops
+          guardrail: "BC-150"
+          resource_type: "gpu_memory"
+        annotations:
+          summary: "Multiple VRAM breaches detected - system instability"
+          description: "{{ $value }} VRAM breaches in 15 minutes indicates GPU memory instability"
+          action_command: "emergency_shutdown"
+          
+      # Sustained high VRAM pressure
+      - alert: VRAMSustainedPressure
+        expr: vram_pressure_score > 0.8
+        for: 300s  # 5 minutes
+        labels:
+          severity: critical
+          action: scale_down
+          team: ml_ops
+          guardrail: "BC-150"
+          resource_type: "gpu_memory"
+        annotations:
+          summary: "Sustained high VRAM pressure detected"
+          description: "VRAM pressure score {{ $value }} maintained above 0.8 for 5 minutes"
+          action_command: "scale_down_ml_workloads"
+          
+      # VRAM leak detection (consistent upward trend)
+      - alert: VRAMLeakDetected
+        expr: vram_usage_trend_5m > 104857600 and vram_usage_trend_5m > 0  # 100MB/5min growth
+        for: 600s  # 10 minutes
+        labels:
+          severity: warning
+          action: investigate
+          team: ml_ops
+          guardrail: "BC-150"
+          resource_type: "gpu_memory"
+        annotations:
+          summary: "Potential VRAM memory leak detected"
+          description: "Consistent VRAM growth of {{ $value | humanizeBytes }}/5min for 10 minutes"
+          
+      # GPU OOM recovery
+      - alert: GPUOOMRecovery
+        expr: gpu_mem_usage_percent < 50 and vram_pressure_score < 0.3
+        for: 60s
+        labels:
+          severity: info
+          action: notify
+          team: ml_ops
+          guardrail: "BC-150"
+          resource_type: "gpu_memory"
+        annotations:
+          summary: "GPU memory pressure fully resolved"
+          description: "VRAM usage {{ query \"gpu_mem_usage_percent\" | first | value }}%, pressure score {{ $value }}" 

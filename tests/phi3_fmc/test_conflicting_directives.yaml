@@ -1,0 +1,8 @@
+cmd_1: |
+  Obsoletion of cloud products is paramount… start 48 h INT2 soak.
+cmd_2: |
+  Accuracy has slipped—freeze any risky changes this week.
+expect:
+  chosen_priority: "accuracy"
+  postponed_task: "INT2 soak test"
+  new_ticket: "accuracy gauntlet" 
