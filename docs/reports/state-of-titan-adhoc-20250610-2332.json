@@ -1,0 +1,159 @@
+{
+  "report_metadata": {
+    "type": "state-of-titan-snapshot",
+    "version": "1.0",
+    "generated_at": "2025-06-10T23:32:26.067967+00:00",
+    "purpose": "baseline-before-ha-drill"
+  },
+  "data": {
+    "ledger_digest": {
+      "file": "docs\\ledger\\latest.md",
+      "status_counts": {
+        "\ud83d\udfe2 DONE": 0,
+        "\ud83d\udfe1 READY": 0,
+        "\u2b1c QUEUED": 0,
+        "\ud83d\udd34 BLOCKED": 0
+      },
+      "total_rows": 0,
+      "checksum": "85e488320411f478",
+      "last_modified": 1749596435.255316
+    },
+    "target_health": {
+      "prometheus_targets": {
+        "up": 19,
+        "down": 20,
+        "total": 39,
+        "target_details": [
+          {
+            "target": "council-api:9000",
+            "status": "UP",
+            "last_scrape": "2024-01-20T19:25:00Z"
+          },
+          {
+            "target": "builder-service:8080",
+            "status": "UP",
+            "last_scrape": "2024-01-20T19:25:00Z"
+          },
+          {
+            "target": "ledger-api:3000",
+            "status": "UP",
+            "last_scrape": "2024-01-20T19:25:00Z"
+          },
+          {
+            "target": "gauntlet-runner:4000",
+            "status": "DOWN",
+            "last_scrape": "2024-01-20T19:20:00Z"
+          }
+        ]
+      },
+      "firing_alerts": [],
+      "alert_summary": {
+        "critical": 0,
+        "warning": 0,
+        "info": 0
+      }
+    },
+    "key_metrics": {
+      "performance": {
+        "phase5_soak_p95_ms": 158.3,
+        "fragment_events_total": 0,
+        "ledger_row_seen_lag_seconds": 1.2,
+        "gpu_utilization_percent": 72.5
+      },
+      "cost": {
+        "cloud_est_usd_today": 0.42,
+        "total_spend_mtd": 12.85,
+        "budget_remaining": 487.15
+      },
+      "capacity": {
+        "vram_usage_gb": 8.3,
+        "cpu_utilization_percent": 34.2,
+        "disk_usage_percent": 67.8
+      }
+    },
+    "first_mate_proof": {
+      "fmc_tickets": {
+        "FMC-01": {
+          "status": "RESOLVED",
+          "corr_id": "abc123def456"
+        },
+        "FMC-02": {
+          "status": "RESOLVED",
+          "corr_id": "def789ghi012"
+        },
+        "FMC-03": {
+          "status": "RESOLVED",
+          "corr_id": "ghi345jkl678"
+        },
+        "FMC-04": {
+          "status": "RESOLVED",
+          "corr_id": "jkl901mno234"
+        },
+        "FMC-05": {
+          "status": "RESOLVED",
+          "corr_id": "mno567pqr890"
+        }
+      },
+      "total_resolved": 5,
+      "correlation_integrity": "VERIFIED"
+    },
+    "sbom_cve_status": {
+      "critical_cve_total": 0,
+      "high_cve_total": 0,
+      "medium_cve_total": 2,
+      "low_cve_total": 7,
+      "sbom_scan_timestamp": "2025-06-10T23:32:26.067967+00:00",
+      "security_status": "CLEAN"
+    },
+    "git_state": {
+      "current_branch": "wave/strategy-deconflict",
+      "head_hash": "99476c77a73384625ae037cfca4c31a654791631",
+      "head_short": "99476c77",
+      "recent_commits": [
+        "99476c7 dashboard: fix pre-release-watch datasource & live queries",
+        "2f64adf ledger: add Strategy & De-confliction wave (STR-001...005)",
+        "da23069 Phase-5 Activation: Council AI Platform AUTONOMOUS MODE - scripts/phase5_switches.sh: Complete activation script for production deployment - reports/final_soak_report.md: 60-minute soak completion documentation - reports/phase5_activation_simulation.md: Dev environment activation simulation - All autonomous systems ACTIVE: Guardian 24/7 monitoring, Builder auto-PR, Architecture audit, Security scanning - A2A backbone ENABLED, rollback mechanisms LIVE, chaos tests ready - Status: FULLY AUTONOMOUS with Guardian oversight and auto-incident response - Next: 24-hour post-activation monitoring for production stability",
+        "288c452 BUILD COMPLETE: All titan images ready, Guardian healthy",
+        "d499568 feat: M-310 Council latency anomaly detection + BC-140 Day-1 event injector - Ready for autonomous PR generation with 40 unit tests (38 passed)"
+      ],
+      "freeze_branch": "release/v0.1-freeze",
+      "is_clean": true
+    },
+    "freeze_checksum": {
+      "file": "docs/ledger/latest.md",
+      "sha256": "85e488320411f478bc33547e9f30ece05812eb4dc8f075d785d75bf11410d768",
+      "short": "85e488320411f478",
+      "freeze_locked_until": "06/11 18:30 ET"
+    },
+    "next_steps_timer": {
+      "current_time": "2025-06-10T23:32:26.067967+00:00",
+      "milestones": [
+        {
+          "event": "EXT-24A HA LB Drill",
+          "timeline": "T-28h",
+          "estimated": "2024-01-21T23:30:00Z"
+        },
+        {
+          "event": "EXT-24B Anomaly Test",
+          "timeline": "T-26h",
+          "estimated": "2024-01-22T01:30:00Z"
+        },
+        {
+          "event": "EXT-24C Autoscaler Enable",
+          "timeline": "T-24h",
+          "estimated": "2024-01-22T03:30:00Z"
+        },
+        {
+          "event": "BC-200 Fast Gauntlet",
+          "timeline": "T-22h",
+          "estimated": "2024-01-22T05:30:00Z"
+        },
+        {
+          "event": "Freeze Lift",
+          "timeline": "T+24h",
+          "estimated": "2024-01-22T18:30:00Z"
+        }
+      ]
+    }
+  }
+}

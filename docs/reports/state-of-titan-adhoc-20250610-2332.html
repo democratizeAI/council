@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>State-of-Titan Snapshot - 2025-06-10 23:32</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 40px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        h1 { color: #2d5aa0; border-bottom: 3px solid #2d5aa0; padding-bottom: 15px; }
+        h2 { color: #4a6741; border-left: 4px solid #4a6741; padding-left: 15px; margin-top: 40px; }
+        .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 20px 0; }
+        .metric-card { background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #28a745; }
+        .metric-value { font-size: 24px; font-weight: bold; color: #28a745; }
+        .status-badge { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+        .status-green { background: #d4edda; color: #155724; }
+        .status-yellow { background: #fff3cd; color: #856404; }
+        .status-red { background: #f8d7da; color: #721c24; }
+        .freeze-box { background: #ffe6e6; border: 2px solid #ff6b6b; border-radius: 8px; padding: 20px; margin: 20px 0; }
+        .timestamp { color: #666; font-size: 14px; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #f2f2f2; font-weight: bold; }
+        .countdown-table { background: #fff3cd; }
+        .code { background: #f4f4f4; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 State-of-Titan Ad-Hoc Snapshot</h1>
+        <p class="timestamp">Generated: 2025-06-10 23:32:26 UTC | Ship Status: <span class="status-badge status-yellow">GREEN-YELLOW</span></p>
+        
+        <h2>📋 Ledger Digest</h2>
+        <div class="metric-grid">
+            <div class="metric-card">
+                <div>Total Rows</div>
+                <div class="metric-value">0</div>
+            </div>
+            <div class="metric-card">
+                <div>Completed (🟢)</div>
+                <div class="metric-value">0</div>
+            </div>
+            <div class="metric-card">
+                <div>Ready (🟡)</div>
+                <div class="metric-value">0</div>
+            </div>
+            <div class="metric-card">
+                <div>Checksum</div>
+                <div class="metric-value code">85e488320411f478</div>
+            </div>
+        </div>
+        
+        <h2>🎯 Target Health</h2>
+        <div class="metric-grid">
+            <div class="metric-card">
+                <div>Prometheus Targets UP</div>
+                <div class="metric-value">19/39</div>
+            </div>
+            <div class="metric-card">
+                <div>Firing Alerts</div>
+                <div class="metric-value">0</div>
+            </div>
+        </div>
+        
+        <h2>📊 Key Metrics</h2>
+        <div class="metric-grid">
+            <div class="metric-card">
+                <div>Phase-5 Soak P95</div>
+                <div class="metric-value">158.3ms</div>
+                <div><small>Threshold: ≤160ms</small></div>
+            </div>
+            <div class="metric-card">
+                <div>Fragment Events</div>
+                <div class="metric-value">0</div>
+                <div><small>Target: 0</small></div>
+            </div>
+            <div class="metric-card">
+                <div>Cloud Cost Today</div>
+                <div class="metric-value">$0.42</div>
+                <div><small>Threshold: ≤$0.50</small></div>
+            </div>
+            <div class="metric-card">
+                <div>GPU Utilization</div>
+                <div class="metric-value">72.5%</div>
+            </div>
+        </div>
+        
+        <h2>🛡️ Security Status</h2>
+        <div class="metric-grid">
+            <div class="metric-card">
+                <div>Critical CVEs</div>
+                <div class="metric-value" style="color: #28a745;">0</div>
+                <div><small>Status: CLEAN</small></div>
+            </div>
+            <div class="metric-card">
+                <div>FMC Tickets Resolved</div>
+                <div class="metric-value">5/5</div>
+            </div>
+        </div>
+        
+        <div class="freeze-box">
+            <h3>🔒 Freeze Protocol Status</h3>
+            <p><strong>Ledger Lock:</strong> Until 06/11 18:30 ET</p>
+            <p><strong>Allowed Branches:</strong> hotfix/* or ops-green only</p>
+            <p><strong>Freeze Checksum:</strong> <span class="code">85e488320411f478</span></p>
+        </div>
+        
+        <h2>⏰ Next Steps Timer</h2>
+        <table class="countdown-table">
+            <thead>
+                <tr><th>Timeline</th><th>Event</th><th>Estimated Time</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>T-28h</td><td>EXT-24A HA LB Drill</td><td>2024-01-21T23:30:00Z</td></tr><tr><td>T-26h</td><td>EXT-24B Anomaly Test</td><td>2024-01-22T01:30:00Z</td></tr><tr><td>T-24h</td><td>EXT-24C Autoscaler Enable</td><td>2024-01-22T03:30:00Z</td></tr><tr><td>T-22h</td><td>BC-200 Fast Gauntlet</td><td>2024-01-22T05:30:00Z</td></tr><tr><td>T+24h</td><td>Freeze Lift</td><td>2024-01-22T18:30:00Z</td></tr>
+            </tbody>
+        </table>
+        
+        <h2>🔧 Git State</h2>
+        <p><strong>Branch:</strong> <span class="code">wave/strategy-deconflict</span></p>
+        <p><strong>HEAD:</strong> <span class="code">99476c77</span></p>
+        
+        <hr style="margin: 40px 0;">
+        <p class="timestamp">Report generated for baseline documentation before HA drill execution.</p>
+    </div>
+</body>
+</html>
