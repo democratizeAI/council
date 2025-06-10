@@ -1,0 +1,229 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Soak Gates - Health Monitoring",
+    "tags": ["lumina", "soak", "gates"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Gate 1: API Health",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=\"api-main\"}",
+            "legendFormat": "API Health",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "green", "value": 1}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 6, "w": 6, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Gate 2: Redis Connectivity",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=\"redis\"}",
+            "legendFormat": "Redis Health",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "green", "value": 1}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 6, "w": 6, "x": 6, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "Gate 3: Prometheus Scraping",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=\"prometheus\"}",
+            "legendFormat": "Prometheus Health",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "green", "value": 1}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 6, "w": 6, "x": 12, "y": 0}
+      },
+      {
+        "id": 4,
+        "title": "Gate 4: Push Gateway",
+        "type": "stat", 
+        "targets": [
+          {
+            "expr": "up{job=\"pushgateway\"}",
+            "legendFormat": "PushGW Health",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "green", "value": 1}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 6, "w": 6, "x": 18, "y": 0}
+      },
+      {
+        "id": 5,
+        "title": "Gate 5: Canary API",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=\"api-canary\"}",
+            "legendFormat": "Canary Health",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "green", "value": 1}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 6, "w": 6, "x": 0, "y": 6}
+      },
+      {
+        "id": 6,
+        "title": "Gate 6: Memory Usage",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "(process_resident_memory_bytes / (1024*1024*1024)) < 8",
+            "legendFormat": "Memory OK",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "green", "value": 1}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 6, "w": 6, "x": 6, "y": 6}
+      },
+      {
+        "id": 7,
+        "title": "Gate 7: Request Success Rate",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(swarm_api_requests_total{status!~\"5..\"}[5m]) / rate(swarm_api_requests_total[5m]) > 0.95",
+            "legendFormat": "Success Rate OK",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "green", "value": 1}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 6, "w": 6, "x": 12, "y": 6}
+      },
+      {
+        "id": 8,
+        "title": "Gate 8: Response Time",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(swarm_api_request_duration_seconds_bucket[5m])) < 1.0",
+            "legendFormat": "Latency OK",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "green", "value": 1}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 6, "w": 6, "x": 18, "y": 6}
+      }
+    ],
+    "time": {
+      "from": "now-15m",
+      "to": "now"
+    },
+    "refresh": "10s"
+  },
+  "meta": {
+    "type": "db",
+    "canSave": true,
+    "canEdit": true,
+    "canAdmin": true,
+    "canStar": true,
+    "slug": "soak-gates",
+    "url": "/d/soak-gates/soak-gates-health-monitoring",
+    "expires": "0001-01-01T00:00:00Z",
+    "created": "2025-06-05T22:37:00Z",
+    "updated": "2025-06-05T22:37:00Z",
+    "updatedBy": "admin",
+    "createdBy": "admin",
+    "version": 1,
+    "hasAcl": false,
+    "isFolder": false,
+    "folderId": 1,
+    "folderTitle": "Lumina Ops",
+    "folderUrl": "/dashboards/f/lumina-ops/lumina-ops",
+    "provisioned": true,
+    "provisionedExternalId": "soak_gates.json"
+  }
+} 

@@ -1,0 +1,74 @@
+{
+  "dashboard": {
+    "title": "Preference Model Performance",
+    "panels": [
+      {
+        "title": "Preference Score Distribution",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(swarm_pref_latency_seconds_bucket[5m])) by (le))",
+            "legendFormat": "p50 Latency"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(swarm_pref_latency_seconds_bucket[5m])) by (le))",
+            "legendFormat": "p95 Latency"
+          }
+        ]
+      },
+      {
+        "title": "Preference Requests Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(swarm_pref_requests_total[5m])",
+            "legendFormat": "Requests/sec"
+          }
+        ]
+      },
+      {
+        "title": "Preference Model Errors",
+        "type": "graph", 
+        "targets": [
+          {
+            "expr": "rate(swarm_pref_errors_total[5m])",
+            "legendFormat": "Errors/sec"
+          }
+        ]
+      },
+      {
+        "title": "Model Training Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "reward_training_status",
+            "legendFormat": "Training Status"
+          },
+          {
+            "expr": "reward_validation_accuracy",
+            "legendFormat": "Validation Accuracy"
+          }
+        ]
+      },
+      {
+        "title": "Preference Score Confidence",
+        "type": "histogram",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(preference_confidence_bucket[5m])) by (le))",
+            "legendFormat": "Confidence p50"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(preference_confidence_bucket[5m])) by (le))",
+            "legendFormat": "Confidence p95"
+          }
+        ]
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "5s"
+  }
+} 
