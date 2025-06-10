@@ -81,6 +81,11 @@ jobs:
         echo "Final health check..."
         curl -f http://localhost:8000/health || exit 1
 
+    - name: promtool check rules
+      uses: prometheus/promtool-action@v0.3.0
+      with:
+        command: check rules monitoring/*.rules.yml
+
   canary-fragmentation:
     runs-on: ubuntu-latest
     needs: test

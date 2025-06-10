@@ -160,11 +160,100 @@ services:
     networks:
       - default
 
+  # Real-time file change watcher
+  inotify-watcher:
+    image: alpine:3.20
+    container_name: inotify-watcher
+    volumes:
+      - ./:/watch
+      - file_metrics:/metrics
+    working_dir: /watch
+    restart: unless-stopped
+    networks:
+      - monitoring
+    command: >
+      sh -c "
+      apk add --no-cache inotify-tools &&
+      mkdir -p /metrics &&
+      echo 'TITAN.EXE file watcher starting...' &&
+      while inotifywait -rq -e modify,create,delete ./docs ./monitoring ./builder/templates ./rules ./config; do
+        timestamp=$$(date +%s) &&
+        echo 'file_change_total{path=\"live\",timestamp=\"'$$timestamp'\"} 1' > /metrics/file_watch.prom &&
+        echo '['$$timestamp'] File change detected'
+      done"
+
+  # Textfile metrics exporter
+  textfile-exporter:
+    image: prom/node-exporter:latest
+    container_name: textfile-exporter
+    volumes:
+      - file_metrics:/metrics:ro
+    ports:
+      - "9103:9103"
+    restart: unless-stopped
+    networks:
+      - monitoring
+    command:
+      - '--path.textfile=/metrics'
+      - '--web.listen-address=:9103'
+      - '--collector.textfile'
+      - '--no-collector.arp'
+      - '--no-collector.bcache'
+      - '--no-collector.bonding'
+      - '--no-collector.conntrack'
+      - '--no-collector.cpu'
+      - '--no-collector.cpufreq'
+      - '--no-collector.diskstats'
+      - '--no-collector.edac'
+      - '--no-collector.entropy'
+      - '--no-collector.filefd'
+      - '--no-collector.filesystem'
+      - '--no-collector.hwmon'
+      - '--no-collector.infiniband'
+      - '--no-collector.ipvs'
+      - '--no-collector.loadavg'
+      - '--no-collector.mdadm'
+      - '--no-collector.meminfo'
+      - '--no-collector.netclass'
+      - '--no-collector.netdev'
+      - '--no-collector.netstat'
+      - '--no-collector.nfs'
+      - '--no-collector.nfsd'
+      - '--no-collector.pressure'
+      - '--no-collector.sockstat'
+      - '--no-collector.stat'
+      - '--no-collector.time'
+      - '--no-collector.timex'
+      - '--no-collector.uname'
+      - '--no-collector.vmstat'
+      - '--no-collector.xfs'
+      - '--no-collector.zfs'
+
+  guide-loader:
+    image: python:3.11-slim
+    container_name: guide-loader
+    restart: unless-stopped
+    volumes:
+      - ./:/app
+    working_dir: /app
+    ports:
+      - "9108:9108"
+    environment:
+      - GUIDE_METRICS_PORT=9108
+    networks:
+      - monitoring
+    command: >
+      sh -c "
+        pip install prometheus-client watchdog requests &&
+        python guide_loader/main.py
+      "
+    depends_on:
+      - prometheus
+
 volumes:
   reward_data:
-    driver: local
+  file_metrics:
 
 networks:
-  default:
-    name: council-network
+  monitoring:
     external: true 

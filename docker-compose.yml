@@ -9,6 +9,8 @@ services:
       - "6379:6379"
     restart: on-failure:3
     command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    networks:
+      - monitoring
     deploy:
       resources:
         limits:
@@ -32,10 +34,12 @@ services:
     ports:
       - "9121:9121"
     environment:
-      - REDIS_ADDR=redis://redis:6379
+      - REDIS_ADDR=redis://council-redis:6379
     depends_on:
       - redis
     restart: on-failure:3
+    networks:
+      - monitoring
     deploy:
       resources:
         limits:
@@ -49,186 +53,141 @@ services:
 
   # Main Council API - Stable traffic
   council-api:
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile
+    container_name: council-api
     ports:
-      - "9000:9000"
+      - "9010:9000"
+    volumes:
+      - ./api:/app/api
+      - ./router:/app/router
+      - ./shared:/app/shared
+      - ./ledger:/app/ledger
     environment:
-      - SWARM_COUNCIL_ENABLED=true
-      - COUNCIL_POCKET_MODE=true
-      - GPU_MEMORY_FRACTION=0.8
-      - CUDA_VISIBLE_DEVICES=0
-      # Slack Integration
-      - SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET}
-      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - PYTHONUNBUFFERED=1
+      - COUNCIL_API_URL=http://council-api:9000
       - SLACK_WEBHOOK_ALERTS=${SLACK_WEBHOOK_ALERTS}
       - SLACK_WEBHOOK_PATCHES=${SLACK_WEBHOOK_PATCHES}
-    volumes:
-      - ./memory:/app/memory
-      - ./logs:/app/logs
-    
-    # 🚀 HARDENING: Restart & Health Check
-    restart: on-failure:5  # Restart on failure, max 5 attempts
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
-      interval: 30s        # Check every 30 seconds
-      timeout: 5s          # 5 second timeout
-      retries: 3           # Fail after 3 consecutive failures
-      start_period: 60s    # Wait 60s for initial startup
-    
-    # 🚀 HARDENING: GPU Resource Management
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-        limits:
-          memory: 10g      # Prevent OOM that kills nvidia-driver
-          cpus: '4.0'      # Reasonable CPU limit
-    
-    # 🚀 HARDENING: Security & Stability
-    security_opt:
-      - no-new-privileges:true
-    read_only: false  # Allow writes to /tmp and /app/logs
-    tmpfs:
-      - /tmp:size=1g
-    
-    # 🚀 HARDENING: Logging
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "100m"
-        max-file: "3"
+      - BUILDER_WEBHOOK_URL=http://builder:8080/webhook
+      - GATEKEEPER_URL=http://gatekeeper:8080
+      - REDIS_URL=redis://council-redis:6379
+    command: >
+      sh -c "
+        cd /app/api &&
+        python -m uvicorn council_api:app --host 0.0.0.0 --port 9000 --reload
+      "
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - monitoring
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.council-api.rule=Host(`api.trinity.local`) || PathPrefix(`/api`)"
+      - "traefik.http.services.council-api.loadbalancer.server.port=9000"
 
   # Canary Council API - New LoRA testing
   council-api-canary:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: council-api-canary
     ports:
-      - "8001:8000"
+      - "9011:9000"
     volumes:
-      - models:/app/models
-      - memory:/app/memory
-      - loras:/app/loras
-      - ./logs:/app/logs
+      - ./api:/app/api
+      - ./router:/app/router
+      - ./shared:/app/shared
+      - ./ledger:/app/ledger
     environment:
       - PYTHONUNBUFFERED=1
-      - AZ_MEMORY_ENABLED=yes
-      - AZ_MEMORY_PATH=/app/memory
-      - AZ_SHELL_TRUSTED=yes
-      - ENABLE_SANDBOX=true
-      - CLOUD_ENABLED=true
-      - PROVIDER_PRIORITY=mistral,openai
-      - SWARM_PROFILE=canary
-      - SWARM_CLOUD_BUDGET_USD=1.5
-      - MEM_EMB_MODEL=all-MiniLM-L6-v2
-      - EXEC_TIMEOUT_SEC=5
-      - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
-      - COUNCIL_TRAFFIC_PERCENT=5
-      - REDIS_URL=redis://redis:6379
-      - LORA_PATH=/app/loras/latest
-      - MISTRAL_API_KEY=${MISTRAL_API_KEY:-}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-    runtime: nvidia
-    deploy:
-      resources:
-        limits:
-          memory: 3g     # Smaller allocation for canary
-          cpus: "4.0"
-        reservations:
-          devices:
-            - capabilities: ["gpu"]
+      - COUNCIL_API_URL=http://council-api-canary:9000
+      - SLACK_WEBHOOK_ALERTS=${SLACK_WEBHOOK_ALERTS}
+      - SLACK_WEBHOOK_PATCHES=${SLACK_WEBHOOK_PATCHES}
+      - BUILDER_WEBHOOK_URL=http://builder:8080/webhook
+      - GATEKEEPER_URL=http://gatekeeper:8080
+      - REDIS_URL=redis://council-redis:6379
+      - DEPLOYMENT_TYPE=canary
+    command: >
+      sh -c "
+        cd /app/api &&
+        python -m uvicorn council_api:app --host 0.0.0.0 --port 9000 --reload
+      "
     depends_on:
       - redis
+    restart: unless-stopped
+    networks:
+      - monitoring
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.council-api-canary.rule=(Host(`api.trinity.local`) || PathPrefix(`/api`)) && HeadersRegexp(`X-Canary`, `true`)"
+      - "traefik.http.services.council-api-canary.loadbalancer.server.port=9000"
+
+  # Slack Socket Mode Service
+  slack-socket:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: slack-socket
+    volumes:
+      - ./services:/app/services
+      - ./api:/app/api
+    environment:
+      - PYTHONUNBUFFERED=1
+      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - COUNCIL_API_URL=http://council-api:9000
+      - SLACK_WEBHOOK_ALERTS=${SLACK_WEBHOOK_ALERTS}
+      - SLACK_WEBHOOK_PATCHES=${SLACK_WEBHOOK_PATCHES}
+    command: >
+      sh -c "
+        cd /app/services &&
+        python slack_socket.py
+      "
+    depends_on:
       - council-api
-    restart: on-failure:3
+    restart: unless-stopped
+    networks:
+      - monitoring
     healthcheck:
-      test: ["CMD", "curl", "-fs", "http://localhost:8000/health"]
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
       interval: 30s
       timeout: 10s
       retries: 3
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "50m"
-        max-file: "3"
 
-  # Agent Zero Runner for failure rewriting
-  agent0-runner:
+  # Alert Slack Relay - Routes internal webhooks to Slack
+  alert-slack:
     build:
       context: .
-      dockerfile: Dockerfile.agent0
-    container_name: agent0-runner
+      dockerfile: Dockerfile
+    container_name: alert-slack
+    ports:
+      - "9005:9005"
     volumes:
-      - memory:/app/memory
-      - workspace:/app/workspace
+      - ./services:/app/services
     environment:
       - PYTHONUNBUFFERED=1
-      - COUNCIL_API_URL=http://council-api:8000
-    depends_on:
-      - council-api
-    restart: unless-stopped
-
-  # Harvest Job - Nightly failure collection and rewriting
-  harvest-job:
-    image: python:3.11-slim
-    container_name: harvest-job
-    volumes:
-      - memory:/app/memory
-      - data-lora:/app/data/lora
-      - ./tools:/app/tools
-      - ./scripts:/app/scripts
-      - ./deploy/cron/snapshot_prune:/etc/cron.d/lumina-snapshot-prune:ro
-      - /var/lib/node_exporter/textfile_collector:/var/lib/node_exporter/textfile_collector
-    environment:
-      - PYTHONUNBUFFERED=1
-      - AGENT0_URL=http://agent0-runner:8080
-      - REDIS_URL=redis://redis:6379
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_WEBHOOK_ALERTS=${SLACK_WEBHOOK_ALERTS}
+      - SLACK_WEBHOOK_PATCHES=${SLACK_WEBHOOK_PATCHES}
     command: >
       sh -c "
-        apt-get update && apt-get install -y cron curl python3-pip &&
-        pip install requests redis faiss-cpu &&
-        echo '0 2 * * * cd /app && python /app/tools/harvest_failures.py' | crontab - &&
-        chmod 644 /etc/cron.d/lumina-snapshot-prune &&
-        mkdir -p /snapshots &&
-        cron -f
+        cd /app/services &&
+        python alert_slack_relay.py
       "
-    depends_on:
-      - agent0-runner
-      - redis
     restart: unless-stopped
-
-  # LoRA Trainer - Nightly fine-tuning
-  lora-trainer:
-    build:
-      context: .
-      dockerfile: Dockerfile.trainer
-    container_name: lora-trainer
-    volumes:
-      - loras:/app/loras
-      - data-lora:/app/data/lora
-      - models:/app/models
-    environment:
-      - PYTHONUNBUFFERED=1
-      - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
-      - TRAINING_BUDGET_USD=0.20
-    runtime: nvidia
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - capabilities: ["gpu"]
-    command: >
-      sh -c "
-        echo '0 3 * * * cd /app && python train_lora.py --data /app/data/lora/latest.jsonl --output /app/loras/latest' | crontab - &&
-        cron -f
-      "
-    depends_on:
-      - harvest-job
-    restart: unless-stopped
+    networks:
+      - monitoring
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9005/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.alert-slack.rule=PathPrefix(`/webhook`)"
+      - "traefik.http.services.alert-slack.loadbalancer.server.port=9005"
 
   # Traefik Load Balancer with Canary Routing
   lb-traefik:
@@ -250,6 +209,8 @@ services:
       - council-api
       - council-api-canary
     restart: unless-stopped
+    networks:
+      - monitoring
     labels:
       - "traefik.enable=true"
 
@@ -266,14 +227,18 @@ services:
     depends_on:
       - council-api
     restart: unless-stopped
+    networks:
+      - monitoring
 
   # Prometheus monitoring with enhanced config
   prometheus:
     image: prom/prometheus:latest
+    container_name: prometheus
     ports:
       - "9090:9090"
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./rules:/etc/prometheus/rules
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -281,17 +246,23 @@ services:
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--web.enable-lifecycle'
     restart: unless-stopped
+    networks:
+      - monitoring
 
   # Grafana dashboard
   grafana:
     image: grafana/grafana:latest
+    container_name: grafana
     ports:
       - "3000:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
       - grafana-storage:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
     restart: unless-stopped
+    networks:
+      - monitoring
 
   # AlertManager for handling alerts
   alertmanager:
@@ -313,6 +284,8 @@ services:
           memory: 512m
           cpus: "0.5"
     restart: on-failure:3
+    networks:
+      - monitoring
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9093/-/healthy"]
       interval: 30s
@@ -327,9 +300,12 @@ services:
   # VRAM metrics exporter (hybrid implementation - metrics only)
   scheduler:
     build: ./scheduler
+    container_name: scheduler
     ports:
       - "9108:8000"
     restart: unless-stopped
+    networks:
+      - monitoring
     environment:
       - PROMETHEUS_PORT=8000
     healthcheck:
@@ -341,6 +317,7 @@ services:
   # Trainer container (managed by host systemd timer)
   trainer:
     image: trainer:latest
+    container_name: trainer
     deploy:
       resources:
         reservations:
@@ -349,6 +326,8 @@ services:
               count: 1
               capabilities: [gpu]
     restart: unless-stopped
+    networks:
+      - monitoring
     volumes:
       - ./models:/models
       - ./data:/data
@@ -356,21 +335,27 @@ services:
   # Node exporter for textfile collector
   node_exporter:
     image: prom/node-exporter:latest
+    container_name: node-exporter
     ports:
       - "9100:9100"
     volumes:
       - /var/lib/node_exporter/textfile_collector:/var/lib/node_exporter/textfile_collector:ro
     restart: unless-stopped
+    networks:
+      - monitoring
 
   # Patchctl microservice for automated patching
   patchctl:
     build: ./patchctl
+    container_name: patchctl
     ports:
       - "9001:9000"
     volumes:
       - ./:/app
       - ./config:/config
     restart: unless-stopped
+    networks:
+      - monitoring
 
 volumes:
   models:        # Static GGUF/Q4_K_M files
@@ -383,5 +368,6 @@ volumes:
   alertmanager-data:
 
 networks:
-  default:
-    name: council-network 
+  monitoring:
+    name: monitoring
+    driver: bridge 
