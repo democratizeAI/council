@@ -1,4 +1,4 @@
-# Prometheus Configuration for Trinity Council
+# Prometheus Configuration for Trinity Council - H1.5 Network Fix
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
@@ -6,7 +6,7 @@ global:
 scrape_configs:
   - job_name: 'prometheus'
     static_configs:
-      - targets: ['localhost:9090']
+      - targets: ['prometheus:9090']
 
   - job_name: 'council-api'
     static_configs:
@@ -16,11 +16,11 @@ scrape_configs:
 
   - job_name: 'guardian'
     static_configs:
-      - targets: ['guardian:8000']
+      - targets: ['guardian:9105']
     scrape_interval: 15s
     metrics_path: '/metrics'
 
-  - job_name: 'tiny-svc'
+  - job_name: 'builder-tiny-svc'
     static_configs:
       - targets: ['tiny-svc:8005']
     scrape_interval: 30s
@@ -32,8 +32,47 @@ scrape_configs:
     scrape_interval: 15s
     metrics_path: '/metrics'
 
+  - job_name: 'textfile-exporter'
+    static_configs:
+      - targets: ['textfile-exporter:9103']
+    scrape_interval: 30s
+    metrics_path: '/metrics'
+
+  - job_name: 'agent-heartbeat'
+    static_configs:
+      - targets: ['agent-heartbeat:9104']
+    scrape_interval: 15s
+    metrics_path: '/metrics'
+
+  - job_name: 'guide-loader'
+    static_configs:
+      - targets: ['guide-loader:9108']
+    scrape_interval: 15s
+    metrics_path: '/metrics'
+
+  - job_name: 'redis-exporter'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 15s
+    metrics_path: '/metrics'
+
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 30s
+    metrics_path: '/metrics'
+
+  - job_name: 'alertmanager'
+    static_configs:
+      - targets: ['alertmanager:9093']
+    scrape_interval: 30s
+    metrics_path: '/metrics'
+
+rule_files:
+  - "/etc/prometheus/rules/*.yml"
+
 alerting:
   alertmanagers:
     - static_configs:
         - targets:
-          - alertmanager:9093 
+          - alertmanager:9093
