@@ -82,9 +82,32 @@ jobs:
         curl -f http://localhost:8000/health || exit 1
 
     - name: promtool check rules
-      uses: prometheus/promtool-action@v0.3.0
-      with:
-        command: check rules monitoring/*.rules.yml
+      run: |
+        curl -LO https://github.com/prometheus/prometheus/releases/download/v3.4.1/prometheus-3.4.1.linux-amd64.tar.gz
+        tar xzf prometheus-3.4.1.linux-amd64.tar.gz
+        prometheus-3.4.1.linux-amd64/promtool check rules monitoring/*.rules.yml
+
+  grafana-import:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: import dashboards
+      env:
+        GF_HOST: http://grafana:3000
+        GF_TOKEN: ${{ secrets.GRAFANA_API_TOKEN }}
+      run: |
+        echo "Importing Grafana dashboards..."
+        for f in grafana/dashboards/*.json; do
+          echo "Importing $(basename "$f")..."
+          curl -s -H "Authorization: Bearer $GF_TOKEN" \
+               -H "Content-Type: application/json" \
+               -X POST ${GF_HOST}/api/dashboards/db \
+               -d @"$f" || echo "Failed to import $(basename "$f")"
+        done
 
   canary-fragmentation:
     runs-on: ubuntu-latest
