@@ -12,6 +12,7 @@
 | B-06 | Enterprise-Bot Integration | 🟡 READY | Infrastructure prepared |
 | B-07 | Nightly Mini-Soak Action | 🟡 READY | PNG telemetry configured |
 | B-08 | Guardian → Gemini Escalation | 🟢 ACTIVE | Audit loop operational |
+| OPS-99 | Restore orchestrator stack after reboot | ⬜ QUEUED | builder, guardian, idr-agent containers UP; mesh_bus > 0 msgs |
 
 ## Autonomous Status
 
