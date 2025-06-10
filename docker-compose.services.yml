@@ -1,0 +1,75 @@
+# OPS-99 Orchestrator Services Restoration
+# Additional services for full orchestrator stack
+
+version: '3.8'
+
+services:
+  # Qdrant Vector Database
+  qdrant:
+    image: qdrant/qdrant:v1.9.1
+    container_name: qdrant
+    volumes:
+      - qdrant_data:/qdrant/storage
+    ports: 
+      - "6333:6333"
+    restart: unless-stopped
+    networks:
+      - monitoring
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Builder Service
+  builder:
+    image: titan/builder:latest
+    container_name: builder
+    env_file: .env
+    depends_on:
+      - redis
+    ports: 
+      - "9100:9100"
+    restart: unless-stopped
+    networks:
+      - monitoring
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9100/metrics"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # IDR Agent Service  
+  idr-agent:
+    image: titan/idr-agent:latest
+    container_name: idr-agent
+    env_file: .env
+    depends_on:
+      - council-api
+    ports: 
+      - "9110:9110"
+    restart: unless-stopped
+    networks:
+      - monitoring
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9110/metrics"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Enhanced Council API with Ledger Loading
+  council-api-enhanced:
+    extends:
+      service: council-api
+    environment:
+      - LEDGER_PATH=/app/docs/ledger/latest.md
+      - LEDGER_ENABLED=true
+    volumes:
+      - ./docs:/app/docs:ro
+
+volumes:
+  qdrant_data:
+
+networks:
+  monitoring:
+    external: true 

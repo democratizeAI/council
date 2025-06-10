@@ -104,4 +104,36 @@ groups:
             1h Average: {{ with query "avg_over_time(histogram_quantile(0.95, rate(council_router_latency_seconds_bucket[1h]))[1h])" }}{{ . | first | value | humanizeDuration }}{{ end }}
             
             The previous latency anomaly has been resolved.
-          runbook_url: "https://wiki.titan.local/runbooks/council-latency-recovery" 
+          runbook_url: "https://wiki.titan.local/runbooks/council-latency-recovery"
+
+  - name: council_latency_anomaly
+    rules:
+    # Main anomaly detection rule
+    - alert: CouncilLatencyAnomaly
+      expr: (
+        rate(council_request_duration_seconds_sum[5m]) /
+        rate(council_request_duration_seconds_count[5m])
+      ) > (
+        avg_over_time(
+          (rate(council_request_duration_seconds_sum[5m]) /
+           rate(council_request_duration_seconds_count[5m]))[30m:5m]
+        ) * 2.5
+      )
+      for: 2m
+      labels:
+        severity: warning
+        service: council-api
+        alert_type: anomaly
+      annotations:
+        summary: "Council API latency anomaly detected"
+        description: "Council API response time {{ $value }}s is {{ printf \"%.1f\" (query \"(rate(council_request_duration_seconds_sum[5m])/rate(council_request_duration_seconds_count[5m])) / (avg_over_time((rate(council_request_duration_seconds_sum[5m])/rate(council_request_duration_seconds_count[5m]))[30m:5m]))\") }}x higher than baseline"
+        runbook_url: "https://docs.council.ai/runbook/latency-anomaly"
+
+    # Recording rule for baseline calculation
+    - record: council_latency_baseline_30m
+      expr: avg_over_time(
+        (rate(council_request_duration_seconds_sum[5m]) /
+         rate(council_request_duration_seconds_count[5m]))[30m:5m]
+      )
+      labels:
+        metric_type: "baseline" 

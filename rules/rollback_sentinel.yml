@@ -1,0 +1,29 @@
+# Rollback Sentinel Monitoring Rules
+# Monitors rollback system health and readiness
+
+groups:
+- name: rollback_sentinel
+  rules:
+  # Rollback sentinel ready check (OPS-99 requirement)
+  - alert: RollbackSentinelReady
+    expr: rollback_sentinel_active == 1
+    for: 0s
+    labels:
+      severity: info
+      service: rollback-sentinel
+      alert_state: inactive
+    annotations:
+      summary: "Rollback sentinel is ready and monitoring"
+      description: "Sentinel active and monitoring for rollback conditions"
+
+  # Rollback sentinel down alert  
+  - alert: RollbackSentinelDown
+    expr: rollback_sentinel_active == 0
+    for: 30s
+    labels:
+      severity: critical
+      service: rollback-sentinel
+      action: escalate
+    annotations:
+      summary: "Rollback sentinel monitoring is down"
+      description: "Sentinel inactive for 30s - automatic rollback disabled" 
