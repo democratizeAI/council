@@ -1,0 +1,107 @@
+groups:
+  - name: council_anomaly_detection
+    rules:
+      # M-310: Council Latency Anomaly Rule
+      # Fires when P95 latency exceeds 110% of 1-hour rolling average
+      - alert: CouncilLatencyAnomaly
+        expr: |
+          histogram_quantile(0.95, rate(council_router_latency_seconds_bucket[5m]))
+          > 
+          (avg_over_time(histogram_quantile(0.95, rate(council_router_latency_seconds_bucket[1h]))[1h]) * 1.10)
+        for: 2m
+        labels:
+          severity: warning
+          component: council-router
+          anomaly_type: latency_spike
+          rule_id: M-310
+        annotations:
+          summary: "Council router P95 latency anomaly detected"
+          description: |
+            Current P95 latency {{ $value | humanizeDuration }} exceeds 110% of 1-hour average.
+            This indicates a significant performance degradation requiring investigation.
+            
+            Current P95: {{ $value | humanizeDuration }}
+            1h Average: {{ with query "avg_over_time(histogram_quantile(0.95, rate(council_router_latency_seconds_bucket[1h]))[1h])" }}{{ . | first | value | humanizeDuration }}{{ end }}
+            Threshold: 110% of average
+            
+            Impact: User requests experiencing elevated latency
+            Recommended Action: Check council-router logs and resource utilization
+          runbook_url: "https://wiki.titan.local/runbooks/council-latency-anomaly"
+          dashboard_url: "http://grafana:3000/d/council-anomalies/council-anomalies?orgId=1&var-instance=all"
+
+      # Supporting metric: Latency deviation percentage
+      - record: council:latency_deviation_percent
+        expr: |
+          (
+            histogram_quantile(0.95, rate(council_router_latency_seconds_bucket[5m]))
+            - 
+            avg_over_time(histogram_quantile(0.95, rate(council_router_latency_seconds_bucket[1h]))[1h])
+          ) 
+          / 
+          avg_over_time(histogram_quantile(0.95, rate(council_router_latency_seconds_bucket[1h]))[1h]) 
+          * 100
+        labels:
+          component: council-router
+
+      # Supporting metric: Latency baseline (1-hour average)
+      - record: council:latency_baseline_1h
+        expr: avg_over_time(histogram_quantile(0.95, rate(council_router_latency_seconds_bucket[1h]))[1h])
+        labels:
+          component: council-router
+
+      # Supporting metric: Current P95 latency
+      - record: council:latency_p95_current
+        expr: histogram_quantile(0.95, rate(council_router_latency_seconds_bucket[5m]))
+        labels:
+          component: council-router
+
+      # Alert for extreme anomalies (150% threshold)
+      - alert: CouncilLatencyAnomaly_Critical
+        expr: |
+          histogram_quantile(0.95, rate(council_router_latency_seconds_bucket[5m]))
+          > 
+          (avg_over_time(histogram_quantile(0.95, rate(council_router_latency_seconds_bucket[1h]))[1h]) * 1.50)
+        for: 1m
+        labels:
+          severity: critical
+          component: council-router
+          anomaly_type: latency_spike_severe
+          rule_id: M-310-CRITICAL
+        annotations:
+          summary: "CRITICAL: Council router severe latency anomaly"
+          description: |
+            Current P95 latency {{ $value | humanizeDuration }} exceeds 150% of 1-hour average.
+            This indicates a severe performance issue requiring immediate action.
+            
+            Current P95: {{ $value | humanizeDuration }}
+            1h Average: {{ with query "avg_over_time(histogram_quantile(0.95, rate(council_router_latency_seconds_bucket[1h]))[1h])" }}{{ . | first | value | humanizeDuration }}{{ end }}
+            Deviation: {{ with query "council:latency_deviation_percent" }}{{ . | first | value | printf "%.1f" }}%{{ end }}
+            
+            Impact: Severe user experience degradation
+            Action Required: Immediate investigation and potential rollback
+          runbook_url: "https://wiki.titan.local/runbooks/council-latency-critical"
+
+      # Recovery alert when anomaly resolves
+      - alert: CouncilLatencyAnomaly_Resolved
+        expr: |
+          histogram_quantile(0.95, rate(council_router_latency_seconds_bucket[5m]))
+          <= 
+          (avg_over_time(histogram_quantile(0.95, rate(council_router_latency_seconds_bucket[1h]))[1h]) * 1.05)
+          and
+          ALERTS{alertname="CouncilLatencyAnomaly"} == 1
+        for: 30s
+        labels:
+          severity: info
+          component: council-router
+          anomaly_type: latency_recovery
+          rule_id: M-310-RECOVERY
+        annotations:
+          summary: "Council router latency anomaly resolved"
+          description: |
+            Council router P95 latency has returned to normal levels (within 105% of baseline).
+            
+            Current P95: {{ $value | humanizeDuration }}
+            1h Average: {{ with query "avg_over_time(histogram_quantile(0.95, rate(council_router_latency_seconds_bucket[1h]))[1h])" }}{{ . | first | value | humanizeDuration }}{{ end }}
+            
+            The previous latency anomaly has been resolved.
+          runbook_url: "https://wiki.titan.local/runbooks/council-latency-recovery" 
