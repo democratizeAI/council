@@ -1,0 +1,57 @@
+display_information:
+  name: Trinity-CommLink
+  description: Press room filter and accuracy auditor for Trinity agents
+  background_color: "#2c3e50"
+
+features:
+  bot_user:
+    display_name: council-bot
+    always_online: true
+
+  slash_commands:
+    - command: /commlink
+      description: "CommLink specialist for drift monitoring"
+      usage_hint: "<command> [args]"
+      
+    - command: /o3
+      description: "Delegate prompt to o3 model"
+      usage_hint: "<prompt>"
+      
+    - command: /opus
+      description: "Ask the Opus Strategist"
+      usage_hint: "<prompt>"
+      
+    - command: /phi3
+      description: "Query the local Phi-3-mini backend"
+      usage_hint: "<prompt>"
+
+oauth_config:
+  scopes:
+    bot:
+      - chat:write
+      - chat:write.public
+      - commands
+      - app_mentions:read
+      - channels:history
+      - channels:read
+      - groups:read
+      - groups:history
+      - im:read
+      - im:history
+      - mpim:read
+
+settings:
+  event_subscriptions:
+    bot_events:
+      - app_home_opened
+      - app_mention
+      - message.channels
+      - message.groups
+      - message.im
+      
+  interactivity:
+    is_enabled: true
+    
+  org_deploy_enabled: false
+  socket_mode_enabled: true
+  token_rotation_enabled: false 

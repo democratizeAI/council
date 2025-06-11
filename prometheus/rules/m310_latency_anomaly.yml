@@ -1,0 +1,37 @@
+groups:
+  - name: m310_latency_anomaly
+    rules:
+      - alert: CouncilLatencyAnomaly
+        expr: histogram_quantile(0.95, rate(council_router_latency_seconds_bucket[5m])) > 0.200
+        for: 15s
+        labels:
+          severity: warning
+          component: council_router
+          drill: ext24b
+          rule_id: m310
+        annotations:
+          summary: "Council Router P95 latency anomaly detected"
+          description: "P95 latency is {{ $value }}s, which exceeds the 200ms threshold for 15 seconds"
+          dashboard: "http://grafana:3000/d/council-latency/council-latency"
+          runbook: "https://docs.council.ai/runbooks/latency-anomaly"
+          
+      - alert: CouncilLatencyCritical
+        expr: histogram_quantile(0.95, rate(council_router_latency_seconds_bucket[5m])) > 0.500
+        for: 30s
+        labels:
+          severity: critical
+          component: council_router
+          rule_id: m310_critical
+        annotations:
+          summary: "Council Router P95 latency critical"
+          description: "P95 latency is {{ $value }}s, which exceeds the 500ms critical threshold"
+          
+      # Supporting metrics for anomaly detection
+      - record: council:latency_p95_5m
+        expr: histogram_quantile(0.95, rate(council_router_latency_seconds_bucket[5m]))
+        
+      - record: council:latency_p95_1h
+        expr: histogram_quantile(0.95, rate(council_router_latency_seconds_bucket[1h]))
+        
+      - record: council:latency_spike_ratio
+        expr: council:latency_p95_5m / council:latency_p95_1h 

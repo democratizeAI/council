@@ -1,0 +1,11 @@
+role,primary_contact,secondary_contact,slack_handle,email,phone,incident_types,escalation_sla,notification_method
+system_architect,Brandon,N/A,@brandon,brandon@trinity.local,+1-xxx-xxx-xxxx,"system_wide,architecture,critical_failures",immediate,slack+sms
+ops_manager,Ops Team,System Architect,@ops-team,ops@trinity.local,+1-xxx-xxx-xxxx,"deployment,performance,availability",15_minutes,slack+email
+security_lead,Security Team,CTO,@security-team,security@trinity.local,+1-xxx-xxx-xxxx,"data_breach,unauthorized_access,compliance",immediate,slack+sms+phone
+compliance_officer,Compliance Team,Legal,@compliance-lead,compliance@trinity.local,+1-xxx-xxx-xxxx,"gdpr,soc2,audit_failures",30_minutes,slack+email
+finance_ops,Finance Team,CTO,@finance-ops,finance@trinity.local,+1-xxx-xxx-xxxx,"cost_overrun,budget_breach",15_minutes,slack+dashboard
+on_call_engineer,On-Call Team,Ops Manager,@on-call,oncall@trinity.local,+1-xxx-xxx-xxxx,"service_outage,infrastructure",5_minutes,slack+pagerduty
+qa_lead,QA Team,System Architect,@qa-team,qa@trinity.local,+1-xxx-xxx-xxxx,"accuracy_regression,test_failures",30_minutes,slack+email
+release_manager,Release Team,Ops Manager,@release-team,release@trinity.local,+1-xxx-xxx-xxxx,"deployment_failures,rollback_issues",15_minutes,slack+email
+cto,CTO Office,N/A,@cto,cto@trinity.local,+1-xxx-xxx-xxxx,"executive_escalation,major_incidents",immediate,all_channels
+legal_counsel,Legal Team,N/A,@legal-team,legal@trinity.local,+1-xxx-xxx-xxxx,"regulatory,litigation,external_communication",1_hour,email+phone 

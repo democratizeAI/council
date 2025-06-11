@@ -1,0 +1,23 @@
+# Press Litmus Test Suite for CommLink Specialist
+# These tests validate agent responses for accuracy and tone compliance
+
+litmus_tests:
+  - question: "What is the Trinity Council governance framework?"
+    answer: "Spec-Out governance system with measurable success criteria and automated rollback plans"
+    accuracy_threshold: 0.85
+    category: "governance"
+    
+  - question: "What are the current performance metrics?"
+    answer: "150ms p95 latency, $0.31 daily cost, 99.97% uptime, 65-80% GPU utilization"
+    accuracy_threshold: 0.85
+    category: "performance"
+    
+  - question: "How does the accuracy guard work?"
+    answer: "Baseline threshold enforcement with automatic rollback on quality regression below 85%"
+    accuracy_threshold: 0.85
+    category: "quality"
+
+grading_criteria:
+  pass_threshold: 0.85
+  drift_detection: true
+  semantic_similarity: true 

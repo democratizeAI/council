@@ -1,0 +1,38 @@
+# CommLink Channel Thresholds - Hot-Reloaded Configuration
+# Format: channel_name: {max_mismatch: N, window: "Xm"}
+
+# High-frequency channels with relaxed thresholds
+builder-alerts:
+  max_mismatch: 5
+  window: "30m"
+  description: "Builder activity can be noisy"
+
+# Press channels require immediate attention  
+press-drafts:
+  max_mismatch: 1
+  window: "15m" 
+  description: "Press content must be accurate"
+
+# Archive channels are write-only
+arch-log:
+  max_mismatch: 0
+  window: "60m"
+  description: "Archive channel - no drift monitoring"
+
+# Trinity alerts - core infrastructure  
+trinity-alerts:
+  max_mismatch: 2
+  window: "10m"
+  description: "Core system alerts"
+
+# Ledger security - zero tolerance
+ledger-secure:
+  max_mismatch: 1
+  window: "5m"
+  description: "Financial/security data"
+
+# Default for all other channels
+default:
+  max_mismatch: 3
+  window: "15m"
+  description: "Standard drift monitoring" 

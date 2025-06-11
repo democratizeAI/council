@@ -93,4 +93,17 @@ groups:
         severity: warning
       annotations:
         summary: "Low disk space"
-        description: "Filesystem has less than 15% space remaining" 
+        description: "Filesystem has less than 15% space remaining"
+
+- name: template_detection
+  rules:
+    - alert: Phi3TemplateAnswer
+      expr: increase(phi3_template_total[2m]) > 0
+      for: 1m
+      labels:
+        severity: "warning"
+        team: "trinity"
+      annotations:
+        summary: "Phi3 template response detected"
+        description: "Phi3 returned boilerplate template response - system_prompt not working"
+        runbook_url: "https://wiki.trinity.local/alerts/phi3-template" 

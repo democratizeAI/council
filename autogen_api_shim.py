@@ -51,15 +51,70 @@ except Exception as e:
 # Add the AutoGen path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'fork', 'swarm_autogen'))
 
-# Import only exceptions at module level - RouterCascade will be imported conditionally
+# Import RouterCascade and exceptions at module level
 try:
-    from router_cascade import MockResponseError
-except ImportError:
+    # Try the complex RouterCascade first
+    from router_cascade import RouterCascade, MockResponseError
+    ROUTER_CASCADE_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: Complex RouterCascade not available: {e}")
+    ROUTER_CASCADE_AVAILABLE = False
     # Define a placeholder exception if RouterCascade isn't available
     class MockResponseError(Exception):
         def __init__(self, response_text):
             self.response_text = response_text
             super().__init__(f"Mock response: {response_text}")
+    
+    # Use simple VLLM-based RouterCascade
+    import os
+    import httpx
+    import time
+    
+    class RouterCascade:
+        """Simple VLLM-based RouterCascade - no complex reasoning chains"""
+        
+        def __init__(self):
+            self.vllm_url = os.getenv("VLLM_BASE_URL", "http://localhost:9300")
+            print(f"🚀 Simple RouterCascade initialized - VLLM at {self.vllm_url}")
+        
+        async def route_query(self, prompt: str) -> dict:
+            """Direct route to simple real API - no reasoning chains"""
+            start_time = time.time()
+            
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        f"{self.vllm_url}/orchestrate",
+                        json={"prompt": prompt},
+                        headers={"Content-Type": "application/json"},
+                        timeout=8.0
+                    )
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        latency_ms = (time.time() - start_time) * 1000
+                        
+                        return {
+                            "text": data.get("response", data.get("text", "No response")),
+                            "model": data.get("model_used", "simple-real-api"),
+                            "confidence": 0.95,
+                            "skill_type": "vllm_direct",
+                            "timestamp": time.time(),
+                            "latency_ms": latency_ms
+                        }
+                    else:
+                        raise Exception(f"API error: {response.status_code}")
+                        
+            except Exception as e:
+                latency_ms = (time.time() - start_time) * 1000
+                return {
+                    "text": f"Simple API unavailable: {str(e)}",
+                    "model": "error",
+                    "confidence": 0.0,
+                    "skill_type": "error",
+                    "timestamp": time.time(),
+                    "latency_ms": latency_ms
+                }
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -236,10 +291,14 @@ async def startup_event():
         logger.info("🚫 Bypass mode enabled - using ultra-fast mock router")
         router = MockRouter()
         logger.info("✅ Mock router initialized successfully")
+    elif not ROUTER_CASCADE_AVAILABLE:
+        logger.error("❌ RouterCascade not available - falling back to mock router")
+        router = MockRouter()
+        logger.info("✅ Fallback mock router initialized successfully")
     else:
         try:
             router = RouterCascade()
-            logger.info("✅ Router initialized successfully")
+            logger.info("✅ RouterCascade initialized successfully")
         except Exception as e:
             logger.error(f"❌ Failed to initialize router: {e}")
             logger.info("🚫 Falling back to mock router")

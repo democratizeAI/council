@@ -248,41 +248,72 @@ def reload_lora(lora: str):
 @app.post("/orchestrate", response_model=OrchestrationResponse)
 def orchestrate(payload: OrchestrationRequest):
     """
-    Enhanced orchestration endpoint for soak testing
-    Returns realistic responses with proper latency simulation
+    Architecture-aware orchestration endpoint 
+    Routes to VLLM with system prompts from agent registry
     """
     start_time = time.time()
     
     try:
         logger.info(f"🎯 Orchestrating: {payload.prompt[:50]}...")
         
-        # Enhanced flag processing
-        model_used = "gpt-4" if "FLAG_MATH" in payload.flags else "gpt-3.5-turbo"
+        # Load agent registry to get system_prompt
+        import yaml
+        registry_path = "../agents/registry.yaml"
+        agent_row = {}
         
-        # More realistic processing simulation
-        if "FLAG_MATH" in payload.flags:
-            time.sleep(0.08)  # Math queries take longer
-        elif len(payload.prompt) > 1000:
-            time.sleep(0.12)  # Long prompts take longer
-        else:
-            time.sleep(0.03)  # Quick responses
+        try:
+            with open(registry_path, 'r') as f:
+                registry = yaml.safe_load(f)
+                agent_row = registry.get('agents', {}).get('phi3mini', {})
+        except Exception as e:
+            logger.warning(f"⚠️ Registry load failed: {e}")
         
-        # Enhanced response generation
-        if "2+2" in payload.prompt.lower():
-            response = "The answer is 4. This is a basic arithmetic operation: 2 + 2 = 4."
-        elif "math" in payload.prompt.lower() or "FLAG_MATH" in payload.flags:
-            response = f"I can solve mathematical problems. For '{payload.prompt}', let me provide a detailed solution..."
-        elif "test" in payload.prompt.lower():
-            response = f"This is a test response for soak testing. Prompt processed: '{payload.prompt}'"
-        else:
-            response = f"I understand your query: '{payload.prompt}'. How can I provide more specific assistance?"
+        # Prepare VLLM payload
+        vllm_payload = {
+            "model": agent_row.get("model", "phi-3-mini-int4"),
+            "prompt": payload.prompt,
+            "temperature": payload.temperature,
+            "max_tokens": payload.max_tokens,
+            "stream": False
+        }
+        
+        # A-2: Prepend system_prompt if available in registry
+        if agent_row.get("system_prompt"):
+            logger.info("🧠 Using system_prompt from registry for architecture awareness")
+            full_prompt = f"{agent_row['system_prompt']}\n\nUser: {payload.prompt}\nAssistant:"
+            vllm_payload["prompt"] = full_prompt
+        
+        # Route to actual VLLM endpoint
+        import httpx
+        vllm_url = agent_row.get("base_url", "http://phi3_vllm:8000")
+        
+        with httpx.Client(timeout=30.0) as client:
+            vllm_response = client.post(
+                f"{vllm_url}/v1/completions",
+                json=vllm_payload,
+                headers={"Content-Type": "application/json"}
+            )
+            
+            if vllm_response.status_code == 200:
+                vllm_data = vllm_response.json()
+                response = vllm_data["choices"][0]["text"].strip()
+                model_used = f"vllm-{agent_row.get('model', 'phi3')}"
+                
+                # A-3: NO template fallback - if blank, return 502 for Prometheus alert
+                if not response.strip():
+                    logger.error("🚨 Empty response from VLLM - returning 502")
+                    raise HTTPException(status_code=502, detail="VLLM returned empty response")
+                    
+            else:
+                logger.error(f"❌ VLLM call failed: {vllm_response.status_code}")
+                raise HTTPException(status_code=502, detail="VLLM service unavailable")
         
         # Get current memory usage
         memory_mb = psutil.Process().memory_info().rss / (1024 * 1024)
         
         latency_ms = int((time.time() - start_time) * 1000)
         
-        logger.info(f"✅ Orchestration completed in {latency_ms}ms using {model_used}")
+        logger.info(f"✅ VLLM orchestration completed in {latency_ms}ms using {model_used}")
         
         return OrchestrationResponse(
             response=response,
@@ -292,6 +323,8 @@ def orchestrate(payload: OrchestrationRequest):
             memory_usage_mb=round(memory_mb, 2)
         )
         
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions as-is
     except Exception as e:
         logger.error(f"❌ Orchestration failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))

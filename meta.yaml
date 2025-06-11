@@ -1,8 +1,8 @@
 qa_300_dual_render:
-  ast_similarity: 98.3%
+  ast_similarity: 98.6%
   quorum_decision: pass
   route_to: none
-  semantic_distance: 0.0174
+  semantic_distance: 0.0137
   threshold: 0.03
   files_compared:
     sonnet_a: test_samples/sonnet_a_output.py
@@ -10,6 +10,6 @@ qa_300_dual_render:
   metrics:
     token_similarity: 0.9783
     structure_similarity: 0.9952
-    execution_time_ms: 16794.55
-  timestamp: '2025-06-11T09:57:01.186236'
+    execution_time_ms: 22232.63
+  timestamp: '2025-06-11T10:26:42.661949'
   rollback: qa-revert

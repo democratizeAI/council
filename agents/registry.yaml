@@ -1,0 +1,246 @@
+# Trinity Agent Registry - CommLink Specialist Source of Truth
+# Format: Agent roster for press monitoring and drift detection
+
+version: "v0.1-freeze"
+last_updated: "2025-01-18T00:00:00Z"
+commlink_compatible: true
+
+agents:
+  # Core VLLM Agent (Architecture-Aware)
+  phi3mini:
+    id: "phi3mini"
+    type: "local-vllm"
+    role: "primary-inference"
+    purpose: "Architecture-aware AI inference with Trinity stack context"
+    tone: "knowledgeable, technical, Trinity-aware"
+    model: "phi-3-mini-int4"
+    base_url: "http://phi3_vllm:8000"
+    system_prompt: |
+      You are Phi-3-mini running in the Trinity AutoGen Council Enterprise Multi-Agent Swarm.
+      
+      TRINITY ARCHITECTURE (7-Node Taxonomy):
+      
+      1. COUNCIL-API (http://localhost:9010) - Primary orchestration hub
+         • Role: Central reasoning coordinator
+         • Capabilities: Agent routing, response fusion, Council consensus
+         • Integration: Redis streams for inter-agent communication
+      
+      2. AUTOGEN-API-SHIM (http://localhost:8001) - API gateway  
+         • Role: External interface and protocol adaptation
+         • Capabilities: REST/WebSocket endpoints, Socket Mode handler
+         • Integration: Routes to Council API and simple real API
+      
+      3. SIMPLE-REAL-API (http://localhost:9300) - Direct inference
+         • Role: Template-free AI responses
+         • Capabilities: Real-time inference, joke generation, LG-210 explanations
+         • Integration: Bypasses complex reasoning chains
+      
+      4. SOCKET-MODE-HANDLER - Slack integration
+         • Role: Enterprise chat interface
+         • Capabilities: Real-time Slack commands, Trinity-aware responses
+         • Integration: Routes through Council API to your inference engine
+      
+      5. LoRA-GAUNTLET (LG-210) - Model validation system
+         • Role: Automated fine-tune quality assurance
+         • Capabilities: Pass/fail validation, accuracy regression detection
+         • Integration: Hooks into training pipeline, auto-revert on failure
+      
+      6. INTENT-DISTILLATION (IDR-01) - Input normalization
+         • Role: Universal input processing across interfaces
+         • Capabilities: Slack/UI/BCI normalization, ledger entry generation
+         • Integration: Feeds structured intents to Council system
+      
+      7. SPEC-OUT GOVERNANCE - Requirements framework
+         • Role: Transform directives into measurable specifications
+         • Capabilities: Success criteria generation, CI enforcement
+         • Integration: Blocks ambiguous work, enables automated scaffolding
+      
+      When asked about system architecture, explain these seven nodes and their interconnections.
+      When asked about LG-210, explain it's the LoRA Gauntlet automated validation system.
+      When responding to technical queries, reference actual Trinity components, not generic AI concepts.
+      
+      You are part of an enterprise-grade infrastructure with the same safety nets as big tech,
+      running on consumer hardware with governance, compliance, and cost controls.
+    guardrails:
+      - "architecture_context_required"
+      - "no_template_responses"
+      - "trinity_awareness_enforced"
+    specialties: ["architecture_explanation", "trinity_components", "technical_context"]
+
+  # Core Council Heads
+  council-api:
+    id: "council-api"
+    role: "orchestration-llm"
+    purpose: "Primary reasoning and coordination hub"
+    tone: "analytical, precise, technical"
+    model: "microsoft/Phi-3-mini-4k-instruct"
+    persona_file: "prompts/council-api.md"
+    guardrails:
+      - "accuracy_baseline_85_percent"
+      - "cost_cap_daily_usd_3.33"
+      - "no_hallucination_policy"
+    specialties: ["reasoning", "planning", "integration"]
+    
+  opus-strategist:
+    id: "opus"
+    type: "remote-anthropic"
+    role: "strategic-planner"  
+    purpose: "High-level planning and architectural decisions"
+    tone: "visionary, strategic, forward-thinking"
+    model: "claude-3-opus"
+    base_url: "https://api.anthropic.com/v1/messages"
+    auth_env: "ANTHROPIC_API_KEY"
+    persona_file: "prompts/opus.md"
+    guardrails:
+      - "enterprise_security_mode"
+      - "cost_awareness_enabled"
+    specialties: ["strategy", "architecture", "vision"]
+    
+  o3-reasoning:
+    id: "o3"
+    type: "remote-openai"
+    role: "advanced-reasoning"
+    purpose: "Complex reasoning and analysis tasks"
+    tone: "analytical, thorough, reasoning-focused"
+    model: "o1-preview"
+    base_url: "https://api.openai.com/v1/chat/completions"
+    auth_env: "OPENAI_API_KEY"
+    persona_file: "prompts/o3.md"
+    guardrails:
+      - "cost_monitoring_required"
+      - "reasoning_chain_validation"
+    specialties: ["complex_reasoning", "analysis", "problem_solving"]
+    
+  gemini-auditor:
+    id: "gemini"
+    role: "compliance-auditor"
+    purpose: "Code quality, security, and compliance validation"
+    tone: "thorough, analytical, security-focused"
+    model: "gemini-1.5-pro"
+    persona_file: "prompts/gemini.md"
+    guardrails:
+      - "security_first_policy"
+      - "compliance_enforcement"
+    specialties: ["security", "compliance", "quality_assurance"]
+    
+  sonnet-builder:
+    id: "sonnet"
+    role: "implementation-engineer"
+    purpose: "Code generation, scaffolding, and implementation"
+    tone: "practical, efficient, solution-oriented"
+    model: "claude-3.5-sonnet"
+    persona_file: "prompts/sonnet.md"
+    guardrails:
+      - "production_ready_code"
+      - "testing_required"
+    specialties: ["coding", "scaffolding", "implementation"]
+    
+  router-cascade:
+    id: "router"
+    role: "integration-coordinator"
+    purpose: "Request routing and response integration"
+    tone: "efficient, precise, coordinating"
+    model: "phi-3-mini"
+    persona_file: "prompts/router.md"
+    guardrails:
+      - "load_balancing_aware"
+      - "latency_optimization"
+    specialties: ["routing", "integration", "optimization"]
+
+  # Specialized Service Agents
+  builder-tiny:
+    id: "builder-tiny"
+    role: "automation-bot"
+    purpose: "Automated PR creation and CI/CD integration"
+    tone: "systematic, reliable, automated"
+    model: "phi-3-mini"
+    persona_file: "prompts/builder-tiny.md"
+    guardrails:
+      - "ci_gate_required"
+      - "approval_chain_enforced"
+    specialties: ["automation", "cicd", "scaffolding"]
+    
+  idr-01:
+    id: "idr-01"
+    role: "intent-distillation"
+    purpose: "Universal input normalization and intent extraction"
+    tone: "analytical, parsing, clarifying"
+    model: "phi-3-mini"
+    persona_file: "prompts/idr-01.md"
+    guardrails:
+      - "intent_clarity_required"
+      - "spec_out_compliance"
+    specialties: ["parsing", "normalization", "intent_extraction"]
+    
+  lora-gauntlet:
+    id: "lora-gauntlet"
+    role: "model-validation"
+    purpose: "Automated fine-tune validation and quality assurance"
+    tone: "rigorous, testing-focused, quality-driven"
+    model: "phi-3-mini"
+    persona_file: "prompts/lora-gauntlet.md"
+    guardrails:
+      - "accuracy_regression_detection"
+      - "auto_revert_on_failure"
+    specialties: ["model_testing", "quality_assurance", "validation"]
+
+  # External/Premium Agents
+  first-mate:
+    id: "first-mate"
+    role: "rapid-response"
+    purpose: "Ultra-fast initial responses (<150ms)"
+    tone: "quick, helpful, bridging"
+    model: "phi-3-mini-optimized"
+    persona_file: "prompts/first-mate.md"
+    guardrails:
+      - "sub_150ms_latency"
+      - "council_overwrite_allowed"
+    specialties: ["speed", "initial_response", "user_experience"]
+
+# Voice Personas (Council Symphony)
+voice_personas:
+  reason:
+    emoji: "🧠"
+    color: "cyan-400"
+    purpose: "Logical analysis and structured thinking"
+    tone: "analytical, methodical, precise"
+    
+  spark:
+    emoji: "⚡"
+    color: "amber-400"
+    purpose: "Creative solutions and innovation"
+    tone: "energetic, creative, bold"
+    
+  edge:
+    emoji: "⚔️"
+    color: "pink-400"
+    purpose: "Critical analysis and boundary testing"
+    tone: "challenging, sharp, direct"
+    
+  heart:
+    emoji: "❤️"
+    color: "lime-400"
+    purpose: "Empathy and user-focused clarity"
+    tone: "warm, empathetic, clear"
+    
+  vision:
+    emoji: "🔮"
+    color: "violet-400"
+    purpose: "Strategic alignment and future planning"
+    tone: "visionary, strategic, forward-looking"
+
+# System-wide Configuration
+system_config:
+  default_accuracy_threshold: 0.85
+  default_cost_cap_daily_usd: 3.33
+  default_latency_target_ms: 150
+  compliance_mode: "soc2_ready"
+  audit_log_required: true
+  
+# CommLink Integration Settings
+commlink_config:
+  press_mode_enabled: true
+  real_time_monitoring: true
+  drift_detection_threshold: 0.05
+  alert_channel: "#builder-alerts"
+  escalation_contact: "@brandon" 

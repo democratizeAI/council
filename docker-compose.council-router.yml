@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  council-router:
+    build:
+      context: ./services/council_router
+      dockerfile: Dockerfile
+    container_name: council_router
+    ports:
+      - "8082:8080"   # Main API
+      - "9102:9100"   # Metrics endpoint
+    environment:
+      - PROMETHEUS_ENABLED=true
+      - METRICS_PORT=9100
+      - LOG_LEVEL=INFO
+      - LATENCY_HISTOGRAM_ENABLED=true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - monitoring
+    restart: unless-stopped
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.port=9100"
+      - "prometheus.path=/metrics"
+
+networks:
+  monitoring:
+    external: true 

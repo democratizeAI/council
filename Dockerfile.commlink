@@ -1,0 +1,39 @@
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+RUN pip install --no-cache-dir \
+    slack-sdk \
+    pyyaml \
+    prometheus_client \
+    requests
+
+# Copy application files
+COPY commlink_specialist.py .
+COPY commlink_config.txt .
+COPY agents/ ./agents/
+COPY prompts/ ./prompts/
+COPY tests/ ./tests/
+COPY ops/ ./ops/
+COPY docs/ ./docs/
+COPY templates/ ./templates/
+
+# Create logs directory
+RUN mkdir -p /app/logs
+
+# Expose Prometheus metrics port
+EXPOSE 8088
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD curl -f http://localhost:8088/metrics || exit 1
+
+# Run CommLink Specialist
+CMD ["python", "-u", "commlink_specialist.py"] 

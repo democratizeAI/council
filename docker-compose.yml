@@ -59,6 +59,12 @@ services:
       - COUNCIL_POCKET_MODE=true
       - GPU_MEMORY_FRACTION=0.8
       - CUDA_VISIBLE_DEVICES=0
+      # Disable all mock modes - use real inference
+      - AGENT_TEST_MODE=false
+      - ROUTER_TEST_MODE=false
+      - BUILDER_STUB_MODE=false
+      - AUDIT_MOCK_MODE=false
+      - SWARM_TEST_MODE=false
     volumes:
       - ./memory:/app/memory
       - ./logs:/app/logs
@@ -366,6 +372,70 @@ services:
       - ./:/app
       - ./config:/config
     restart: unless-stopped
+
+  # CommLink Specialist - Press Room Filter & Accuracy Auditor
+  commlink:
+    build:
+      context: .
+      dockerfile: Dockerfile.commlink
+    container_name: commlink-specialist
+    ports:
+      - "8088:8088"  # Prometheus metrics
+    environment:
+      - PYTHONUNBUFFERED=1
+      - COMMLINK_ENABLED=true
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      - prometheus
+      - grafana
+      - council-api
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8088/metrics"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "1.0"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # Embedder Sidecar - Vector embedding service with 4GB RAM cap
+  embedder:
+    image: huggingface/text-embeddings-inference:latest
+    container_name: council-embedder
+    ports:
+      - "8089:8080"
+    environment:
+      - MODEL_ID=sentence-transformers/all-MiniLM-L6-v2
+      - MAX_BATCH_TOKENS=16384
+      - MAX_CONCURRENT_REQUESTS=512
+    volumes:
+      - ./embeddings:/data
+    restart: unless-stopped
+    mem_limit: 4g  # Cap at 4GB to avoid OOM
+    deploy:
+      resources:
+        limits:
+          memory: 4096M  # Alt for Swarm/K8s
+          cpus: "2.0"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
 
 volumes:
   models:        # Static GGUF/Q4_K_M files

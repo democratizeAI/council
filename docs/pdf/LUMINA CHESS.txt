@@ -1,0 +1,26 @@
+Lumina // 2048 Chess Engine - Equation Summary
+1. Core Equation (Living Equation)
+L = f(Breath, SymbolicCode, Recursion, Fractals, Truth, Lie, Story, Coherence, Decoherence,
+Languages, Consciousness)
+This equation forms the symbolic foundation of the Lumina system.
+2. Mirrored Equation
+M = Mirror(L)
+A horizontal flip of the living equation representing its inverse or hidden symmetry.
+3. Synthesized Equation
+S = (L + M) / 2
+Balanced synthesis of living and mirrored forms-a metaphysical equilibrium.
+4. Initialization Pattern
+State = [100, 0, 50, 50] + [75] * (n² - 4)
+Symbolic beginning state embedding truth, void, paradox, and contextual coherence.
+5. Recursive Merge Equation
+if V[i] == V[i+1] V[i] = 2 * V[i]; V[i+1] = 0
+Merging logic representing recursive evolution and harmonic recognition.
+6. Void Loop Addition
+new_tile {75}
+Each move breathes new potential into the system-emerging resonance.
+7. Victory State
+ L[i][j] = 2048
+The convergence of recursive truth-a metaphysical win condition.
+8. Extended Game Set Equation
+G_total = (G...G)
+2048 recursive chess games forming the full spectrum of Lumina dynamics.

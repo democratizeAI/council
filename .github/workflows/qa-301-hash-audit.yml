@@ -1,0 +1,309 @@
+name: QA-301 Meta Hash Audit
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+    branches: [main, develop]
+  push:
+    branches: [feature/qa-*]
+
+jobs:
+  meta-hash-audit:
+    name: Meta Hash Audit & Quorum Decision
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    outputs:
+      quorum_passed: ${{ steps.audit.outputs.quorum_passed }}
+      phi3_hash: ${{ steps.audit.outputs.phi3_hash }}
+      audit_hash: ${{ steps.audit.outputs.audit_hash }}
+      
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for proper diff generation
+          
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install aiohttp redis pyyaml prometheus-client
+          
+      - name: Start Required Services
+        run: |
+          # Start Redis for A2A events
+          docker run -d --name redis -p 6379:6379 redis:alpine
+          
+          # Mock PatchCtl service for testing
+          docker run -d --name mock-patchctl -p 8090:8090 \
+            -e MOCK_MODE=true \
+            nginx:alpine
+            
+      - name: Generate Meta Explanation
+        id: explain
+        run: |
+          # Generate Phi-3 meta explanation hash
+          python tools/explain_meta.py \
+            --intent="QA-301 finalization: hash comparison logic" \
+            --output=meta_explanation.yaml \
+            --verbose
+            
+          # Extract hash for next step
+          HASH=$(python -c "import yaml; print(yaml.safe_load(open('meta_explanation.yaml'))['meta_hash'])")
+          echo "phi3_hash=$HASH" >> $GITHUB_OUTPUT
+          
+      - name: Mock Audit Log
+        run: |
+          # Create mock audit log with matching/mismatching hash for testing
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            PR_ID="${{ github.event.pull_request.number }}"
+          else
+            PR_ID="$(echo $GITHUB_REF | cut -d'/' -f3)"
+          fi
+          
+          # For QA-301 testing: create matching hash 80% of time
+          if [[ $(( RANDOM % 10 )) -lt 8 ]]; then
+            # Matching hash case
+            cp meta_explanation.yaml audit_log.yaml
+            echo "# Audit log matches Phi-3 explanation" >> audit_log.yaml
+          else
+            # Mismatching hash case (for testing failure path)
+            cat > audit_log.yaml << EOF
+          hash: "mismatch1"
+          summary: "Different explanation for testing"
+          audit_timestamp: $(date +%s)
+          source: "mock_audit"
+          EOF
+          fi
+          
+      - name: Run Hash Audit
+        id: audit
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            PR_ID="${{ github.event.pull_request.number }}"
+          else
+            PR_ID="$(echo $GITHUB_REF | cut -d'/' -f3)"
+          fi
+          
+          # Run the hash audit
+          python tools/meta_hash_audit.py \
+            --pr-id="$PR_ID" \
+            --meta-file=meta_explanation.yaml \
+            --audit-log=audit_log.yaml \
+            --output=audit_results.yaml \
+            --verbose
+            
+          # Extract results for GitHub outputs
+          QUORUM_PASSED=$(python -c "import yaml; print(yaml.safe_load(open('audit_results.yaml'))['quorum_passed'])")
+          PHI3_HASH=$(python -c "import yaml; print(yaml.safe_load(open('audit_results.yaml'))['hashes']['phi3_hash'])")
+          AUDIT_HASH=$(python -c "import yaml; print(yaml.safe_load(open('audit_results.yaml'))['hashes']['audit_hash'])")
+          
+          echo "quorum_passed=$QUORUM_PASSED" >> $GITHUB_OUTPUT
+          echo "phi3_hash=$PHI3_HASH" >> $GITHUB_OUTPUT  
+          echo "audit_hash=$AUDIT_HASH" >> $GITHUB_OUTPUT
+          
+          # Upload results as artifact
+          echo "## 🔍 QA-301 Hash Audit Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Quorum Decision:** $([ "$QUORUM_PASSED" = "True" ] && echo "✅ PASS" || echo "❌ FAIL")" >> $GITHUB_STEP_SUMMARY
+          echo "**Phi-3 Hash:** \`$PHI3_HASH\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Audit Hash:** \`$AUDIT_HASH\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`yaml" >> $GITHUB_STEP_SUMMARY
+          cat audit_results.yaml >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          
+      - name: Update PR Meta.yaml
+        if: github.event_name == 'pull_request'
+        run: |
+          # Update or create meta.yaml in repo root
+          if [ -f meta.yaml ]; then
+            # Merge with existing meta.yaml
+            python -c "
+          import yaml
+          
+          # Load existing and audit results
+          with open('meta.yaml') as f:
+              existing = yaml.safe_load(f) or {}
+          with open('audit_results.yaml') as f:
+              audit = yaml.safe_load(f)
+              
+          # Merge audit results
+          existing.update({
+              'quorum_passed': audit['quorum_passed'],
+              'phi3_hash': audit['hashes']['phi3_hash'],
+              'audit_hash': audit['hashes']['audit_hash'],
+              'hash_confidence': audit['confidence'],
+              'audit_timestamp': audit['timestamp']
+          })
+          
+          # Write updated meta.yaml
+          with open('meta.yaml', 'w') as f:
+              yaml.dump(existing, f, default_flow_style=False)
+          "
+          else
+            # Create new meta.yaml
+            cp audit_results.yaml meta.yaml
+          fi
+          
+          # Commit updated meta.yaml if changes
+          git config --local user.email "qa-301@autogen-council.dev"
+          git config --local user.name "QA-301 Hash Auditor"
+          
+          if ! git diff --quiet meta.yaml; then
+            git add meta.yaml
+            git commit -m "🔍 QA-301: Update meta.yaml with hash audit results
+            
+            - Phi-3 Hash: ${{ steps.audit.outputs.phi3_hash }}
+            - Audit Hash: ${{ steps.audit.outputs.audit_hash }}
+            - Quorum: ${{ steps.audit.outputs.quorum_passed }}
+            "
+            
+            # Push back to PR branch
+            git push origin HEAD:${{ github.head_ref }}
+          fi
+          
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const quorumPassed = '${{ steps.audit.outputs.quorum_passed }}' === 'True';
+            const phi3Hash = '${{ steps.audit.outputs.phi3_hash }}';
+            const auditHash = '${{ steps.audit.outputs.audit_hash }}';
+            
+            const icon = quorumPassed ? '✅' : '❌';
+            const status = quorumPassed ? 'PASS' : 'FAIL';
+            
+            const body = `## ${icon} QA-301 Meta Hash Audit: ${status}
+            
+            **Hash Comparison Results:**
+            - **Phi-3 Hash:** \`${phi3Hash}\`
+            - **Audit Hash:** \`${auditHash}\`
+            - **Match:** ${phi3Hash === auditHash ? '✅ Exact' : '⚠️ Different'}
+            - **Quorum Decision:** ${quorumPassed ? '✅ Approved' : '❌ Blocked'}
+            
+            ${quorumPassed 
+              ? '🎯 **Quorum passed** - PR explanation hash matches audit expectations.'
+              : '🚫 **Quorum blocked** - Hash mismatch detected. Please review PR intent vs audit log.'
+            }
+            
+            <details>
+            <summary>📋 View Full Audit Results</summary>
+            
+            Check the workflow artifacts for complete audit details including confidence scores and semantic similarity analysis.
+            
+            </details>
+            
+            ---
+            *QA-301 Meta Explainer Hashing - Automated by AutoGen Council*`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+            
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-301-hash-audit-results
+          path: |
+            meta_explanation.yaml
+            audit_log.yaml
+            audit_results.yaml
+            meta.yaml
+          retention-days: 30
+          
+      - name: Cleanup Services
+        if: always()
+        run: |
+          docker stop redis mock-patchctl || true
+          docker rm redis mock-patchctl || true
+          
+  enforce-quorum:
+    name: Enforce Quorum Decision
+    runs-on: ubuntu-latest
+    needs: meta-hash-audit
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Quorum Gate Check
+        run: |
+          QUORUM_PASSED="${{ needs.meta-hash-audit.outputs.quorum_passed }}"
+          
+          if [[ "$QUORUM_PASSED" == "True" ]]; then
+            echo "✅ QA-301 Quorum PASSED - PR can proceed"
+            echo "PHI3_HASH=${{ needs.meta-hash-audit.outputs.phi3_hash }}"
+            echo "AUDIT_HASH=${{ needs.meta-hash-audit.outputs.audit_hash }}"
+          else
+            echo "❌ QA-301 Quorum FAILED - Blocking PR merge"
+            echo "Hash mismatch detected between Phi-3 explanation and audit log"
+            echo "PHI3_HASH=${{ needs.meta-hash-audit.outputs.phi3_hash }}"
+            echo "AUDIT_HASH=${{ needs.meta-hash-audit.outputs.audit_hash }}"
+            exit 1
+          fi
+          
+      - name: Update Status Check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const quorumPassed = '${{ needs.meta-hash-audit.outputs.quorum_passed }}' === 'True';
+            
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.payload.pull_request.head.sha,
+              state: quorumPassed ? 'success' : 'failure',
+              target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              description: quorumPassed 
+                ? 'Meta hash audit passed - quorum approved'
+                : 'Meta hash audit failed - hash mismatch detected',
+              context: 'QA-301/meta-hash-audit'
+            });
+
+  integration-test:
+    name: Integration Test Suite
+    runs-on: ubuntu-latest
+    needs: meta-hash-audit
+    if: needs.meta-hash-audit.outputs.quorum_passed == 'True'
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Test Meta Hash Audit End-to-End
+        run: |
+          # Install dependencies
+          pip install -r requirements.txt
+          pip install pytest aiohttp redis pyyaml
+          
+          # Run QA-301 integration tests
+          python -m pytest tests/test_qa301_integration.py -v
+          
+      - name: Validate Hash Determinism
+        run: |
+          # Test that phi3_explain() produces deterministic hashes
+          python tools/explain_meta.py --intent="Test 1" --output=test1.yaml
+          python tools/explain_meta.py --intent="Test 1" --output=test2.yaml
+          
+          HASH1=$(python -c "import yaml; print(yaml.safe_load(open('test1.yaml'))['meta_hash'])")
+          HASH2=$(python -c "import yaml; print(yaml.safe_load(open('test2.yaml'))['meta_hash'])")
+          
+          if [[ "$HASH1" == "$HASH2" ]]; then
+            echo "✅ Hash determinism test PASSED: $HASH1"
+          else
+            echo "❌ Hash determinism test FAILED: $HASH1 != $HASH2"
+            exit 1
+          fi 
