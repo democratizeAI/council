@@ -32,6 +32,26 @@
 | QA-301    | Quorum Validation     | 💡 PatchCtl        | Phi-3 meta-hash + PatchCtl status hook                     | hash(phi3_explain) == hash_audit → quorum pass flag set                   | 0.25 d | ⬜ queued | depends on QA-300 |
 | QA-302    | Streaming Auditor     | 🌟 Gemini-Audit    | Webhook mode: continuous assertion of meta.yaml criteria   | unit_cov ≥ 95 %, latency_reg ≤ 1 %, cost_delta ≤ $0.01 or auto-revert     | 0.25 d | ⬜ queued | rollout shadow to 1 service |
 
+## Wave – Audit Extension (O3 Quorum)
+
+| ID / Code | Wave / Track         | Owner (Agent Hat) | Deliverable (shorthand)                                      | KPI / Gate                                                                                               | Effort | Status | Notes |
+|-----------|----------------------|-------------------|--------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------|--------|--------|-------|
+| AUD-100   | Audit Extension      | 🛰️ O3-Proxy DevOps | **o3_audit_proxy** container + docker-compose.audit.yml      | audits:results entry within 5 s; latency_p95 ≤ 4 s                                                       | 0.25 d | ⬜ queued | rollback: audit-revert |
+| AUD-110   | Audit Extension      | ⚙️ PatchCtl Core   | PatchCtl `audit_heads` config (Gemini + o3 + Rule-Guard)      | 2-of-3 quorum passes merge; max_block_time 10m enforced                                                  | 0.25 d | ⬜ queued | depends on AUD-100 |
+| AUD-120   | Monitoring           | 📈 SRE             | Prometheus counters + Grafana panels ("Audit Pass Rate", "o3 Latency p95") | pass_rate ≥ 0.95 · latency_p95 < 10 s alerts green                                                       | 0.25 d | ⬜ queued | ties into M-310 board |
+| AUD-130   | Cost Control         | 👛 FinOps          | Guardian fallback: `O3_AUDIT_MODE=degraded` when R-201 cap hit | cost_guardrail fires → o3 calls suspended; Gemini+Rule-Guard quorum active                               | 0.1 d  | ⬜ queued | no new spend alarms |
+| AUD-140   | Reporting            | 🧑‍💻 Ops Automation | Nightly "o3-daily_health" bulk audit + Slack digest section    | daily_health_pass_total ≥ 1; digest contains JSON verdict                                                | 0.25 d | ⬜ queued | cron @ 03 UTC |
+
+### External Ledger Extract (Public-Facing)
+
+| ID | Public Deliverable | Launch Status |
+|----|-------------------|--------------|
+| AUD-100 | o3 remote audit proxy container | ⬜ queued |
+| AUD-110 | 2-of-3 audit quorum (Gemini+o3+Rule) | ⬜ queued |
+| AUD-120 | Audit pass-rate & latency dashboards | ⬜ queued |
+| AUD-130 | Auto fallback when cost cap breached | ⬜ queued |
+| AUD-140 | Nightly o3 system-health audit | ⬜ queued |
+
 ## Autonomous Status
 
 - **Mode**: Fully Autonomous ✅
