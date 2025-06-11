@@ -73,16 +73,16 @@
 - **T-26h**: EXT-24B + M-310 anomaly injection + latency burst testing  
 - **T-24h**: EXT-24C autoscaler ramp + 600 QPS stress test
 
-## Wave – Paper-Journal (Capture → Insight)
+## Wave – PJ-Series – Journal Digitization (green path)
 
-| ID / Code | Wave / Track    | Owner / Hat        | Core Deliverable (User-Story)                               | Primary KPI / Gate                               | Effort | Status | Notes |
-|-----------|-----------------|--------------------|-------------------------------------------------------------|--------------------------------------------------|--------|--------|-------|
-| J-100     | Capture         | 📸 Scanner Agent    | Hi-res scan + dewarp pipeline (CLI / Playwright)            | dpi ≥ 300 · skew < 1°                            | 0.5 d  | ⬜ queued | — |
-| J-110     | Capture         | 🔍 Interpreter Agent| Handwriting OCR + confidence ensemble                       | word_confidence ≥ 0.88                           | 1 d    | ⬜ queued | — |
-| J-120     | Curation        | 📚 Historian Agent  | Temporal / thematic clustering                              | topic_purity ≥ 0.80                              | 0.5 d  | ⬜ queued | — |
-| J-130     | Compliance      | 🔒 Privacy Guardian | PII masking + consent ledger                                | false_positive ≤ 2 %                             | 0.25 d | ⬜ queued | — |
-| J-140     | Curation        | 🎭 Curator Agent    | Searchable index + multi-level summary                      | search_recall ≥ 0.90                             | 0.75 d | ⬜ queued | — |
-| J-150     | Delivery        | 📬 Delivery Agent   | PDF/EPUB export, archive push, client webhook               | on_time_rate ≥ 99 %                              | 0.5 d  | ⬜ queued | — |
-| J-160     | Insight         | 💭 Therapist Agent  | Sentiment & life-event timeline                             | insight_accuracy ≥ 0.85                          | 0.75 d | ⬜ queued | — |
-| J-170     | Ops             | 🗄️ Archivist Agent  | Redundant cold-store + hash audit                           | bitrot_detect = 0                                | 0.25 d | ⬜ queued | — |
-| J-180     | Growth          | 📢 Outreach Agent   | Weekly blog + social drops from extracted gems              | posts_week ≥ 1                                   | 0.25 d | ⬜ queued | — |
+| ID / Code | Wave / Track | Owner (Agent "Hat") | Deliverable (shorthand)                       | KPI / Gate                              | Effort | Status | Notes |
+|-----------|--------------|---------------------|------------------------------------------------|-----------------------------------------|--------|--------|-------|
+| PJ-100    | Capture      | 📸 Scanner Agent     | Hi-res scan + dewarp pipeline                 | dpi ≥ 300 · skew < 1°                   | 0.5 d  | ⬜ queued | rollback: pj-revert |
+| PJ-110    | Capture      | 🔍 Interpreter Agent | Handwriting OCR ensemble                      | word_confidence ≥ 0.88                  | 1 d    | ⬜ queued | rollback: pj-revert |
+| PJ-120    | Curation     | 📚 Historian Agent   | Temporal / thematic clustering                | topic_purity ≥ 0.80                     | 0.5 d  | ⬜ queued | rollback: pj-revert |
+| PJ-130    | Compliance   | 🔒 Privacy Guardian  | PII masking + consent ledger                  | false_positive ≤ 2 %                    | 0.25 d | ⬜ queued | rollback: pj-revert |
+| PJ-140    | Curation     | 🎭 Curator Agent     | Searchable index + multi-level summary        | search_recall ≥ 0.90                    | 0.75 d | ⬜ queued | rollback: pj-revert |
+| PJ-150    | Delivery     | 📬 Delivery Agent    | PDF/EPUB export · client webhook              | on_time_rate ≥ 99 %                     | 0.5 d  | ⬜ queued | rollback: pj-revert |
+| PJ-160    | Insight      | 💭 Therapist Agent   | Sentiment & life-event timeline               | insight_accuracy ≥ 0.85                 | 0.75 d | ⬜ queued | rollback: pj-revert |
+| PJ-170    | Ops          | 🗄️ Archivist Agent   | Redundant cold-store + hash audit             | bitrot_detect = 0                       | 0.25 d | ⬜ queued | rollback: pj-revert |
+| PJ-180    | Growth       | 📢 Outreach Agent    | Weekly blog & social drops from journal gems  | posts_week ≥ 1                          | 0.25 d | ⬜ queued | rollback: pj-revert |
