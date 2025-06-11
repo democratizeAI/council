@@ -402,8 +402,15 @@ dev-disable: ## Disable O3 audit services
 	@docker-compose --profile audit down 2>/dev/null || true
 	@echo "✅ O3 audit disabled"
 
+# 📖 FREEZE-SAFE: Slash Command Help Generator  
+help-md: ## Generate Slack slash command help documentation
+	@echo "📖 Generating slash command help documentation..."
+	@python tools/gen_slash_help.py
+	@echo "✅ SLASH_HELP.md and SLASH_HELP.json generated"
+
 clean: ## Clean up temporary files
 	@echo "Cleaning up temporary files..."
 	@find . -name "*.pyc" -delete
 	@find . -name "__pycache__" -delete
+	@rm -f SLASH_HELP.md SLASH_HELP.json
 	@echo "✅ Cleanup complete" 

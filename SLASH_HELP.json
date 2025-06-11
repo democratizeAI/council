@@ -1,0 +1,16 @@
+{
+  "commands": {
+    "help": "Lambda function",
+    "status": "Lambda function",
+    "audit": "Lambda function",
+    "deploy": "Lambda function",
+    "rollback": "Lambda function",
+    "logs": "Lambda function",
+    "health": "Lambda function",
+    "config": "Lambda function",
+    "restart": "Lambda function",
+    "scale": "Lambda function"
+  },
+  "generated_at": "1749655868.3679214",
+  "total_commands": 10
+}

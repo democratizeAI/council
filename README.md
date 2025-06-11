@@ -701,6 +701,50 @@ council/
 
 ---
 
+## 📖 **DEVELOPMENT TOOLS**
+
+### **Generating `/help` Output**
+
+The AutoGen Council includes a freeze-safe tool for generating Slack slash command documentation:
+
+```bash
+# Generate help documentation for all registered slash commands
+make help-md
+```
+
+**What it does:**
+- Scans the Slack router's command registry
+- Extracts command descriptions from docstrings
+- Generates `SLASH_HELP.md` with a formatted table
+- Creates `SLASH_HELP.json` for programmatic access
+
+**Example output:**
+```markdown
+# Slash Commands
+
+Available commands for the AutoGen Council Slack integration:
+
+| Command | Description |
+|---------|-------------|
+| `/audit` | Trigger audit process |
+| `/deploy` | Deploy latest changes |
+| `/health` | Check service health |
+| `/help` | Show available commands |
+| `/status` | Show system status |
+```
+
+**Files generated:**
+- `SLASH_HELP.md` - Human-readable markdown table
+- `SLASH_HELP.json` - Machine-readable command data
+
+**Integration with Slack:**
+The generated documentation powers the `/help` slash command in production Slack channels, providing users with an up-to-date list of available commands and their descriptions.
+
+**Freeze-safe guarantee:**
+This tool only reads code and writes documentation files—it never touches running containers or live services, making it safe to use during deployment freezes.
+
+---
+
 ## 🛣️ **ROADMAP**
 
 ### **v2.8.0 - Advanced Learning**
