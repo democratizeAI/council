@@ -81,7 +81,7 @@ services:
 
   # Phi-3 Meta-Hash Service - QA-301 Implementation  
   phi3-meta-hash:
-    image: microsoft/phi-3-mini:latest
+    image: microsoft/phi-3-mini@sha256:a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456
     container_name: council_phi3_hash
     environment:
       - MODEL_PATH=/models/phi-3-mini-4k-instruct
