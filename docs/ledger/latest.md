@@ -115,6 +115,14 @@
 | PJ-170    | Ops          | 🗄️ Archivist Agent   | Redundant cold-store + hash audit             | bitrot_detect = 0                       | 0.25 d | ⬜ queued | rollback: pj-revert |
 | PJ-180    | Growth       | 📢 Outreach Agent    | Weekly blog & social drops from journal gems  | posts_week ≥ 1                          | 0.25 d | ⬜ queued | rollback: pj-revert |
 
+## Wave – North-Star Codification
+
+| ID / Code | Wave / Track | Owner (Agent Hat) | Deliverable (shorthand)                       | KPI / Gate                              | Effort | Status | Notes |
+|-----------|--------------|-------------------|------------------------------------------------|-----------------------------------------|--------|--------|-------|
+| NS-100    | Docs         | 🎯 Opus           | `north_star.yaml` seed framework              | YAML lint pass                          | 0.25 d | ⬜ queued | freeze-safe |
+| NS-110    | Builder      | 🧠 Builder-tiny   | `extract_north_star.py` scaffold (SPEC-712)   | yaml_updated flag set                   | 0.5 d  | ⬜ queued | depends on NS-100 |
+| NS-120    | DevOps       | 📈 SRE            | Metric loader + Prom rules from kpi_targets   | gauges emit on start                    | 0.25 d | ⬜ queued | depends on NS-110 |
+
 # AutoGen Council Ledger - Latest
 ## Enterprise Swarm Operational Status
 
