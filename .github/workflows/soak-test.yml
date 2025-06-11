@@ -88,20 +88,17 @@ jobs:
         
       - name: "🚀 Start FastAPI Stack"
         run: |
-          echo "🚀 Starting FastAPI stack for soak testing..."
+          echo "🚀 Starting CI-optimized FastAPI stack for soak testing..."
           
           echo "Debug: Checking docker-compose availability..."
           which docker-compose
           docker-compose --version
           
-          echo "Debug: Checking compose file..."
-          ls -la docker-compose.fastapi.yml
+          echo "Debug: Checking CI stack file..."
+          ls -la compose/ci-stack.yml
           
-          echo "Debug: Checking CI override file..."
-          ls -la docker-compose.ci.yml
-          
-          echo "Debug: Starting containers with CI override..."
-          docker-compose -f docker-compose.fastapi.yml -f docker-compose.ci.yml up -d --build
+          echo "Debug: Starting CI containers (CPU-only, no GPU)..."
+          docker-compose -f compose/ci-stack.yml up -d --build
           
           echo "⏳ Waiting for services to become healthy..."
           sleep 30
@@ -379,27 +376,16 @@ jobs:
           echo "Current working directory: $(pwd)"
           echo "Workspace: ${{ github.workspace }}"
           
-          echo "--- Directory structure ---"
-          ls -la . || echo "Failed to list current directory"
+          echo "--- Contents of ./artifacts ---"
+          ls -R artifacts || echo "No artifacts directory found"
           
-          echo "--- Artifacts directory check ---"
-          if [ -d "artifacts" ]; then
-            echo "✅ artifacts/ directory exists"
-            echo "Contents of artifacts/:"
-            ls -la artifacts/
-            echo "Recursive listing:"
-            find artifacts/ -type f -exec ls -la {} \; 2>/dev/null || echo "No files found in artifacts"
-          else
-            echo "❌ artifacts/ directory does not exist"
-          fi
-          
-          echo "--- Search for soak files anywhere ---"
+          echo "--- Search for files anywhere ---"
           find . -name "*soak*" -type f 2>/dev/null || echo "No soak files found"
           find . -name "*.csv" -type f 2>/dev/null || echo "No CSV files found"
           find . -name "*.html" -type f 2>/dev/null || echo "No HTML files found"
           find . -name "*.log" -type f 2>/dev/null || echo "No log files found"
           
-          echo "--- Current directory files ---"
+          echo "--- Working directory files ---"
           find . -maxdepth 2 -type f | head -20
           
       - name: "📤 Upload artifacts"
@@ -408,13 +394,8 @@ jobs:
         continue-on-error: true
         with:
           name: soak-test-results
-          path: |
-            artifacts/**
-            *.csv
-            *.html
-            *.log
-            **/soak*
-          if-no-files-found: warn
+          path: artifacts/**
+          if-no-files-found: ignore
             
       - name: "🧹 Cleanup"
         if: always()
