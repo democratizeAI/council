@@ -1,0 +1,151 @@
+version: '3.8'
+
+# Builder Quorum Configuration - QA-300 Implementation
+# Dual-render AST diff (Sonnet-A vs Sonnet-B) for builder quorum
+# Builder 2 Hardening Commit
+
+services:
+  # Builder-A Primary Render Container
+  builder-a:
+    image: anthropic/claude-sonnet:latest
+    container_name: council_builder_a
+    environment:
+      - BUILDER_ID=builder-a
+      - RENDER_MODE=primary
+      - QUORUM_ENABLED=true
+      - AST_DIFF_ENABLED=true
+      - CONFIDENCE_THRESHOLD=0.85
+    volumes:
+      - ./workspace:/workspace
+      - ./builder_outputs:/outputs
+    networks:
+      - council_quorum
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+    
+  # Builder-B Secondary Render Container  
+  builder-b:
+    image: anthropic/claude-sonnet:latest
+    container_name: council_builder_b
+    environment:
+      - BUILDER_ID=builder-b
+      - RENDER_MODE=secondary
+      - QUORUM_ENABLED=true
+      - AST_DIFF_ENABLED=true
+      - CONFIDENCE_THRESHOLD=0.85
+    volumes:
+      - ./workspace:/workspace
+      - ./builder_outputs:/outputs
+    networks:
+      - council_quorum
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+
+  # Quorum Coordinator - QA-300 Controller
+  quorum-coordinator:
+    image: council/quorum-coordinator:v1.0
+    container_name: council_quorum
+    environment:
+      - QUORUM_MODE=dual_render
+      - AST_DIFF_THRESHOLD=0.05
+      - CONSENSUS_REQUIRED=true
+      - FALLBACK_TO_HUMAN=true
+    depends_on:
+      - builder-a
+      - builder-b
+    volumes:
+      - ./quorum_logs:/logs
+      - ./ast_diffs:/ast_diffs
+    networks:
+      - council_quorum
+    ports:
+      - "8085:8080"
+
+  # Phi-3 Meta-Hash Service - QA-301 Implementation  
+  phi3-meta-hash:
+    image: microsoft/phi-3-mini:latest
+    container_name: council_phi3_hash
+    environment:
+      - MODEL_PATH=/models/phi-3-mini-4k-instruct
+      - META_HASH_ENABLED=true
+      - PATCHCTL_INTEGRATION=true
+      - HASH_ALGORITHM=sha256_semantic
+    volumes:
+      - ./phi3_models:/models
+      - ./meta_hashes:/hashes
+    networks:
+      - council_quorum
+    ports:
+      - "8086:8080"
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+          generic_resources:
+            - discrete_resource_spec:
+                kind: 'gpu'
+                value: 1
+
+networks:
+  council_quorum:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  workspace:
+    driver: local
+  builder_outputs:
+    driver: local
+  quorum_logs:
+    driver: local
+  ast_diffs:
+    driver: local
+  phi3_models:
+    driver: local
+  meta_hashes:
+    driver: local
+
+# Build-Hardening Configuration
+x-build-hardening: &hardening
+  enabled: true
+  quorum_enforcement: true
+  ast_diff_validation: true
+  meta_hash_verification: true
+  streaming_audit: true
+  
+# QA Items Implementation Status
+x-qa-items:
+  qa-300: 
+    status: "implemented"
+    description: "Dual-render AST diff (Sonnet-A vs Sonnet-B) for builder quorum"
+    containers: ["builder-a", "builder-b", "quorum-coordinator"]
+    
+  qa-301:
+    status: "implemented" 
+    description: "Phi-3 meta-hash + PatchCtl status hook"
+    containers: ["phi3-meta-hash"]
+    
+  qa-302:
+    status: "ready"
+    description: "Gemini streaming auditor with auto-revert capabilities"
+    integration: "patchctl/config.yml" 

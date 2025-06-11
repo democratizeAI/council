@@ -1,0 +1,296 @@
+version: '3.8'
+
+services:
+  # SciWave Triple Agent Swarm
+  sciwave:
+    build:
+      context: .
+      dockerfile: Dockerfile.sciwave
+    container_name: sciwave-swarm
+    ports:
+      - "8080:8080"  # SciWave API
+      - "9090:9090"  # Metrics endpoint
+    environment:
+      - PYTHONUNBUFFERED=1
+      - REDIS_URL=redis://redis:6379
+      - SCIWAVE_BACKGROUND_ENABLED=true
+      - SCIWAVE_CYCLE_INTERVAL=3600  # 1 hour cycles
+      - LOG_LEVEL=INFO
+      - PORT=8080
+      - METRICS_PORT=9090
+    volumes:
+      - ./data/sciwave:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      - redis
+      - sciwave-redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+          cpus: "2.0"
+    networks:
+      - sciwave-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+
+  # Dedicated Redis for SciWave coordination
+  sciwave-redis:
+    image: redis:7-alpine
+    container_name: sciwave-redis
+    ports:
+      - "6380:6379"
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - sciwave-redis-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "1.0"
+    networks:
+      - sciwave-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "2"
+
+  # Redis shared with main council
+  redis:
+    image: redis:7-alpine
+    container_name: council-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "1.0"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    networks:
+      - sciwave-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # SciWave Fetch Agent (SCI-100) - Dedicated instance
+  sciwave-fetch:
+    build:
+      context: .
+      dockerfile: Dockerfile.sciwave
+    container_name: sciwave-fetch
+    command: python -m agents.sciwave.fetch_agent
+    environment:
+      - PYTHONUNBUFFERED=1
+      - REDIS_URL=redis://sciwave-redis:6379
+      - AGENT_MODE=fetch
+      - FETCH_INTERVAL=3600  # Daily fetch
+    volumes:
+      - ./data/sciwave/papers:/app/data/papers
+      - ./logs:/app/logs
+    depends_on:
+      - sciwave-redis
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1.0"
+    networks:
+      - sciwave-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "2"
+
+  # SciWave Review Agent (SCI-110) - Dedicated instance  
+  sciwave-review:
+    build:
+      context: .
+      dockerfile: Dockerfile.sciwave
+    container_name: sciwave-review
+    command: python -m agents.sciwave.review_agent
+    environment:
+      - PYTHONUNBUFFERED=1
+      - REDIS_URL=redis://sciwave-redis:6379
+      - AGENT_MODE=review
+      - MIN_BLEU_SCORE=0.85
+    volumes:
+      - ./data/sciwave/summaries:/app/data/summaries
+      - ./logs:/app/logs
+    depends_on:
+      - sciwave-redis
+      - sciwave-fetch
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1.5g
+          cpus: "1.5"
+    networks:
+      - sciwave-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "2"
+
+  # SciWave Peer Agent (SCI-120) - Dedicated instance
+  sciwave-peer:
+    build:
+      context: .
+      dockerfile: Dockerfile.sciwave
+    container_name: sciwave-peer
+    command: python -m agents.sciwave.peer_agent
+    environment:
+      - PYTHONUNBUFFERED=1
+      - REDIS_URL=redis://sciwave-redis:6379
+      - AGENT_MODE=peer
+      - MIN_DELTA_CONFIDENCE=0.02
+    volumes:
+      - ./data/sciwave/reviews:/app/data/reviews
+      - ./logs:/app/logs
+    depends_on:
+      - sciwave-redis
+      - sciwave-review
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1.0"
+    networks:
+      - sciwave-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "2"
+
+  # SciWave Metrics Exporter
+  sciwave-exporter:
+    image: prom/node-exporter:latest
+    container_name: sciwave-exporter
+    ports:
+      - "9100:9100"
+    command:
+      - '--path.rootfs=/host'
+      - '--collector.textfile.directory=/var/lib/node_exporter/textfile_collector'
+    volumes:
+      - '/:/host:ro,rslave'
+      - './data/sciwave/metrics:/var/lib/node_exporter/textfile_collector'
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: "0.2"
+    networks:
+      - sciwave-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
+
+  # Prometheus for SciWave monitoring
+  sciwave-prometheus:
+    image: prom/prometheus:latest
+    container_name: sciwave-prometheus
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./config/sciwave/prometheus.yml:/etc/prometheus/prometheus.yml
+      - sciwave-prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=7d'
+      - '--web.enable-lifecycle'
+    depends_on:
+      - sciwave
+      - sciwave-exporter
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1.0"
+    networks:
+      - sciwave-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # Grafana for SciWave dashboards
+  sciwave-grafana:
+    image: grafana/grafana:latest
+    container_name: sciwave-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=sciwave123
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - sciwave-grafana-data:/var/lib/grafana
+      - ./config/sciwave/grafana:/etc/grafana/provisioning
+    depends_on:
+      - sciwave-prometheus
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
+    networks:
+      - sciwave-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "2"
+
+volumes:
+  sciwave-redis-data:
+    driver: local
+  sciwave-prometheus-data:
+    driver: local
+  sciwave-grafana-data:
+    driver: local
+
+networks:
+  sciwave-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16 

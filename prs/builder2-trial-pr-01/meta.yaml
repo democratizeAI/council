@@ -1,0 +1,139 @@
+---
+# Builder 2 Trial PR Metadata
+# Live FMC-120 Feedback Loop Integration Test
+pr_id: "builder2-trial-pr-01"
+builder: "builder2"
+mode: "live"
+created_at: "2024-12-15T10:30:00Z"
+
+# Required Metrics from Task
+ci_latency: "1.4%"
+test_coverage: 93
+code_quality_score: 0.84
+feedback_actionable: true
+
+# PR Details
+title: "FMC-120 Live Feedback Loop Integration"
+description: "Implement end-to-end feedback lifecycle with PatchCtl, Gemini-Audit, and Trinity Ledger integration"
+branch: "feature/fmc120-feedback-loop"
+target_branch: "main"
+
+# Integration Points
+integrations:
+  fmc120_service: true
+  patchctl_hooks: true
+  gemini_audit: true
+  trinity_ledger: true
+  prometheus_metrics: true
+
+# Files Modified
+files_changed:
+  - "services/fmc120/main.py"
+  - "meta/feedback_status.json"
+  - "patchctl/hooks/fmc_audit_trigger.py"
+  - "metrics/fmc_gauges.py"
+
+# Expected Feedback Sources
+feedback_sources:
+  - source: "ci"
+    type: "latency_regression"
+    confidence: 0.8
+    content: "CI detected 2.4% latency increase in response times"
+    
+  - source: "ai_analysis"
+    type: "memory_leak"
+    confidence: 0.91
+    content: "AI analysis detected potential memory leak in feedback loop processing"
+    
+  - source: "human"
+    type: "code_review"
+    confidence: 0.85
+    content: "Human reviewer notes: Good implementation, minor optimization opportunities"
+
+# Acceptance Criteria Tracking
+acceptance_criteria:
+  feedback_seen_total: 
+    target: "≥ 3"
+    current: 0
+    status: "pending"
+    
+  average_confidence:
+    target: "> 0.8"
+    current: 0.0
+    status: "pending"
+    
+  loop_closure_status:
+    target: "complete"
+    current: "active"
+    status: "pending"
+    
+  pr_status:
+    target: "safe_to_merge OR sent_to_audit"
+    current: "active"
+    status: "pending"
+
+# FMC Integration Status
+fmc_integration:
+  fmc100_intent_mapping: "not_required"
+  fmc110_spec_validation: "not_required" 
+  fmc120_feedback_loop: "active"
+  
+# Expected Routing Decision
+expected_outcome:
+  route_to_audit: true
+  reason: "latency_regression_detected"
+  auto_merge: false
+  manual_review: false
+
+# Test Timeline
+timeline:
+  loop_start: "2024-12-15T10:30:00Z"
+  first_feedback: "2024-12-15T10:31:00Z"
+  second_feedback: "2024-12-15T10:32:00Z"
+  third_feedback: "2024-12-15T10:33:00Z"
+  loop_closure: "2024-12-15T10:34:00Z"
+  patchctl_decision: "2024-12-15T10:35:00Z"
+  gemini_audit_trigger: "2024-12-15T10:36:00Z"
+
+# Metrics Validation
+prometheus_metrics:
+  - "feedback_seen_total{pr=\"builder2-trial-pr-01\"} = 3"
+  - "loop_status{status=\"complete\"} = 1"
+  - "average_confidence{pr=\"builder2-trial-pr-01\"} > 0.8"
+  - "builder2_decisions_total{decision_type=\"route_to_audit\"} = 1"
+  - "patchctl_integrations_total{pr=\"builder2-trial-pr-01\",action=\"success\"} = 1"
+  - "gemini_audit_triggers_total{pr=\"builder2-trial-pr-01\",reason=\"feedback_loop\"} = 1"
+
+# A2A Event Expected
+a2a_event:
+  type: "LOOP_CLOSE"
+  pr_id: "builder2-trial-pr-01"
+  status: "sent_to_audit"
+  feedback_count: 3
+  quality_score: 0.853
+  builder: "builder2"
+
+# Quality Gates
+quality_gates:
+  regression_detection: true
+  security_check: true
+  performance_impact: true
+  audit_routing: true
+  autonomous_operation: true
+
+# Success Criteria
+success_criteria:
+  - "Feedback loop initiated and tracked"
+  - "3+ feedback events processed"
+  - "Average confidence > 0.8 achieved"
+  - "PatchCtl integration triggered"
+  - "Gemini audit routing activated"
+  - "Trinity Ledger updated with feedback status"
+  - "Prometheus metrics exported correctly"
+  - "A2A LOOP_CLOSE event published"
+  - "Autonomous governance loop demonstrated"
+
+# Builder 2 Mission Status
+mission_status: "active"
+live_mode: true
+simulation_disabled: true 

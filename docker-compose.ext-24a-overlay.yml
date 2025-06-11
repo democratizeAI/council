@@ -91,6 +91,8 @@ networks:
       config:
         - subnet: 172.24.0.0/16
           gateway: 172.24.0.1
+  council-network:
+    external: true
 
 volumes:
   ext24a-data:

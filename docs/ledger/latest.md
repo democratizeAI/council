@@ -24,6 +24,14 @@
 | STR-004   | DevOps | **INT2 soak toggle flag** (`INT2_ENABLED=false` default) + Prom metric | flag flips only when STR-002 baseline PASS | 0.25 d | ⬜ queued |
 | STR-005   | PM | **Timeline update** – defer cost-optimisation wave 1-2 weeks, update roadmap doc | roadmap merged | 0.1 d | ⬜ queued |
 
+## Wave – Build-Hardening & Quorum
+
+| ID / Code | Wave / Track          | Owner (Agent Hat) | Deliverable (shorthand)                                    | KPI / Gate                                                                | Effort | Status | Notes |
+|-----------|-----------------------|-------------------|------------------------------------------------------------|---------------------------------------------------------------------------|--------|--------|-------|
+| QA-300    | Quorum Validation     | 🧠 Builder-Tiny    | Dual-render diff + AST matcher (Sonnet-A vs Sonnet-B)      | ast_diff_pct ≤ 3 % → auto-pass; else routed to Gemini audit               | 0.5 d  | ⬜ queued | rollback: qa-revert |
+| QA-301    | Quorum Validation     | 💡 PatchCtl        | Phi-3 meta-hash + PatchCtl status hook                     | hash(phi3_explain) == hash_audit → quorum pass flag set                   | 0.25 d | ⬜ queued | depends on QA-300 |
+| QA-302    | Streaming Auditor     | 🌟 Gemini-Audit    | Webhook mode: continuous assertion of meta.yaml criteria   | unit_cov ≥ 95 %, latency_reg ≤ 1 %, cost_delta ≤ $0.01 or auto-revert     | 0.25 d | ⬜ queued | rollout shadow to 1 service |
+
 ## Autonomous Status
 
 - **Mode**: Fully Autonomous ✅

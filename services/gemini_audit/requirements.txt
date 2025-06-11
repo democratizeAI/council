@@ -1,0 +1,27 @@
+# QA-302 Gemini Streaming Auditor Requirements
+# ============================================
+
+# Web framework
+fastapi>=0.68.0
+uvicorn[standard]>=0.15.0
+
+# Data validation
+pydantic>=1.8.0
+
+# HTTP client
+aiohttp>=3.8.0
+
+# Redis async client
+redis[hiredis]>=4.0.0
+
+# Prometheus metrics
+prometheus-client>=0.15.0
+
+# Logging and utilities
+structlog>=21.1.0
+python-dateutil>=2.8.0
+
+# Testing (for development)
+pytest>=6.2.0
+pytest-asyncio>=0.18.0
+pytest-mock>=3.6.0 

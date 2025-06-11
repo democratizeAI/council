@@ -1,0 +1,110 @@
+version: '3.8'
+
+services:
+  gemini-audit:
+    build: .
+    container_name: gemini-streaming-auditor
+    ports:
+      - "8091:8091"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - PATCHCTL_URL=http://patchctl:8090
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+      - GEMINI_WEBHOOK_SECRET=${GEMINI_WEBHOOK_SECRET:-qa302-secret}
+      - PROMETHEUS_GATEWAY=http://prometheus-gateway:9091
+    depends_on:
+      - redis
+      - prometheus-gateway
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - qa302-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8091/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  redis:
+    image: redis:7-alpine
+    container_name: gemini-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    networks:
+      - qa302-network
+    command: >
+      redis-server 
+      --appendonly yes 
+      --appendfsync everysec
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+
+  prometheus-gateway:
+    image: prom/pushgateway:v1.6.2
+    container_name: gemini-prometheus-gateway
+    ports:
+      - "9091:9091"
+    restart: unless-stopped
+    networks:
+      - qa302-network
+    command:
+      - '--web.listen-address=:9091'
+      - '--persistence.file=/tmp/metric.store'
+      - '--persistence.interval=5m'
+
+  prometheus:
+    image: prom/prometheus:v2.40.0
+    container_name: gemini-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    networks:
+      - qa302-network
+
+  grafana:
+    image: grafana/grafana:9.3.0
+    container_name: gemini-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-qa302admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+    restart: unless-stopped
+    networks:
+      - qa302-network
+    depends_on:
+      - prometheus
+
+volumes:
+  redis-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+
+networks:
+  qa302-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16 

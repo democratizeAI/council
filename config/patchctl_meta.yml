@@ -1,0 +1,141 @@
+# config/patchctl_meta.yml - QA-301 Meta Explainer Enforcement
+# PatchCtl configuration for automatic meta explanation validation
+
+meta_explanation:
+  enabled: true
+  enforce_on_pr: true
+  
+  # Auto-flag PRs missing meta explanation
+  validation_rules:
+    - name: "meta_hash_required"
+      description: "Every PR must include meta_hash.yaml with valid explanation"
+      action: "flag_awaiting_meta"
+      priority: "blocking"
+      
+    - name: "hash_determinism_check"
+      description: "Meta hash must be 8-character deterministic hash"
+      pattern: "^[a-f0-9]{8}$"
+      action: "flag_invalid_hash"
+      
+    - name: "summary_quality_check"
+      description: "Summary must be non-empty and under 200 characters"
+      min_length: 10
+      max_length: 200
+      action: "flag_poor_summary"
+
+  # Required files in PR
+  required_files:
+    - "meta_hash.yaml"
+    
+  # Validation schema for meta_hash.yaml
+  schema:
+    required_fields:
+      - meta_hash
+      - summary
+      - logic_change_type
+      - affected_modules
+      - intent
+      - timestamp
+      - model
+      - deterministic
+      
+    field_validation:
+      meta_hash:
+        type: "string"
+        pattern: "^[a-f0-9]{8}$"
+        
+      summary:
+        type: "string"
+        min_length: 10
+        max_length: 200
+        
+      logic_change_type:
+        type: "string"
+        enum: ["feature", "bugfix", "refactor", "performance", "security", "config"]
+        
+      affected_modules:
+        type: "array"
+        min_items: 1
+        
+      deterministic:
+        type: "boolean"
+        required_value: true
+
+  # Auto-labeling based on meta content
+  auto_labels:
+    - condition: "logic_change_type == 'security'"
+      label: "security-review-required"
+      
+    - condition: "logic_change_type == 'performance'"
+      label: "performance-testing-required"
+      
+    - condition: "len(affected_modules) > 5"
+      label: "large-change"
+      
+    - condition: "model == 'fallback_heuristic'"
+      label: "needs-manual-review"
+
+  # Integration with existing PatchCtl rules
+  integration:
+    quota:
+      daily_limit: 3
+      override_label: "freeze-exempt"
+      meta_exempt: false  # Meta explanation required even for exempt PRs
+      
+    audit:
+      lineage_cid: true
+      gpg_required: true
+      approval_chain: ["opus", "gemini"]
+      meta_hash_in_commit: true  # Include meta hash in commit message
+      
+    enforcement:
+      master_protection: true
+      ci_gate_required: true
+      meta_gate_required: true  # NEW: Meta explanation gate
+      rollback_timeout: 300s
+
+# Webhook endpoints for meta explanation events
+webhooks:
+  meta_generated:
+    url: "http://localhost:8080/webhooks/meta_generated"
+    events: ["meta_hash_created", "meta_hash_updated"]
+    
+  meta_validation_failed:
+    url: "http://localhost:8080/webhooks/meta_validation_failed"
+    events: ["meta_hash_invalid", "meta_summary_poor"]
+
+# Prometheus metrics configuration
+metrics:
+  enabled: true
+  labels:
+    - pr_id
+    - meta_hash
+    - logic_change_type
+    - validation_result
+    
+  custom_metrics:
+    - name: "patchctl_meta_validation_total"
+      type: "counter"
+      help: "Total meta validations performed"
+      labels: ["result", "change_type"]
+      
+    - name: "meta_explanation_quality_score"
+      type: "histogram"
+      help: "Quality score of meta explanations"
+      buckets: [0.1, 0.3, 0.5, 0.7, 0.9, 1.0]
+
+# Redis streams integration
+redis_streams:
+  ticket_bus:
+    stream: "ticket-bus"
+    consumer_group: "patchctl_meta"
+    events:
+      - "EXPLAIN_META_HASH"
+      - "PR_CREATED"
+      - "PR_UPDATED"
+      
+  a2a_events:
+    publish_on:
+      - meta_validation_passed
+      - meta_validation_failed
+      - pr_flagged_awaiting_meta 

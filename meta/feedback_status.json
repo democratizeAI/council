@@ -1,0 +1,44 @@
+{
+  "feedback_loops": {
+    "builder2-trial-pr-01": {
+      "pr_id": "builder2-trial-pr-01",
+      "created_at": "2024-12-15T10:30:00Z",
+      "status": "active",
+      "meta": {
+        "ci_latency": "1.4%",
+        "test_coverage": 93,
+        "code_quality_score": 0.84,
+        "feedback_actionable": true
+      },
+      "events": [],
+      "total_feedback": 0,
+      "average_confidence": 0.0,
+      "loop_closed": false,
+      "actions_triggered": [],
+      "integration_points": {
+        "patchctl_notified": false,
+        "gemini_audit_triggered": false,
+        "ledger_updated": false,
+        "a2a_event_published": false
+      }
+    }
+  },
+  "metrics": {
+    "total_loops_created": 0,
+    "total_loops_closed": 0,
+    "average_feedback_per_loop": 0.0,
+    "loops_sent_to_audit": 0,
+    "loops_approved_for_merge": 0
+  },
+  "thresholds": {
+    "min_feedback_events": 3,
+    "confidence_threshold": 0.8,
+    "quality_threshold": 0.84
+  },
+  "last_updated": "2024-12-15T10:30:00Z",
+  "service_info": {
+    "builder": "builder2",
+    "mode": "live",
+    "version": "v1.0.0"
+  }
+} 

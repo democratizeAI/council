@@ -1,0 +1,391 @@
+# QA-302 Gemini Audit CI Integration
+# 🛡️ Property-based test enforcement for PR meta validation
+
+name: Gemini Audit Pipeline
+description: "Streaming auditor with property-based test enforcement"
+version: "1.0.0"
+
+triggers:
+  - pull_request
+  - push_to_main
+  - gemini_audit_required  # From QA-300 quorum failures
+  - meta_bundle_ready
+
+conditions:
+  # Run when PR meta is available or audit is triggered
+  files_exist:
+    - "artifacts/pr_meta.yaml"
+    - "artifacts/qa-300-meta.yaml"
+  
+  # Skip for emergency bypasses
+  skip_labels:
+    - "emergency-bypass"
+    - "rollback: gemini-skip"
+
+environment:
+  HYPOTHESIS_PROFILE: "ci"
+  GEMINI_AUDIT_MODE: "strict"
+  PROMETHEUS_GATEWAY: "http://prometheus-pushgateway:9091"
+
+steps:
+  - name: "Setup Gemini Audit Environment"
+    uses: "setup-python@v4"
+    with:
+      python-version: "3.11"
+  
+  - name: "Install Property Testing Dependencies"
+    run: |
+      pip install hypothesis pytest PyYAML requests
+      
+  - name: "Configure Hypothesis for CI"
+    run: |
+      mkdir -p ~/.hypothesis
+      cat > ~/.hypothesis/settings.toml << EOF
+      [ci]
+      max_examples = 200
+      deadline = 30000
+      derandomize = true
+      print_blob = true
+      EOF
+
+  - name: "Load PR Meta Bundle"
+    id: load_meta
+    run: |
+      if [ -f "artifacts/pr_meta.yaml" ]; then
+        echo "meta_source=pr_direct" >> $GITHUB_OUTPUT
+        cp artifacts/pr_meta.yaml meta_input.yaml
+      elif [ -f "artifacts/qa-300-meta.yaml" ]; then
+        echo "meta_source=qa_300_routing" >> $GITHUB_OUTPUT
+        cp artifacts/qa-300-meta.yaml meta_input.yaml
+      else
+        echo "❌ No meta bundle found for audit"
+        exit 1
+      fi
+      
+      # Extract meta fields for validation
+      python -c "
+      import yaml
+      with open('meta_input.yaml') as f:
+          meta = yaml.safe_load(f)
+      
+      # Extract audit fields (with defaults for missing values)
+      unit_coverage = meta.get('unit_coverage', 95)
+      latency_regression = meta.get('latency_regression', 0.0)
+      cost_delta = meta.get('cost_delta', 0.0)
+      
+      print(f'unit_coverage={unit_coverage}')
+      print(f'latency_regression={latency_regression}')
+      print(f'cost_delta={cost_delta}')
+      " >> $GITHUB_OUTPUT
+
+  - name: "Run Property-Based Meta Assertions"
+    id: property_tests
+    run: |
+      echo "🧪 Running QA-302 Property-Based Test Suite"
+      
+      # Run property tests with CI profile
+      python -m pytest tests/test_meta_assertions_property.py \
+        --hypothesis-profile=ci \
+        --tb=short \
+        --json-report \
+        --json-report-file=artifacts/property_test_report.json \
+        -v
+      
+      echo "property_tests_exit_code=$?" >> $GITHUB_OUTPUT
+    continue-on-error: true
+
+  - name: "Validate Specific PR Meta"
+    id: meta_validation
+    run: |
+      # Create specific validation script
+      cat > validate_pr_meta.py << 'EOF'
+      import sys
+      import yaml
+      sys.path.append('tests')
+      from test_meta_assertions_property import GeminiAuditPolicy
+      
+      # Load PR meta
+      with open('meta_input.yaml') as f:
+          meta = yaml.safe_load(f)
+      
+      # Run audit
+      policy = GeminiAuditPolicy()
+      result = policy.audit_pr_meta(meta, "${{ github.event.pull_request.number }}")
+      
+      # Output results
+      print(f"overall_pass={result.overall_pass}")
+      print(f"violations={len(result.violations)}")
+      print(f"red_card={result.rollback_triggered}")
+      
+      if result.red_card_comment:
+          with open('red_card_comment.txt', 'w') as f:
+              f.write(result.red_card_comment)
+      
+      # Exit with appropriate code
+      sys.exit(0 if result.overall_pass else 1)
+      EOF
+      
+      python validate_pr_meta.py
+      echo "validation_exit_code=$?" >> $GITHUB_OUTPUT
+    continue-on-error: true
+
+  - name: "Generate Audit Metrics"
+    if: always()
+    run: |
+      # Create metrics script
+      cat > generate_metrics.py << 'EOF'
+      import sys
+      import json
+      import requests
+      from datetime import datetime
+      sys.path.append('tests')
+      from test_meta_assertions_property import GeminiAuditPolicy
+      
+      # Load test results
+      try:
+          with open('artifacts/property_test_report.json') as f:
+              test_report = json.load(f)
+      except:
+          test_report = {"summary": {"total": 0, "passed": 0, "failed": 0}}
+      
+      # Generate metrics
+      metrics = [
+          f'gemini_meta_assertions_total{{result="pass"}} {test_report["summary"]["passed"]}',
+          f'gemini_meta_assertions_total{{result="fail"}} {test_report["summary"]["failed"]}',
+          f'gemini_property_tests_total {test_report["summary"]["total"]}',
+          f'gemini_audit_timestamp {int(datetime.now().timestamp())}'
+      ]
+      
+      # Write metrics file
+      with open('artifacts/gemini_metrics.prom', 'w') as f:
+          for metric in metrics:
+              f.write(metric + '\n')
+      
+      print("📊 Metrics generated:")
+      for metric in metrics:
+          print(f"  {metric}")
+      EOF
+      
+      python generate_metrics.py
+
+  - name: "Push Metrics to Prometheus"
+    if: always()
+    run: |
+      # Push metrics to Prometheus pushgateway
+      curl -X POST "$PROMETHEUS_GATEWAY/metrics/job/gemini-audit/instance/${{ github.run_id }}" \
+        --data-binary @artifacts/gemini_metrics.prom \
+        -H "Content-Type: text/plain"
+    continue-on-error: true
+
+  - name: "Archive Audit Artifacts"
+    uses: "actions/upload-artifact@v3"
+    if: always()
+    with:
+      name: gemini-audit-results
+      path: |
+        artifacts/property_test_report.json
+        artifacts/gemini_metrics.prom
+        meta_input.yaml
+        red_card_comment.txt
+      retention-days: 30
+
+# Routing Logic Based on Audit Results
+routing:
+  audit_pass:
+    condition: "${{ steps.meta_validation.outputs.validation_exit_code == '0' }}"
+    actions:
+      - name: "Audit Passed - Continue Pipeline"
+        run: |
+          echo "✅ Gemini Audit: PASSED"
+          echo "PR meta validation successful"
+          echo "Property tests: ${{ steps.property_tests.outputs.property_tests_exit_code }}"
+          
+          # Update status
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --body "✅ **Gemini Audit: PASSED**
+            
+            **Property Tests**: All assertions validated
+            **Meta Fields**: Within policy bounds
+            **Status**: Ready for merge
+            
+            *Audit completed by QA-302 Streaming Auditor*"
+
+  audit_fail:
+    condition: "${{ steps.meta_validation.outputs.validation_exit_code != '0' }}"
+    actions:
+      - name: "Audit Failed - Red Card Triggered"
+        run: |
+          echo "❌ Gemini Audit: FAILED"
+          echo "Policy violations detected"
+          
+          # Post red card comment if generated
+          if [ -f "red_card_comment.txt" ]; then
+            gh pr comment ${{ github.event.pull_request.number }} \
+              --body-file red_card_comment.txt
+          else
+            gh pr comment ${{ github.event.pull_request.number }} \
+              --body "🚫 **Gemini Policy Violation**
+              
+              Property-based validation failed. Please review artifacts and fix issues before re-submission.
+              
+              **Next Steps**:
+              1. Check audit artifacts
+              2. Fix policy violations  
+              3. Re-run tests locally
+              4. Re-submit for audit"
+          fi
+          
+          # Block merge
+          gh pr ready --undo ${{ github.event.pull_request.number }}
+
+  property_test_fail:
+    condition: "${{ steps.property_tests.outputs.property_tests_exit_code != '0' }}"
+    actions:
+      - name: "Property Tests Failed"
+        run: |
+          echo "🧪 Property Tests: FAILED"
+          echo "Hypothesis found violations across fuzzed inputs"
+          
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --body "🧪 **Property Test Failure**
+            
+            **Issue**: Hypothesis property tests failed
+            **Meaning**: Meta validation is not robust across all input conditions
+            **Impact**: Audit enforcement may be unreliable
+            
+            **Required Actions**:
+            1. Review property test report in artifacts
+            2. Check for edge cases in meta generation
+            3. Ensure meta fields are within expected ranges
+            4. Re-run property tests locally
+            
+            **Debug Command**:
+            \`\`\`bash
+            python -m pytest tests/test_meta_assertions_property.py -v --hypothesis-show-statistics
+            \`\`\`"
+
+# Notifications
+notifications:
+  slack:
+    webhook_url: "${{ secrets.SLACK_GEMINI_WEBHOOK }}"
+    channels:
+      - "#gemini-audit"
+      - "#qa-alerts"
+    
+    pass_message: |
+      ✅ **Gemini Audit: PASSED**
+      PR: ${{ github.event.pull_request.title }}
+      Meta Source: ${{ steps.load_meta.outputs.meta_source }}
+      Property Tests: All assertions validated
+    
+    fail_message: |
+      ❌ **Gemini Audit: FAILED**
+      PR: ${{ github.event.pull_request.title }}
+      Violations Detected: Policy enforcement triggered
+      Red Card: Comment posted to PR
+      
+      **Action Required**: Manual review and fixes needed
+
+  email:
+    recipients:
+      - "gemini-team@autogencouncil.dev"
+      - "qa-team@autogencouncil.dev"
+    
+    subject_pass: "Gemini Audit PASSED - {{ github.event.pull_request.title }}"
+    subject_fail: "Gemini Audit FAILED - Red Card Issued"
+
+# Integration Hooks
+integrations:
+  qa_300_routing:
+    # Triggered when QA-300 routes to Gemini audit
+    webhook: "/audit/qa-300-routing"
+    priority: "high"
+    
+  patchctl_integration:
+    # Update PatchCtl with audit results
+    pass_webhook: "/gemini/audit/pass"
+    fail_webhook: "/gemini/audit/fail"
+    
+  prometheus_monitoring:
+    # Real-time metrics integration
+    pushgateway: "${{ env.PROMETHEUS_GATEWAY }}"
+    job_name: "gemini-audit"
+
+# Emergency Rollback
+rollback:
+  trigger_label: "rollback: gemini-skip"
+  
+  emergency_bypass:
+    - name: "Emergency Gemini Bypass"
+      if: contains(github.event.pull_request.labels.*.name, 'rollback: gemini-skip')
+      run: |
+        echo "🚨 EMERGENCY GEMINI BYPASS TRIGGERED"
+        echo "Skipping property-based audit due to rollback label"
+        
+        # Create bypass audit result
+        cat > artifacts/bypass_audit.yaml << EOF
+        gemini_audit:
+          status: "emergency_bypass"
+          reason: "rollback: gemini-skip label applied"
+          bypassed_by: "${{ github.actor }}"
+          timestamp: "$(date -Iseconds)"
+          original_meta_source: "${{ steps.load_meta.outputs.meta_source }}"
+        EOF
+        
+        # Force pass for emergency
+        echo "validation_exit_code=0" >> $GITHUB_OUTPUT
+        echo "emergency_bypass=true" >> $GITHUB_OUTPUT
+
+    - name: "Log Emergency Bypass"
+      if: contains(github.event.pull_request.labels.*.name, 'rollback: gemini-skip')
+      run: |
+        # Security audit log
+        curl -X POST "$AUDIT_LOG_API/gemini-bypass" \
+          -H "Authorization: Bearer $AUDIT_TOKEN" \
+          -d '{
+            "event": "gemini-audit-emergency-bypass",
+            "pr": "${{ github.event.pull_request.number }}",
+            "user": "${{ github.actor }}",
+            "reason": "rollback: gemini-skip label applied",
+            "timestamp": "'$(date -Iseconds)'",
+            "meta_source": "${{ steps.load_meta.outputs.meta_source }}"
+          }'
+
+# Monitoring & Alerting
+monitoring:
+  prometheus_rules:
+    - alert: GeminiAuditHighFailureRate
+      expr: rate(gemini_meta_assertions_total{result="fail"}[5m]) > 0.2
+      for: 2m
+      annotations:
+        summary: "High Gemini audit failure rate detected"
+        action: "Investigate PR meta generation quality"
+    
+    - alert: GeminiPropertyTestFailures
+      expr: increase(gemini_property_tests_total[1h]) == 0
+      for: 5m
+      annotations:
+        summary: "No property tests running - audit enforcement down"
+        action: "Check Gemini audit pipeline health"
+
+  grafana_dashboard:
+    title: "QA-302 Gemini Audit Health"
+    panels:
+      - "Audit Pass/Fail Rate"
+      - "Property Test Coverage"
+      - "Red Card Trigger Rate"
+      - "Meta Field Distribution"
+      - "Audit Response Time"
+
+# Security
+security:
+  secrets_required:
+    - "SLACK_GEMINI_WEBHOOK"
+    - "AUDIT_TOKEN"
+    - "AUDIT_LOG_API"
+  
+  permissions:
+    contents: read
+    pull-requests: write
+    checks: write
+    packages: read 

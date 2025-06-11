@@ -1,0 +1,337 @@
+Below is a ground-up “zero → green board” drill-down that proves every coil of the Autonomous Software Spiral v1.0 is wired, healthy, and self-improving.
+
+✱ 0. Fresh clone / workstation prep
+bash
+Copy
+Edit
+git clone https://github.com/<you>/swarm-ai.git
+cd swarm-ai
+python -m venv .venv && . .venv/bin/activate
+pip install -r requirements/dev.txt          # pytest, locust, etc.
+GPU workstation with NVIDIA driver ≥ 535, CUDA 12.1, 16 GB RAM, 50 GB disk.
+
+✱ 1. Model & docker assets (make init)
+bash
+Copy
+Edit
+make init               # pulls TinyLlama gguf + pattern-heads (~3 GB)
+make docker-build-all    # builds api, pattern-miner, trainer
+docker volume create models_vol && \
+rsync -a models/ $(docker volume inspect models_vol -f '{{.Mountpoint}}')/
+Expect “✅ Downloaded tiny_llama_Q4_K_M.gguf” & “✔ docker images list … v2.7.0-spiral”.
+
+✱ 2. Secrets & env knobs
+infra/env/prod.env
+
+ini
+Copy
+Edit
+OPENAI_API_KEYS=sk-A,sk-B
+MISTRAL_API_KEY=sk-mistral
+COUNCIL_DAILY_BUDGET=0.10
+SWARM_GPU_PROFILE=rtx_4070
+PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
+(Budget purposely low to test guardrail.)
+
+✱ 3. Bring the whole stack up
+bash
+Copy
+Edit
+make up       # wrapper around multi-compose line (core+canary+evolution)
+Verify:
+
+bash
+Copy
+Edit
+curl -f localhost:9000/health
+docker compose ps --format "table {{.Name}}\t{{.State}}\t{{.Ports}}"
+All nine services in “running (healthy)” state.
+
+✱ 4. Unit & micro tests (Python-only)
+bash
+Copy
+Edit
+pytest -q
+0 failures; duration < 15 s.
+
+✱ 5. GPU loader smoke
+bash
+Copy
+Edit
+make smoke-loader         # probes VRAM, loads tiny llama into CUDA
+Pass gate ⇒ VRAM ≤ 10.5 GB, util > 25 %.
+
+✱ 6. API live smoke
+bash
+Copy
+Edit
+make smoke-live           # 10 curl calls /orchestrate & /vote
+Check banner:
+
+sql
+Copy
+Edit
+🤖 council-fusion (Reason·Spark·Edge…) • Fast  first-token ≈ 250 ms
+✱ 7. Cache hit check
+bash
+Copy
+Edit
+curl -s -o /dev/null -w "%{time_total}\n" \
+     -H "Content-Type: app/json" \
+     -d '{"prompt":"2+2?"}' http://localhost:9000/orchestrate
+# repeat
+curl -s -o /dev/null -w "%{time_total}\n" ...   # second call ≤ 40 ms
+Redis KEYS cache:* shows an entry; Prom metric swarm_cache_hit_ratio ≥ 0.3.
+
+✱ 8. Cost guard test
+bash
+Copy
+Edit
+SWARM_CLOUD_ENABLED=true openai_cost=0.05 \
+make micro STRICT_COST=on
+Run should abort with "cost per request exceeded 0.02" after first pricey call.
+
+Reset budget:
+
+bash
+Copy
+Edit
+make budget-reset
+✱ 9. Full 380-prompt Titanic (optimized path)
+bash
+Copy
+Edit
+make titanic BUDGET=0.10
+Runtime 25 min; GPU util 35 – 65 %.
+
+Success criteria
+  • effective success ≥ 97 %
+  • composite accuracy ≥ 85 %
+  • cost ≤ $0.07 (with cache + pattern heads)
+  • p95 latency ≤ 200 ms
+
+Report saved to reports/titanic_optimized_YYYY-MM-DD.json.
+
+✱ 10. 5-min Locust soak
+bash
+Copy
+Edit
+make soak-live QPS=120 DURATION=5m
+Watch Grafana:
+VRAM flat ≤ 10 GB, swarm_fragmentation_events_total == 0, p95 ≤ 150 ms.
+
+✱ 11. Alert drill (VRAM Warning → Pager)
+Start pushgateway overlay:
+
+bash
+Copy
+Edit
+docker compose -f infra/docker-compose.pushgw.yml up -d pushgw
+Fire end-to-end drill:
+
+bash
+Copy
+Edit
+make test-alerts-e2e
+Slack #swarm-ops: Warning & Critical
+
+PagerDuty incident opens & auto-resolves
+
+make clear-chaos resets metric; alerts green.
+
+✱ 12. Nightly loop dry-run
+bash
+Copy
+Edit
+echo '[{"name":"dev_test","dataset":["What is 7*8?"]}]' > tasks/lora_queue.json
+# trainer picks it up within 30s
+docker compose logs -f trainer | grep "✅ trained"
+curl -f localhost:9000/admin/reload?lora=latest
+Prom metric swarm_lora_version increments.
+
+✱ 13. Canary promotion drill
+bash
+Copy
+Edit
+make set-canary-weight PERCENT=5
+make promote-canary
+Traefik dashboard → 100 % traffic on api-canary; old api stops; p95 unchanged.
+
+✅ Green-board pass
+When the release-gate summary prints:
+
+css
+Copy
+Edit
+✔ pytest ✔ loader ✔ live smoke ✔ titanic ✔ soak ✔ alerts ✔ lora
+ALL TARGETS MET 🎉
+commit the two JSON reports, push the branch, and tag v2.7.0-alpha.
+
+Runtime order & timing reference
+Stage	Time
+clone + build	10 min
+unit / loader / live	2 min
+Titanic	25 min
+soak	5 min
+alert drill	7 min
+lora dry-run	1 min
+Total	~50 min unattended
+
+That’s the full, deterministic “pipes test” for the Spiral system—from a blank workstation to a fully validated, self-training, cost-guarded, alert-wired swarm. 🟢
+
+
+Here’s a from-scratch, one-page “kick the tires” checklist you can run anytime you spin up the stack or change a prompt.
+Follow the steps in order; if a step fails, the box in the Fix column tells you exactly what file to touch.
+
+Step	Check / Command	Pass = What you should see	Fail ⇒ Fix here
+1 Boot log	`python autogen_api_shim.py	tee boot.log`	• [OK] Transformers available with CUDA: True
+• Loaded TinyLlama… on CUDA
+2 Endpoint sanity	`grep -R "fetch(" ui	grep -v "/hybrid"`	(no output) (UI only hits /hybrid)
+3 Greeting shortcut removed	grep -n "GREETING_RE" router_cascade.py	0 hits	Delete the old greeting-shortcut block
+4 Agent-0 first	curl -sXPOST /hybrid -d '{"query":"hi"}' | jq .skill_type	agent0	routing path wrong → step 2 & 3
+5 Stub markers active	curl -sXPOST /hybrid -d '{"query":"def custom_function()"}' | jq .confidence	0	add "custom_function","todo","template" to self.stub_markers
+6 Vote floor	grep "min_confidence" router/voting.py	min_confidence = 0.75 (or >)	raise it; stub can’t win below this
+7 Local model really loads	`nvidia-smi	grep python` while sending prompt	process using ≥ 800 MiB
+8 Specialist parallel OK	curl -sXPOST /hybrid -d '{"query":"factor x^2-5x+6"}' | jq .latency_ms	< 900 ms	see log; if math head returns “unsupported” add CloudRetry
+9 CloudFallback works	kill Internet, run: complex prompt → UNSURE	restore net, same prompt gets GPT-4 answer	cloud_enabled: true & OpenAI key set
+10 CI stub test	pytest tests/test_no_stub.py	green bar	update test if marker list changed
+11 1-min soak	locust -f locustfile.py -u40 -r10 -t1m --headless	p95 < 200 ms, 0 errors	latency ↑ → GPU fragmentation; restart models
+
+If every row passes…
+Agent-0 draft appears in < 300 ms.
+
+Any template / TODO reply is forced to UNSURE and escalates.
+
+Cloud calls fire only when both Agent-0 and Mixtral say “I don’t know”.
+
+A 40-user soak holds p95 < 200 ms and zero template leaks.
+
+Run this table whenever you change models, prompts, or routing code and you’ll always know exactly where a new problem crept in. 🚀
+
+
+
+Below is the “fresh-disk → talking Agent-0” run-book that captures all of the kernel-adjacent integration you now rely on. Follow it verbatim on a clean Windows 11 or Ubuntu 22.04 box with an RTX 4070 and you’ll land at the exact stack you’ve been testing.
+
+0 · Firmware / BIOS
+Enable Resizable-BAR (a.k.a. “Above-4 G decode”).
+
+Set PCIe to GEN 4 (or “Auto”) and turn off ASPM power-save.
+
+1 · Base OS & driver
+OS	Commands
+Ubuntu 22.04	bash sudo add-apt-repository ppa:graphics-drivers/ppa -y sudo apt update && sudo apt install -y nvidia-driver-572 nvidia-dkms-572 docker.io docker-compose
+Windows 11	• NVIDIA package 572.83
+• WSL 2 with Ubuntu 22.04
+• Docker Desktop (WSL backend, GPU support on)
+
+Check:
+
+bash
+Copy
+Edit
+nvidia-smi  # driver 572.xx, CUDA 12.8
+2 · Kernel-level toggles (one-time)
+Linux
+bash
+Copy
+Edit
+# 1. Persistence daemon so GPU loads before Compose
+sudo systemctl enable nvidia-persistenced
+
+# 2. Transparent HugePages only on madvise
+echo 'never'  | sudo tee /sys/kernel/mm/transparent_hugepage/enabled
+echo 'madvise'| sudo tee /sys/kernel/mm/transparent_hugepage/defrag
+
+# 3. Cgroup v2 unified hierarchy
+sudo grubby --update-kernel=ALL --args="systemd.unified_cgroup_hierarchy=1"
+Windows
+No extra kernel knobs—driver handles BAR mapping & THP equivalent.
+
+3 · Clone repo & install script
+bash
+Copy
+Edit
+git clone https://github.com/your-org/agent0-swarm.git
+cd agent0-swarm
+chmod +x install.sh
+./install.sh --quiet            # creates /opt/agent0 & models_vol
+The script:
+
+installs python 3.11, vLLM 0.8.2, llama.cpp 0.2.24
+
+writes .env.swarm with your OpenAI / Mistral keys
+
+downloads TinyLlama-1.1B-chat-q4.gguf into /models
+
+enables THP = never at boot (Ubuntu only)
+
+4 · Docker Compose stack
+bash
+Copy
+Edit
+docker compose --env-file infra/env/prod.env -f docker-compose.yml up -d
+Services
+
+Name	What it does	Kernel tie-ins
+api	FastAPI + deterministic loader. ENV: PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128.	allocator fragmentation fix
+pattern-miner	MiniLM → HDBSCAN every 6 h.	—
+trainer	Nightly QLoRA on TinyLlama (6 GB VRAM cap via cgroup).	cgroup v2 memory.high
+metrics	swarm_metrics.service exporter on :9091.	independent journal slice
+
+models_vol is a bind-mount (/models) so the trainer and API share checkpoints.
+
+5 · System services (host)
+Unit	Purpose
+agent0-compose.service	After=network-online.target docker.service nvidia-persistenced.service then docker compose up.
+distill@daily.timer + .service	Fires docker compose exec trainer python auto_lora_trainer.py at 03:00.
+swarm_metrics.service	Keeps Prometheus feed alive even if API dies.
+
+Windows analogue uses NSSM to wrap docker-compose.exe and sets DependOn=docker.
+
+6 · Security & sandbox
+Linux code-exec: firejail --private --net=none --rlimit-as=8G --cpu=4 python - <<'PY' …
+
+Windows: wsl --exec firejail … --memory=2GB --net=none.
+
+Compose security_opt: ["no-new-privileges"] plus a minimal seccomp profile.
+
+Post-install script opens ports 8000, 8765, 9091 via ufw/firewalld and labels /models with svirt_t on SELinux systems.
+
+7 · First boot verification
+bash
+Copy
+Edit
+sudo systemctl enable --now agent0-compose
+journalctl -u agent0-compose | tail -20   # should end in “Loaded TinyLlama...VRAM 1010 MB”
+curl -s http://localhost:8000/health      # → {"status":"ok"}
+curl -s http://localhost:9091/metrics | grep service_startups_total
+Browser: http://localhost:8765/chat — type “hello”; first token appears in ≈ 250 ms, TinyLlama answers locally; cloud fallback odds < 10 %.
+
+Grafana: http://localhost:3000 → Swarm Overview
+
+VRAM 10 GB, GPU util 45 – 55 % under load
+
+swarm_cloud_hit_ratio trending down after nightly distill.
+
+8 · Daily autonomous spiral
+Pattern-miner clusters yesterday’s cache → writes new specialist heads → touches /app/reload.flag.
+
+API hot-reloads models in-process (no container restart).
+
+Trainer fine-tunes TinyLlama LoRA each night; canary A/B merges if latency ≤ previous & success ≥ previous.
+
+Budget-enforcer daemon retires any cloud provider once daily spend ≥ $0.10 or hit-rate < 10 %.
+
+Prom alerts page you only on:
+
+GPU free < 1.5 GB for 5 min and trainer running.
+
+Cloud spend > $0.08.
+
+Fragmentation events > 0. (should be zero with allocator knob)
+
+That is the full “from-zero-to-talking” kernel-integration stack
+Nothing runs in ring 0 that you wrote; the deepest touch is cgroup & /sys tweaks plus NVIDIA persistence. If you follow the eight sections above on a fresh OS image, Agent-0 boots on login, trains at night, and costs you pennies—no kernel module required.
+
+
+

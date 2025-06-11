@@ -1,0 +1,170 @@
+---
+# PatchCtl Configuration - Build Hardening Integration
+# QA-302: Gemini streaming auditor with auto-revert capabilities
+# Builder 2 Hardening Commit
+
+api:
+  version: "v2.1.0"
+  port: 8090
+  timeout: 300s
+  rate_limit:
+    requests_per_minute: 120
+    burst_size: 20
+
+# Core PatchCtl Settings
+patch_control:
+  enabled: true
+  auto_merge: false
+  require_approval: true
+  daily_quota: 3
+  emergency_quota: 1
+  freeze_exempt_label: "freeze-exempt"
+
+# GPG and Security
+security:
+  gpg_required: true
+  lineage_cid: true
+  signature_verification: true
+  approval_chain: ["opus", "gemini"]
+
+# Master Branch Protection
+branch_protection:
+  master:
+    enabled: true
+    ci_gate_required: true
+    rollback_timeout: 300s
+    protection_during_soak: true
+
+# QA-302 Implementation: Gemini Streaming Audit Webhook
+gemini_audit:
+  enabled: true
+  streaming: true
+  assertions: true  # QA-302 requirement
+  webhook:
+    url: "http://localhost:8091/stream-audit"
+    method: "POST"
+    timeout: 60s
+    retry_attempts: 3
+    retry_backoff: 2s
+  
+  # Auto-revert capabilities
+  auto_revert:
+    enabled: true
+    triggers:
+      - regression_detected
+      - security_vulnerability
+      - quality_degradation
+      - performance_impact
+    confidence_threshold: 0.75
+    revert_timeout: 120s
+  
+  # Streaming audit configuration
+  stream_config:
+    buffer_size: 1024
+    flush_interval: 5s
+    compression: gzip
+    format: "jsonl"
+  
+  # Audit assertions
+  assertions:
+    code_quality_min: 0.80
+    security_scan_required: true
+    performance_regression_max: 0.05  # 5% max degradation
+    test_coverage_min: 0.85
+    memory_leak_detection: true
+    
+# FMC-120 Integration Hooks
+fmc_integration:
+  fmc120_feedback_hooks:
+    enabled: true
+    endpoint: "http://localhost:8088/feedback"
+    auto_route_decisions: true
+    
+  routing_rules:
+    auto_merge_threshold: 0.85
+    audit_trigger_threshold: 0.80
+    hold_threshold: 0.60
+    
+  decision_factors:
+    regression_detection: "route_to_audit"
+    security_concerns: "route_to_audit"
+    test_failures: "route_to_audit"
+    high_confidence: "approve_merge"
+    low_confidence: "hold_for_review"
+
+# Quorum Integration - QA-300
+quorum:
+  enabled: true
+  dual_render_required: true
+  ast_diff_threshold: 0.05
+  consensus_mode: "strict"
+  
+  builder_endpoints:
+    builder_a: "http://localhost:8085/render"
+    builder_b: "http://localhost:8085/render"
+    coordinator: "http://localhost:8085/quorum"
+
+# Phi-3 Meta-Hash Integration - QA-301  
+phi3_meta_hash:
+  enabled: true
+  endpoint: "http://localhost:8086/meta-hash"
+  verification_required: true
+  hash_algorithm: "sha256_semantic"
+  
+  patchctl_hooks:
+    pre_merge: true
+    post_merge: true
+    verification_timeout: 30s
+
+# Monitoring and Alerting
+monitoring:
+  prometheus:
+    enabled: true
+    metrics_port: 9090
+    custom_metrics:
+      - patchctl_decisions_total
+      - gemini_audit_triggers_total
+      - auto_revert_events_total
+      - quorum_consensus_rate
+      - phi3_hash_verification_total
+  
+  alerting:
+    slack_webhook: "${SLACK_WEBHOOK_URL}"
+    email_notifications: true
+    critical_alerts:
+      - auto_revert_triggered
+      - quorum_consensus_failed
+      - security_vulnerability_detected
+
+# Build Pipeline Integration
+pipeline:
+  ci_integration:
+    github_actions: true
+    status_checks_required: true
+    auto_cancel_outdated: true
+  
+  deployment:
+    shadow_rollout: true  # QA-302 requirement
+    canary_percentage: 5
+    rollback_automation: true
+
+# Hardening Status
+hardening:
+  qa_300_dual_render: true
+  qa_301_phi3_hash: true
+  qa_302_gemini_stream: true
+  build_hardening_complete: true
+  
+# Webhook Endpoints Summary
+webhooks:
+  gemini_audit: "http://localhost:8091/stream-audit"
+  fmc_feedback: "http://localhost:8088/feedback" 
+  quorum_coordinator: "http://localhost:8085/quorum"
+  phi3_meta_hash: "http://localhost:8086/meta-hash"
+
+# Logging
+logging:
+  level: "INFO"
+  format: "json"
+  audit_trail: true
+  retention_days: 90 

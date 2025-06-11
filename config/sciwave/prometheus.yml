@@ -1,0 +1,38 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "sciwave_rules.yml"
+
+scrape_configs:
+  - job_name: 'sciwave-swarm'
+    static_configs:
+      - targets: ['sciwave:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  - job_name: 'sciwave-redis'
+    static_configs:
+      - targets: ['sciwave-redis:6379']
+    scrape_interval: 30s
+
+  - job_name: 'sciwave-system'
+    static_configs:
+      - targets: ['sciwave-exporter:9100']
+    scrape_interval: 15s
+
+  - job_name: 'sciwave-agents'
+    static_configs:
+      - targets: 
+          - 'sciwave-fetch:8080'
+          - 'sciwave-review:8080' 
+          - 'sciwave-peer:8080'
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093 

@@ -1,0 +1,70 @@
+FROM python:3.11-slim
+
+# SWS-Core Platform Dockerfile
+# ============================
+# 
+# Multi-stage build for Swarm-to-Swarm Services platform
+# Includes all SWS agents and API components
+
+LABEL maintainer="SWS-Core Team"
+LABEL version="1.0.0"
+LABEL description="Swarm-to-Swarm Services Platform"
+
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+ENV SWS_ENV=production
+ENV LOG_LEVEL=INFO
+
+# Create app directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better Docker layer caching
+COPY requirements.sws.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.sws.txt
+
+# Create non-root user for security
+RUN useradd --create-home --shell /bin/bash sws \
+    && mkdir -p /app/logs /app/repos /app/config \
+    && chown -R sws:sws /app
+
+# Copy SWS-Core source code
+COPY sws/ ./sws/
+COPY cli/ ./cli/
+COPY config/ ./config/
+
+# Copy startup scripts
+COPY scripts/sws-entrypoint.sh ./
+COPY scripts/health-check.sh ./
+
+# Make scripts executable
+RUN chmod +x sws-entrypoint.sh health-check.sh
+
+# Change ownership to sws user
+RUN chown -R sws:sws /app
+
+# Switch to non-root user
+USER sws
+
+# Expose ports
+EXPOSE 8080 9090
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD ./health-check.sh
+
+# Set entrypoint
+ENTRYPOINT ["./sws-entrypoint.sh"]
+
+# Default command
+CMD ["python", "-m", "sws.api"] 

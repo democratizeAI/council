@@ -1,0 +1,295 @@
+# QA-300 Quorum Check CI Guard
+# 🛡️ Automated Sonnet-A vs Sonnet-B AST comparison in CI pipeline
+
+name: QA-300 Quorum Check
+description: "Dual-render diff engine for Sonnet builder comparison"
+version: "1.0.0"
+
+triggers:
+  - pull_request
+  - push_to_main
+  - builder_output_ready
+
+conditions:
+  # Only run when both Sonnet builders have generated output
+  files_exist:
+    - "build/sonnet-a/output.py"
+    - "build/sonnet-b/output.py"
+  
+  # Skip for emergency fixes
+  skip_labels:
+    - "emergency-fix"
+    - "hotfix"
+    - "skip-quorum"
+
+steps:
+  - name: "Setup QA-300 Environment"
+    uses: "setup-python@v4"
+    with:
+      python-version: "3.11"
+    
+  - name: "Install Dependencies"
+    run: |
+      pip install ast difflib python-Levenshtein PyYAML
+      
+  - name: "Run Dual-Render Comparison"
+    id: quorum_check
+    run: |
+      python tools/qa/compare_ast.py \
+        --file-a build/sonnet-a/output.py \
+        --file-b build/sonnet-b/output.py \
+        --threshold 0.03 \
+        --output artifacts/qa-300-meta.yaml \
+        --metric-file artifacts/quorum_metric.txt \
+        --json > artifacts/comparison_result.json
+    continue-on-error: true
+    
+  - name: "Parse Quorum Decision"
+    id: decision
+    run: |
+      DECISION=$(python -c "
+      import json
+      with open('artifacts/comparison_result.json') as f:
+          result = json.load(f)
+      print(result['quorum_decision'])
+      ")
+      echo "decision=$DECISION" >> $GITHUB_OUTPUT
+      
+      ROUTE_TO=$(python -c "
+      import json
+      with open('artifacts/comparison_result.json') as f:
+          result = json.load(f)
+      print(result['route_to'])
+      ")
+      echo "route_to=$ROUTE_TO" >> $GITHUB_OUTPUT
+      
+      SIMILARITY=$(python -c "
+      import json
+      with open('artifacts/comparison_result.json') as f:
+          result = json.load(f)
+      print(f\"{result['ast_similarity']:.1%}\")
+      ")
+      echo "similarity=$SIMILARITY" >> $GITHUB_OUTPUT
+
+  - name: "Update Prometheus Metrics"
+    if: always()
+    run: |
+      # Write metric to node exporter textfile collector
+      mkdir -p /var/lib/node_exporter/textfile_collector
+      cp artifacts/quorum_metric.txt /var/lib/node_exporter/textfile_collector/qa_300_quorum.prom
+    continue-on-error: true
+
+  - name: "Archive QA-300 Artifacts"
+    uses: "actions/upload-artifact@v3"
+    if: always()
+    with:
+      name: qa-300-quorum-results
+      path: |
+        artifacts/qa-300-meta.yaml
+        artifacts/comparison_result.json
+        artifacts/quorum_metric.txt
+
+# Routing Logic
+routing:
+  pass:
+    condition: "${{ steps.decision.outputs.decision == 'pass' }}"
+    actions:
+      - name: "Route to Builder Merge"
+        run: |
+          echo "✅ Quorum PASSED (Similarity: ${{ steps.decision.outputs.similarity }})"
+          echo "Routing to builder/merge pipeline"
+          
+          # Update PatchCtl with pass status
+          curl -X POST "$PATCHCTL_API/quorum/pass" \
+            -H "Authorization: Bearer $PATCHCTL_TOKEN" \
+            -d '{
+              "qa_stage": "QA-300",
+              "decision": "pass",
+              "similarity": "${{ steps.decision.outputs.similarity }}",
+              "artifacts": ["artifacts/qa-300-meta.yaml"]
+            }'
+      
+      - name: "Enable Auto-Merge"
+        if: contains(github.event.head_commit.message, '[auto-merge]')
+        run: |
+          gh pr merge ${{ github.event.pull_request.number }} \
+            --auto --squash \
+            --body "QA-300 Quorum: PASS (${{ steps.decision.outputs.similarity }})"
+
+  fail:
+    condition: "${{ steps.decision.outputs.decision == 'fail' }}"
+    actions:
+      - name: "Route to Gemini Audit"
+        run: |
+          echo "❌ Quorum FAILED (Similarity: ${{ steps.decision.outputs.similarity }})"
+          echo "Routing to gemini/pre-audit pipeline"
+          
+          # Update PatchCtl with fail status
+          curl -X POST "$PATCHCTL_API/quorum/fail" \
+            -H "Authorization: Bearer $PATCHCTL_TOKEN" \
+            -d '{
+              "qa_stage": "QA-300", 
+              "decision": "fail",
+              "similarity": "${{ steps.decision.outputs.similarity }}",
+              "route_to": "gemini-audit",
+              "artifacts": ["artifacts/qa-300-meta.yaml", "artifacts/comparison_result.json"]
+            }'
+      
+      - name: "Trigger Gemini Audit"
+        uses: "repository-dispatch"
+        with:
+          event-type: "gemini-audit-required"
+          client-payload: |
+            {
+              "trigger": "qa-300-quorum-fail",
+              "pr_number": "${{ github.event.pull_request.number }}",
+              "similarity": "${{ steps.decision.outputs.similarity }}",
+              "artifacts_url": "${{ steps.archive.outputs.artifact-url }}"
+            }
+      
+      - name: "Block Auto-Merge"
+        run: |
+          gh pr ready --undo ${{ github.event.pull_request.number }}
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --body "🛡️ **QA-300 Quorum Check: FAILED**
+            
+            **AST Similarity:** ${{ steps.decision.outputs.similarity }}
+            **Threshold:** 97%
+            **Route:** Gemini Audit Required
+            
+            The Sonnet-A and Sonnet-B builders produced significantly different AST structures. This requires manual review before merge.
+            
+            **Next Steps:**
+            1. Review artifacts in [QA-300 Results](${{ steps.archive.outputs.artifact-url }})
+            2. Wait for Gemini audit completion
+            3. Address any identified issues
+            
+            **Rollback:** Add \`rollback: qa-revert\` to bypass if urgent"
+
+# Notifications
+notifications:
+  slack:
+    webhook_url: "${{ secrets.SLACK_QA_WEBHOOK }}"
+    channels:
+      - "#qa-alerts"
+      - "#builder-team"
+    
+    pass_message: |
+      ✅ **QA-300 Quorum: PASS**
+      PR: ${{ github.event.pull_request.title }}
+      Similarity: ${{ steps.decision.outputs.similarity }}
+      Route: Builder Merge
+    
+    fail_message: |
+      ❌ **QA-300 Quorum: FAIL** 
+      PR: ${{ github.event.pull_request.title }}
+      Similarity: ${{ steps.decision.outputs.similarity }}
+      Route: Gemini Audit Required
+      
+      Action Required: Manual review needed
+
+  email:
+    recipients:
+      - "qa-team@autogende council.dev"
+      - "builder-leads@autogencouncil.dev"
+    
+    subject_pass: "QA-300: Quorum PASSED - {{ github.event.pull_request.title }}"
+    subject_fail: "QA-300: Quorum FAILED - Manual Review Required"
+
+# Rollback Configuration
+rollback:
+  trigger_label: "rollback: qa-revert"
+  
+  steps:
+    - name: "Emergency QA-300 Bypass"
+      if: contains(github.event.pull_request.labels.*.name, 'rollback: qa-revert')
+      run: |
+        echo "🚨 EMERGENCY ROLLBACK TRIGGERED"
+        echo "Bypassing QA-300 quorum check due to rollback label"
+        
+        # Create emergency pass meta.yaml
+        cat > artifacts/qa-300-meta-emergency.yaml << EOF
+        qa_300_dual_render:
+          ast_similarity: "BYPASSED"
+          quorum_decision: "emergency-pass"
+          route_to: "none"
+          rollback: "qa-revert"
+          emergency_bypass: true
+          timestamp: "$(date -Iseconds)"
+        EOF
+        
+        # Force pass routing
+        echo "decision=pass" >> $GITHUB_OUTPUT
+        echo "route_to=none" >> $GITHUB_OUTPUT
+        echo "similarity=EMERGENCY_BYPASS" >> $GITHUB_OUTPUT
+
+    - name: "Log Emergency Bypass"
+      if: contains(github.event.pull_request.labels.*.name, 'rollback: qa-revert')
+      run: |
+        # Audit log for security
+        curl -X POST "$AUDIT_LOG_API/emergency-bypass" \
+          -H "Authorization: Bearer $AUDIT_TOKEN" \
+          -d '{
+            "event": "qa-300-emergency-bypass",
+            "pr": "${{ github.event.pull_request.number }}",
+            "user": "${{ github.actor }}",
+            "reason": "rollback: qa-revert label applied",
+            "timestamp": "'$(date -Iseconds)'"
+          }'
+
+# Metrics & Monitoring
+metrics:
+  prometheus:
+    - name: "qa_300_checks_total"
+      type: "counter"
+      help: "Total QA-300 quorum checks performed"
+      labels: ["decision", "repository"]
+    
+    - name: "qa_300_similarity_score"
+      type: "histogram"
+      help: "AST similarity scores from QA-300"
+      buckets: [0.5, 0.7, 0.85, 0.9, 0.95, 0.97, 0.99, 1.0]
+    
+    - name: "qa_300_execution_duration_seconds"
+      type: "histogram"
+      help: "QA-300 execution time"
+      buckets: [1, 5, 10, 30, 60, 120]
+
+  grafana_dashboard:
+    title: "QA-300 Quorum Health"
+    panels:
+      - "Pass/Fail Rate"
+      - "Similarity Score Distribution" 
+      - "Execution Time Trends"
+      - "Gemini Audit Trigger Rate"
+
+# Integration Points
+integrations:
+  patchctl:
+    endpoint: "${{ secrets.PATCHCTL_API_ENDPOINT }}"
+    authentication: "bearer_token"
+    
+    pass_webhook: "/quorum/pass"
+    fail_webhook: "/quorum/fail"
+    
+  gemini_audit:
+    trigger_event: "gemini-audit-required"
+    queue: "high-priority"
+    
+  builder_merge:
+    auto_merge_enabled: true
+    conditions:
+      - "qa_300_decision == 'pass'"
+      - "all_other_checks_passed"
+
+# Security
+security:
+  secrets_required:
+    - "PATCHCTL_TOKEN"
+    - "AUDIT_TOKEN" 
+    - "SLACK_QA_WEBHOOK"
+    
+  permissions:
+    contents: read
+    pull-requests: write
+    checks: write 
