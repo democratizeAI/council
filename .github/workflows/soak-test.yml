@@ -9,12 +9,12 @@ on:
         default: '150'
         type: string
       spawn_rate:
-        description: 'User spawn rate per second' 
+        description: 'User spawn rate per second'
         required: false
         default: '25'
         type: string
       duration:
-        description: 'Test duration (e.g., 5m, 30s)'
+        description: 'Test duration (e.g., 5m, 10s)'
         required: false
         default: '5m'
         type: string
@@ -33,6 +33,9 @@ on:
 env:
   DOCKER_BUILDKIT: 1
   COMPOSE_DOCKER_CLI_BUILD: 1
+  # Higher thresholds for CPU-only CI stack (vs GPU production)
+  P95_THRESHOLD_MS: 1500  # CPU inference is naturally slower
+  FAILURE_RATE_THRESHOLD: 0.5
 
 jobs:
   soak-test:
@@ -319,8 +322,8 @@ jobs:
             echo "📊 Error rate: ${error_rate}%"
             
             # Threshold validation
-            if (( $(echo "$error_rate > 0.5" | bc -l) )); then
-              echo "❌ Error rate ${error_rate}% exceeds 0.5% threshold"
+            if (( $(echo "$error_rate > $FAILURE_RATE_THRESHOLD" | bc -l) )); then
+              echo "❌ Error rate ${error_rate}% exceeds $FAILURE_RATE_THRESHOLD threshold"
               exit 1
             fi
           fi
@@ -355,13 +358,13 @@ jobs:
             echo "❌ Failure rate: ${failure_rate}%"
             
             # Validate SLA thresholds
-            if (( $(echo "$p95_response_time > 200" | bc -l) )); then
-              echo "❌ P95 latency ${p95_response_time}ms exceeds 200ms threshold"
+            if (( $(echo "$p95_response_time > $P95_THRESHOLD_MS" | bc -l) )); then
+              echo "❌ P95 latency ${p95_response_time}ms exceeds $P95_THRESHOLD_MS threshold"
               exit 1
             fi
             
-            if (( $(echo "$failure_rate > 0.5" | bc -l) )); then
-              echo "❌ Failure rate ${failure_rate}% exceeds 0.5% threshold"  
+            if (( $(echo "$failure_rate > $FAILURE_RATE_THRESHOLD" | bc -l) )); then
+              echo "❌ Failure rate ${failure_rate}% exceeds $FAILURE_RATE_THRESHOLD threshold"  
               exit 1
             fi
             
@@ -416,8 +419,8 @@ jobs:
         if: needs.soak-test.result == 'success'
         run: |
           echo "🎉 Soak test PASSED!"
-          echo "✅ P95 latency ≤ 200ms"
-          echo "✅ Error rate < 0.5%"
+          echo "✅ P95 latency ≤ $P95_THRESHOLD_MSms"
+          echo "✅ Error rate < $FAILURE_RATE_THRESHOLD%"
           echo "✅ No memory fragmentation detected"
           echo "✅ All health checks passing"
           
