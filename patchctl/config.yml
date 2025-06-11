@@ -167,4 +167,66 @@ logging:
   level: "INFO"
   format: "json"
   audit_trail: true
-  retention_days: 90 
+  retention_days: 90
+
+# PatchCtl Configuration for AutoGen Council
+# Builder Hardening Wave Production Configuration
+
+server:
+  port: 8080
+  host: "0.0.0.0"
+
+audit:
+  enabled: true
+  timeout: 90s
+  lineage_cid: true
+  gpg_required: true
+  approval_chain: ["opus", "gemini"]
+
+quota:
+  daily_limit: 3
+  override_label: "freeze-exempt"
+  emergency_quota: 1
+
+enforcement:
+  master_protection: true
+  ci_gate_required: true
+  rollback_timeout: 300s
+
+# Existing quorum configuration
+quorum_groups:
+  audit_heads:
+    min_green: 2
+    heads:
+      - name: "Gemini"
+        stream: "audits:gemini"
+        weight: 1
+      - name: "O3"
+        stream: "audits:o3" 
+        weight: 1
+      - name: "Rule-Guard"
+        stream: "audits:rules"
+        weight: 1
+
+  # New 3-Sonnet quorum group
+  sonnet_builders:
+    min_green: ${SONNET_QUORUM_SIZE:-2}
+    heads:
+      - name: "Sonnet-A"
+        stream: "audits:results"
+        weight: 1
+      - name: "Sonnet-B"
+        stream: "audits:results"
+        weight: 1
+      - name: "Sonnet-C"
+        stream: "audits:results"
+        weight: 1
+
+rollback:
+  auto_enabled: true
+  max_attempts: 3
+  backoff_seconds: 30
+
+monitoring:
+  prometheus_enabled: true
+  metrics_port: 9100 

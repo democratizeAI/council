@@ -1,0 +1,104 @@
+# AutoGen Council Builder Deployment Configuration
+# Builder Hardening Wave Production Deployment
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: builder-config
+  namespace: autogen-council
+data:
+  redis_url: "redis://redis:6379"
+  prometheus_url: "http://prometheus:9090"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opus-strategist
+  namespace: autogen-council
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opus-strategist
+  template:
+    metadata:
+      labels:
+        app: opus-strategist
+    spec:
+      containers:
+      - name: opus-strategist
+        image: autogen/opus-strategist:v0.1-pre
+        ports:
+        - containerPort: 8080
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gemini-auditor
+  namespace: autogen-council
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: gemini-auditor
+  template:
+    metadata:
+      labels:
+        app: gemini-auditor
+    spec:
+      containers:
+      - name: gemini-auditor
+        image: autogen/gemini-auditor:v0.1-pre
+        ports:
+        - containerPort: 8080
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sonnet-builder
+  namespace: autogen-council
+spec:
+  replicas: 3           # quorum-sonnet draft — do not deploy until after freeze
+  selector:
+    matchLabels:
+      app: sonnet-builder
+  template:
+    metadata:
+      labels:
+        app: sonnet-builder
+    spec:
+      containers:
+      - name: sonnet-builder
+        image: autogen/sonnet-builder:v0.1-pre
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SONNET_INSTANCE_ID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: router-cascade
+  namespace: autogen-council
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: router-cascade
+  template:
+    metadata:
+      labels:
+        app: router-cascade
+    spec:
+      containers:
+      - name: router-cascade
+        image: autogen/router-cascade:v0.1-pre
+        ports:
+        - containerPort: 8080 
