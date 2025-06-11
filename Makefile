@@ -408,9 +408,15 @@ help-md: ## Generate Slack slash command help documentation
 	@python tools/gen_slash_help.py
 	@echo "✅ SLASH_HELP.md and SLASH_HELP.json generated"
 
+# 📝 FREEZE-SAFE: Release Note Generator
+release-note: ## Generate RELEASE_NOTES.md from ledger and git data
+	@echo "📝 Generating release notes..."
+	@python scripts/make_release_note.py
+	@echo "✅ RELEASE_NOTES.md and RELEASE_SUMMARY.json generated"
+
 clean: ## Clean up temporary files
 	@echo "Cleaning up temporary files..."
 	@find . -name "*.pyc" -delete
 	@find . -name "__pycache__" -delete
-	@rm -f SLASH_HELP.md SLASH_HELP.json
+	@rm -f SLASH_HELP.md SLASH_HELP.json RELEASE_NOTES.md RELEASE_SUMMARY.json
 	@echo "✅ Cleanup complete" 

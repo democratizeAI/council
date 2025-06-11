@@ -743,6 +743,49 @@ The generated documentation powers the `/help` slash command in production Slack
 **Freeze-safe guarantee:**
 This tool only reads code and writes documentation files—it never touches running containers or live services, making it safe to use during deployment freezes.
 
+### **Release Workflow**
+
+The AutoGen Council includes a freeze-safe tool for generating release notes from ledger data and git statistics:
+
+```bash
+# Generate release notes for current version
+make release-note
+```
+
+**What it does:**
+- Exports public ledger data (with fallback to `docs/ledger/latest.md`)
+- Extracts git statistics (version, commits, branch info)
+- Generates comprehensive `RELEASE_NOTES.md` with structured sections
+- Creates `RELEASE_SUMMARY.json` for programmatic access
+
+**Generated content includes:**
+- **Executive Summary** - High-level overview of release achievements
+- **Performance Metrics** - Latency, cost, success rate comparisons
+- **Detailed Changes** - Full ledger content integration
+- **Technical Achievements** - Freeze-safe development, architecture highlights
+- **Installation Instructions** - Quick start and Docker deployment
+- **Security Updates** - Guardian enhancements and audit improvements
+- **Roadmap Preview** - What's coming next
+
+**Example usage:**
+```bash
+# At noon on release days
+make release-note
+
+# Review generated content
+cat RELEASE_NOTES.md
+
+# Post to Slack or GitHub release
+# Content is ready for immediate distribution
+```
+
+**Files generated:**
+- `RELEASE_NOTES.md` - Complete release documentation
+- `RELEASE_SUMMARY.json` - Metadata for automation
+
+**Freeze-safe guarantee:**
+This tool only reads git history and ledger files—it never modifies running services or configurations, making it safe for use during deployment freezes.
+
 ---
 
 ## 🛣️ **ROADMAP**
