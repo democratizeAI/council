@@ -1,56 +1,87 @@
-name: "FastAPI Soak Test (Ticket #217)"
+name: "🔥 FastAPI Soak Test"
 
 on:
   workflow_dispatch:
     inputs:
-      duration:
-        description: 'Test duration (e.g., 5m, 10m)'
-        required: false
-        default: '5m'
       users:
-        description: 'Number of users'
+        description: 'Number of concurrent users'
         required: false
         default: '150'
+        type: string
       spawn_rate:
-        description: 'User spawn rate per second'
+        description: 'User spawn rate per second' 
         required: false
         default: '25'
+        type: string
+      duration:
+        description: 'Test duration (e.g., 5m, 30s)'
+        required: false
+        default: '5m'
+        type: string
+        
+  schedule:
+    # Run twice daily: 6 AM and 6 PM UTC 
+    - cron: '0 6,18 * * *'
   
-  # Auto-trigger on FastAPI changes
   push:
     paths:
-      - 'api/**'
-      - 'docker-compose.fastapi.yml'
-      - 'monitoring/**'
-  
-  # Schedule for nightly soak tests
-  schedule:
-    - cron: '0 2 * * *'  # 2 AM daily
-
+    - 'docker-compose.fastapi.yml'
+    - '.github/workflows/soak-test.yml'
+    - 'api/**'
+    - 'requirements.txt'
+    
 env:
-  PYTORCH_CUDA_ALLOC_CONF: "max_split_size_mb:128"
-  PROMETHEUS_ENABLED: "true"
+  DOCKER_BUILDKIT: 1
+  COMPOSE_DOCKER_CLI_BUILD: 1
 
 jobs:
   soak-test:
-    name: "🔥 5-Minute Soak Test"
+    name: "🔥 5-minute Soak Test"
     runs-on: ubuntu-latest
     timeout-minutes: 15
     
+    outputs:
+      test-status: ${{ steps.final-check.outputs.status }}
+      p95-latency: ${{ steps.final-check.outputs.p95 }}
+      error-rate: ${{ steps.final-check.outputs.error_rate }}
+    
     steps:
-      - name: "📥 Checkout code"
+      - name: "📥 Checkout repository"
         uses: actions/checkout@v4
-        
-      - name: "🐍 Setup Python"
+        with:
+          fetch-depth: 1
+          
+      - name: "🔧 Install docker-compose v1 (fallback)"
+        run: |
+          echo "Installing docker-compose v1..."
+          echo "Current PATH: $PATH"
+          which docker || echo "Docker not found in PATH"
+          docker --version || echo "Docker version failed"
+          
+          echo "Downloading docker-compose v1.29.2..."
+          sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+          
+          echo "Verifying installation..."
+          which docker-compose || echo "docker-compose not found in PATH"
+          docker-compose --version || echo "docker-compose version failed"
+          ls -la /usr/local/bin/docker-compose || echo "docker-compose binary not found"
+          echo "Docker Compose installation complete"
+          
+      - name: "📁 Create artifacts directory"
+        run: |
+          mkdir -p artifacts
+          echo "Artifacts directory created: $(pwd)/artifacts"
+          
+      - name: "🐍 Setup Python 3.11"
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
           cache: 'pip'
           
-      - name: "📦 Install dependencies"
+      - name: "📦 Install Locust and dependencies"
         run: |
-          pip install -r tests/requirements.txt
-          pip install locust docker requests
+          pip install locust requests pytest
           
       - name: "🐋 Setup Docker Buildx"
         uses: docker/setup-buildx-action@v3
@@ -58,6 +89,15 @@ jobs:
       - name: "🚀 Start FastAPI Stack"
         run: |
           echo "🚀 Starting FastAPI stack for soak testing..."
+          
+          echo "Debug: Checking docker-compose availability..."
+          which docker-compose
+          docker-compose --version
+          
+          echo "Debug: Checking compose file..."
+          ls -la docker-compose.fastapi.yml
+          
+          echo "Debug: Starting containers..."
           docker-compose -f docker-compose.fastapi.yml up -d --build
           
           echo "⏳ Waiting for services to become healthy..."
@@ -93,7 +133,7 @@ jobs:
       - name: "📊 Baseline metrics collection"
         run: |
           echo "📊 Collecting baseline metrics..."
-          curl -s http://localhost:8000/metrics > baseline_metrics.txt
+          curl -s http://localhost:8000/metrics > artifacts/baseline_metrics.txt
           echo "Baseline metrics collected at $(date)"
           
       - name: "🔥 Locust Soak Test - Main API"
@@ -196,18 +236,40 @@ jobs:
                   print(f"⚠️ HTTP error: {request_type} {name} - {response.status_code}")
           EOF
           
-          # Run Locust soak test with GitHub Action inputs
+          # Run Locust soak test with GitHub Action inputs - output to artifacts
           locust -f locust_soak.py \
             --host=http://localhost:8000 \
             --users=${{ github.event.inputs.users || '150' }} \
             --spawn-rate=${{ github.event.inputs.spawn_rate || '25' }} \
             --run-time=${{ github.event.inputs.duration || '5m' }} \
             --headless \
-            --csv=soak_results \
-            --html=soak_report.html \
-            --logfile=locust.log \
+            --csv=artifacts/soak_results \
+            --html=artifacts/soak_report.html \
+            --logfile=artifacts/locust.log \
             --loglevel=INFO
             
+      - name: "🔍 Debug: Check Locust output immediately"
+        run: |
+          echo "=== POST-LOCUST DEBUG ==="
+          echo "Checking if Locust created files..."
+          
+          echo "--- Artifacts directory after Locust ---"
+          ls -la artifacts/ || echo "artifacts directory missing"
+          
+          echo "--- Expected files check ---"
+          [ -f "artifacts/soak_report.html" ] && echo "✅ soak_report.html found" || echo "❌ soak_report.html missing"
+          [ -f "artifacts/locust.log" ] && echo "✅ locust.log found" || echo "❌ locust.log missing"
+          
+          echo "--- CSV files check ---"
+          ls -la artifacts/*.csv 2>/dev/null || echo "❌ No CSV files in artifacts"
+          
+          echo "--- Any soak files in current directory? ---"
+          ls -la soak* 2>/dev/null || echo "No soak files in current directory"
+          
+          echo "--- Locust working directory check ---"
+          echo "Current PWD: $(pwd)"
+          ls -la . | grep -E "(soak|locust)" || echo "No locust/soak files in current directory"
+          
       - name: "🎯 Canary Traffic Mirroring Test"
         run: |
           echo "🎯 Testing canary traffic mirroring (5% split)..."
@@ -227,25 +289,25 @@ jobs:
           echo "📈 Analyzing post-soak metrics..."
           
           # Collect final metrics
-          curl -s http://localhost:8000/metrics > final_metrics.txt
+          curl -s http://localhost:8000/metrics > artifacts/final_metrics.txt
           
           # Parse key metrics
           echo "=== SOAK TEST RESULTS ==="
           echo "📊 Request metrics:"
-          grep "swarm_api_requests_total" final_metrics.txt | head -5
+          grep "swarm_api_requests_total" artifacts/final_metrics.txt | head -5
           
           echo "❌ Error metrics:"
-          grep "swarm_api_5xx_total" final_metrics.txt || echo "No 5xx errors recorded"
+          grep "swarm_api_5xx_total" artifacts/final_metrics.txt || echo "No 5xx errors recorded"
           
           echo "⏱️ Latency metrics:"
-          grep "swarm_api_request_duration_seconds" final_metrics.txt | grep "_sum\|_count" | head -3
+          grep "swarm_api_request_duration_seconds" artifacts/final_metrics.txt | grep "_sum\|_count" | head -3
           
           echo "💾 Memory metrics:"
-          grep "swarm_api_memory_usage_bytes" final_metrics.txt
+          grep "swarm_api_memory_usage_bytes" artifacts/final_metrics.txt
           
           # Validate thresholds
-          total_requests=$(grep 'swarm_api_requests_total.*status="200"' final_metrics.txt | awk '{sum += $2} END {print sum}' || echo "0")
-          total_errors=$(grep 'swarm_api_5xx_total' final_metrics.txt | awk '{sum += $2} END {print sum}' || echo "0")
+          total_requests=$(grep 'swarm_api_requests_total.*status="200"' artifacts/final_metrics.txt | awk '{sum += $2} END {print sum}' || echo "0")
+          total_errors=$(grep 'swarm_api_5xx_total' artifacts/final_metrics.txt | awk '{sum += $2} END {print sum}' || echo "0")
           
           echo "📈 Total successful requests: $total_requests"
           echo "❌ Total 5xx errors: $total_errors"
@@ -278,14 +340,14 @@ jobs:
         run: |
           echo "📋 Analyzing Locust soak test results..."
           
-          if [ -f "soak_results_stats.csv" ]; then
+          if [ -f "artifacts/soak_results_stats.csv" ]; then
             echo "=== LOCUST PERFORMANCE SUMMARY ==="
-            cat soak_results_stats.csv
+            cat artifacts/soak_results_stats.csv
             
             # Parse CSV for key metrics
-            avg_response_time=$(tail -n +2 soak_results_stats.csv | grep -v "Aggregated" | awk -F',' '{sum+=$6; count++} END {print sum/count}' || echo "0")
-            p95_response_time=$(tail -n +2 soak_results_stats.csv | grep "Aggregated" | awk -F',' '{print $9}' || echo "0")
-            failure_rate=$(tail -n +2 soak_results_stats.csv | grep "Aggregated" | awk -F',' '{print $4}' || echo "0")
+            avg_response_time=$(tail -n +2 artifacts/soak_results_stats.csv | grep -v "Aggregated" | awk -F',' '{sum+=$6; count++} END {print sum/count}' || echo "0")
+            p95_response_time=$(tail -n +2 artifacts/soak_results_stats.csv | grep "Aggregated" | awk -F',' '{print $9}' || echo "0")
+            failure_rate=$(tail -n +2 artifacts/soak_results_stats.csv | grep "Aggregated" | awk -F',' '{print $4}' || echo "0")
             
             echo "⏱️ Average response time: ${avg_response_time}ms"
             echo "📊 95th percentile: ${p95_response_time}ms" 
@@ -307,17 +369,49 @@ jobs:
             echo "⚠️ Locust results file not found"
           fi
           
+      - name: "🔍 Debug: List artifact directory contents"
+        if: always()
+        run: |
+          echo "=== ARTIFACT DIRECTORY DEBUG ==="
+          echo "Current working directory: $(pwd)"
+          echo "Workspace: ${{ github.workspace }}"
+          
+          echo "--- Directory structure ---"
+          ls -la . || echo "Failed to list current directory"
+          
+          echo "--- Artifacts directory check ---"
+          if [ -d "artifacts" ]; then
+            echo "✅ artifacts/ directory exists"
+            echo "Contents of artifacts/:"
+            ls -la artifacts/
+            echo "Recursive listing:"
+            find artifacts/ -type f -exec ls -la {} \; 2>/dev/null || echo "No files found in artifacts"
+          else
+            echo "❌ artifacts/ directory does not exist"
+          fi
+          
+          echo "--- Search for soak files anywhere ---"
+          find . -name "*soak*" -type f 2>/dev/null || echo "No soak files found"
+          find . -name "*.csv" -type f 2>/dev/null || echo "No CSV files found"
+          find . -name "*.html" -type f 2>/dev/null || echo "No HTML files found"
+          find . -name "*.log" -type f 2>/dev/null || echo "No log files found"
+          
+          echo "--- Current directory files ---"
+          find . -maxdepth 2 -type f | head -20
+          
       - name: "📤 Upload artifacts"
         uses: actions/upload-artifact@v4
         if: always()
+        continue-on-error: true
         with:
           name: soak-test-results
           path: |
-            soak_report.html
-            soak_results_*.csv
-            locust.log
-            baseline_metrics.txt
-            final_metrics.txt
+            artifacts/**
+            *.csv
+            *.html
+            *.log
+            **/soak*
+          if-no-files-found: warn
             
       - name: "🧹 Cleanup"
         if: always()
