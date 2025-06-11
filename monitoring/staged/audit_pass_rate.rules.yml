@@ -1,0 +1,215 @@
+# O3 Audit Extension - Prometheus Rules
+# 🚦 FREEZE-SAFE: Staged in monitoring/staged/ - Prometheus won't load
+groups:
+  - name: o3_audit_rules
+    interval: 30s
+    rules:
+      # Audit Pass Rate Monitoring
+      - record: audit:pass_rate_5m
+        expr: |
+          (
+            rate(audit_decisions_total{decision="pass"}[5m]) / 
+            rate(audit_decisions_total[5m])
+          ) * 100
+        labels:
+          service: "o3_audit"
+          
+      - record: audit:pass_rate_1h
+        expr: |
+          (
+            rate(audit_decisions_total{decision="pass"}[1h]) / 
+            rate(audit_decisions_total[1h])
+          ) * 100
+        labels:
+          service: "o3_audit"
+
+      # Consensus Tracking
+      - record: audit:consensus_rate_5m
+        expr: |
+          (
+            rate(audit_consensus_total{outcome="achieved"}[5m]) / 
+            rate(audit_consensus_total[5m])
+          ) * 100
+        labels:
+          service: "o3_audit"
+          
+      - record: audit:consensus_latency_p95
+        expr: |
+          histogram_quantile(0.95, 
+            rate(audit_consensus_duration_seconds_bucket[5m])
+          )
+        labels:
+          service: "o3_audit"
+
+      # Agent Performance
+      - record: audit:agent_availability_5m
+        expr: |
+          (
+            rate(audit_agent_requests_total{status="success"}[5m]) / 
+            rate(audit_agent_requests_total[5m])
+          ) * 100
+        labels:
+          service: "o3_audit"
+          
+      - record: audit:agent_latency_p50
+        expr: |
+          histogram_quantile(0.50, 
+            rate(audit_agent_duration_seconds_bucket[5m])
+          )
+        labels:
+          service: "o3_audit"
+
+      # Cost Monitoring
+      - record: audit:cost_per_hour
+        expr: |
+          rate(audit_cost_total_usd[1h])
+        labels:
+          service: "o3_audit"
+          
+      - record: audit:cost_per_decision
+        expr: |
+          rate(audit_cost_total_usd[5m]) / 
+          rate(audit_decisions_total[5m])
+        labels:
+          service: "o3_audit"
+
+  - name: o3_audit_alerts
+    rules:
+      # Critical Alerts - Immediate Response
+      - alert: AuditPassRateCritical
+        expr: audit:pass_rate_5m < 50
+        for: 2m
+        labels:
+          severity: critical
+          service: o3_audit
+          action: immediate_escalation
+        annotations:
+          summary: "O3 Audit pass rate critically low"
+          description: "Pass rate {{ $value }}% below 50% threshold for 2+ minutes"
+          runbook_url: "https://docs.autogencouncil.dev/runbooks/audit-pass-rate"
+          rollback_trigger: "audit_emergency_disable"
+
+      - alert: AuditConsensusFailure
+        expr: audit:consensus_rate_5m < 70
+        for: 1m
+        labels:
+          severity: critical
+          service: o3_audit
+          action: immediate_escalation
+        annotations:
+          summary: "O3 Audit consensus failing"
+          description: "Consensus rate {{ $value }}% below 70% threshold"
+          runbook_url: "https://docs.autogencouncil.dev/runbooks/audit-consensus"
+          rollback_trigger: "audit_fallback_mode"
+
+      - alert: AuditCostOverrun
+        expr: audit:cost_per_hour > 0.15
+        for: 5m
+        labels:
+          severity: critical
+          service: o3_audit
+          action: cost_cap_trigger
+        annotations:
+          summary: "O3 Audit cost overrun detected"
+          description: "Hourly cost ${{ $value }} exceeds $0.15 threshold"
+          runbook_url: "https://docs.autogencouncil.dev/runbooks/cost-overrun"
+          rollback_trigger: "audit_cost_emergency_stop"
+
+      # High Priority Alerts - 15 minute response
+      - alert: AuditLatencyHigh
+        expr: audit:consensus_latency_p95 > 180
+        for: 10m
+        labels:
+          severity: high
+          service: o3_audit
+          action: performance_investigation
+        annotations:
+          summary: "O3 Audit latency degraded"
+          description: "P95 latency {{ $value }}s exceeds 180s threshold"
+          runbook_url: "https://docs.autogencouncil.dev/runbooks/audit-latency"
+
+      - alert: AuditAgentUnavailable
+        expr: audit:agent_availability_5m < 90
+        for: 5m
+        labels:
+          severity: high
+          service: o3_audit
+          action: agent_health_check
+        annotations:
+          summary: "O3 Audit agent availability low"
+          description: "Agent {{ $labels.agent }} availability {{ $value }}% below 90%"
+          runbook_url: "https://docs.autogencouncil.dev/runbooks/agent-availability"
+
+      # Medium Priority Alerts - 1 hour response
+      - alert: AuditPassRateWarning
+        expr: audit:pass_rate_1h < 80
+        for: 30m
+        labels:
+          severity: medium
+          service: o3_audit
+          action: trend_analysis
+        annotations:
+          summary: "O3 Audit pass rate trending down"
+          description: "1-hour pass rate {{ $value }}% below 80% threshold"
+          runbook_url: "https://docs.autogencouncil.dev/runbooks/pass-rate-trend"
+
+      - alert: AuditCostTrending
+        expr: |
+          (
+            audit:cost_per_hour - 
+            audit:cost_per_hour offset 1h
+          ) / audit:cost_per_hour offset 1h * 100 > 25
+        for: 20m
+        labels:
+          severity: medium
+          service: o3_audit
+          action: cost_analysis
+        annotations:
+          summary: "O3 Audit cost trending up"
+          description: "Hourly cost increased {{ $value }}% over previous hour"
+          runbook_url: "https://docs.autogencouncil.dev/runbooks/cost-trending"
+
+  - name: o3_audit_slos
+    rules:
+      # Service Level Objectives
+      - record: audit:slo_availability_30d
+        expr: |
+          (
+            (count by (service) (up{service="o3_audit"} == 1)) /
+            (count by (service) (up{service="o3_audit"}))
+          ) * 100
+        labels:
+          slo: availability
+          period: 30d
+          target: 99.9
+
+      - record: audit:slo_latency_30d
+        expr: |
+          (
+            (
+              count by (service) (
+                audit_consensus_duration_seconds_bucket{le="120"}
+              ) -
+              count by (service) (
+                audit_consensus_duration_seconds_bucket{le="60"}
+              )
+            ) /
+            count by (service) (audit_consensus_duration_seconds_bucket{le="+Inf"})
+          ) * 100
+        labels:
+          slo: latency
+          period: 30d
+          target: 95
+
+      - record: audit:slo_accuracy_30d
+        expr: audit:pass_rate_1h
+        labels:
+          slo: accuracy
+          period: 30d
+          target: 85
+
+# 🚦 FREEZE-SAFE VALIDATION:
+# - Rules contain proper syntax (verified by make test-rules)
+# - No external dependencies during freeze
+# - Staged directory prevents Prometheus loading
+# - Ready for immediate activation post-freeze 

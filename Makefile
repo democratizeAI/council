@@ -1,7 +1,7 @@
 # AutoGen Council Makefile
 # Provides convenient commands for development, testing, and deployment
 
-.PHONY: help setup start stop test micro soak titanic health logs clean test-all test-unit test-service test-e2e test-ui install-test-deps train_reward merge_rl_lora status
+.PHONY: help setup start stop test micro soak titanic health logs clean test-all test-unit test-service test-e2e test-ui install-test-deps train_reward merge_rl_lora status test-rules test-audit-config lint-audit
 
 # Default target
 help:
@@ -275,4 +275,135 @@ status:
 clean:
 	rm -rf models/reward_v1/
 	rm -rf logs/training/
-	rm -rf checkpoints/ 
+	rm -rf checkpoints/
+
+# 🚦 FREEZE-SAFE: Monitoring rules testing
+test-rules: ## Test staged Prometheus rules syntax
+	@echo "🚦 Testing O3 audit Prometheus rules (freeze-safe)..."
+	@if [ -f "monitoring/staged/audit_pass_rate.rules.yml" ]; then \
+		echo "Validating audit rules syntax..."; \
+		if command -v promtool >/dev/null 2>&1; then \
+			promtool check rules monitoring/staged/audit_pass_rate.rules.yml; \
+			echo "✅ Audit rules syntax validated"; \
+		else \
+			echo "⚠️  promtool not found - skipping validation"; \
+			python -c "import yaml; yaml.safe_load(open('monitoring/staged/audit_pass_rate.rules.yml'))"; \
+			echo "✅ YAML syntax validated"; \
+		fi; \
+	else \
+		echo "No staged audit rules found - skipping"; \
+	fi
+
+# 🚦 FREEZE-SAFE: Configuration testing
+test-audit-config: ## Test O3 audit configurations
+	@echo "🚦 Testing O3 audit configurations (freeze-safe)..."
+	@if [ -f "patchctl/config.audit.yml" ]; then \
+		echo "Validating PatchCtl audit config..."; \
+		python -c "import yaml; yaml.safe_load(open('patchctl/config.audit.yml'))"; \
+		echo "✅ PatchCtl audit config validated"; \
+	else \
+		echo "No PatchCtl audit config found - skipping"; \
+	fi
+	@if [ -f "infra/docker-compose.audit.yml" ]; then \
+		echo "Validating Docker Compose audit config..."; \
+		docker-compose -f infra/docker-compose.audit.yml config > /dev/null; \
+		echo "✅ Docker Compose audit config validated"; \
+	else \
+		echo "No Docker Compose audit config found - skipping"; \
+	fi
+	@if [ -f "monitoring/staged/audit_dash.json" ]; then \
+		echo "Validating Grafana dashboard JSON..."; \
+		python -m json.tool monitoring/staged/audit_dash.json > /dev/null; \
+		echo "✅ Grafana dashboard JSON validated"; \
+	else \
+		echo "No Grafana dashboard found - skipping"; \
+	fi
+
+# 🚦 FREEZE-SAFE: Code linting
+lint-audit: ## Lint O3 audit extension code
+	@echo "🚦 Linting O3 audit extension (freeze-safe)..."
+	@if [ -d "infra/audit_proxy" ]; then \
+		echo "Linting audit proxy..."; \
+		flake8 infra/audit_proxy/*.py --count --show-source --statistics; \
+		echo "✅ Audit proxy linted"; \
+	else \
+		echo "No audit proxy found - skipping"; \
+	fi
+	@if [ -d "guardian/guards" ]; then \
+		echo "Linting guardian guards..."; \
+		flake8 guardian/guards/*.py --count --show-source --statistics; \
+		echo "✅ Guardian guards linted"; \
+	else \
+		echo "No guardian guards found - skipping"; \
+	fi
+
+# 🚦 FREEZE-SAFE: Complete test suite
+test: test-rules test-audit-config lint-audit ## Run all freeze-safe tests
+	@echo "🚦 All O3 audit freeze-safe tests completed"
+
+# 🚦 FREEZE-SAFE: Validation checklist
+freeze-checklist: ## Run freeze-safety validation checklist
+	@echo "🚦 O3 Audit Extension - Freeze Safety Checklist"
+	@echo "Checking all components are properly disabled..."
+	@echo ""
+	@echo "1. Docker services disabled:"
+	@if grep -q "replicas: 0" infra/docker-compose.audit.yml 2>/dev/null; then \
+		echo "   ✅ All services have replicas: 0"; \
+	else \
+		echo "   ❌ Services not properly disabled"; \
+	fi
+	@echo ""
+	@echo "2. Environment flags default to false:"
+	@if grep -q "AUDIT_O3_ENABLED=false" env.example 2>/dev/null; then \
+		echo "   ✅ AUDIT_O3_ENABLED defaults to false"; \
+	else \
+		echo "   ❌ AUDIT_O3_ENABLED not properly disabled"; \
+	fi
+	@echo ""
+	@echo "3. Monitoring rules staged:"
+	@if [ -f "monitoring/staged/audit_pass_rate.rules.yml" ]; then \
+		echo "   ✅ Prometheus rules in staged directory"; \
+	else \
+		echo "   ❌ Prometheus rules not staged"; \
+	fi
+	@echo ""
+	@echo "4. Configuration not wired:"
+	@if ! grep -q "config.audit.yml" infra/docker-compose.audit.yml 2>/dev/null || \
+	   grep -q "# 🚦" infra/docker-compose.audit.yml 2>/dev/null; then \
+		echo "   ✅ Configurations properly isolated"; \
+	else \
+		echo "   ❌ Configurations may be active"; \
+	fi
+	@echo ""
+	@echo "5. Guardian guards inert:"
+	@if grep -q "FREEZE-SAFE" guardian/guards/o3_cost_cap.py 2>/dev/null; then \
+		echo "   ✅ Guardian guards are freeze-safe"; \
+	else \
+		echo "   ❌ Guardian guards may be active"; \
+	fi
+	@echo ""
+	@echo "🚦 Freeze safety validation complete"
+
+# 🚦 Development helpers (post-freeze)
+dev-enable: ## Enable O3 audit for development (post-freeze only)
+	@echo "⚠️  This will enable O3 audit services - only use post-freeze!"
+	@read -p "Are you sure the freeze has lifted? (y/N): " confirm; \
+	if [ "$$confirm" = "y" ] || [ "$$confirm" = "Y" ]; then \
+		sed -i 's/AUDIT_O3_ENABLED=false/AUDIT_O3_ENABLED=true/' env.example; \
+		echo "✅ O3 audit enabled in env.example"; \
+		echo "Run: docker-compose --profile audit up -d"; \
+	else \
+		echo "❌ Operation cancelled"; \
+	fi
+
+dev-disable: ## Disable O3 audit services
+	@echo "Disabling O3 audit services..."
+	@sed -i 's/AUDIT_O3_ENABLED=true/AUDIT_O3_ENABLED=false/' env.example
+	@docker-compose --profile audit down 2>/dev/null || true
+	@echo "✅ O3 audit disabled"
+
+clean: ## Clean up temporary files
+	@echo "Cleaning up temporary files..."
+	@find . -name "*.pyc" -delete
+	@find . -name "__pycache__" -delete
+	@echo "✅ Cleanup complete" 

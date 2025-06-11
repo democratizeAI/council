@@ -1,0 +1,222 @@
+# PatchCtl O3 Audit Configuration
+# 🚦 FREEZE-SAFE: Not wired in docker-compose.yml until activation
+version: "2.1"
+
+audit:
+  enabled: false  # 🚦 Disabled during freeze
+  mode: "stub"    # 🚦 Will change to "active" post-freeze
+  
+  # O3 Quorum Configuration
+  quorum:
+    type: "o3"
+    agents:
+      - name: "opus"
+        role: "strategist"
+        weight: 0.4
+        endpoint: "/audit/opus"
+        timeout: 30
+      - name: "gemini" 
+        role: "auditor"
+        weight: 0.3
+        endpoint: "/audit/gemini"
+        timeout: 45
+      - name: "sonnet"
+        role: "builder"
+        weight: 0.3
+        endpoint: "/audit/sonnet"
+        timeout: 30
+    
+    # Consensus thresholds
+    consensus:
+      pass_threshold: 0.67  # 2/3 agents must agree
+      confidence_minimum: 0.85
+      timeout_seconds: 120
+      retry_attempts: 2
+      
+    # Fallback configuration
+    fallback:
+      enabled: true
+      mode: "gemini_only"  # Fallback to single agent if quorum fails
+      trigger_conditions:
+        - "agent_timeout"
+        - "consensus_failure"
+        - "cost_cap_breach"
+
+  # Webhook Configuration  
+  webhooks:
+    enabled: false  # 🚦 Disabled during freeze
+    endpoints:
+      qa_300_routing:
+        url: "http://o3_audit_proxy:8300/audit/qa-300-route"
+        method: "POST"
+        timeout: 15
+        headers:
+          Authorization: "Bearer ${AUDIT_WEBHOOK_TOKEN}"
+          Content-Type: "application/json"
+      
+      direct_audit:
+        url: "http://o3_audit_proxy:8300/audit/direct"
+        method: "POST"
+        timeout: 30
+        headers:
+          Authorization: "Bearer ${AUDIT_WEBHOOK_TOKEN}"
+          Content-Type: "application/json"
+      
+      health_check:
+        url: "http://o3_audit_proxy:8300/health"
+        method: "GET"
+        timeout: 5
+        interval: 30
+
+  # Redis Stream Configuration
+  streams:
+    enabled: false  # 🚦 Disabled during freeze
+    redis_url: "redis://audit_queue_manager:6379"
+    streams:
+      audit_queue:
+        name: "audit:queue"
+        consumer_group: "patchctl"
+        max_pending: 100
+        claim_timeout: 300
+        
+      audit_results:
+        name: "audit:results"
+        consumer_group: "patchctl"
+        max_pending: 50
+        claim_timeout: 180
+        
+      audit_metrics:
+        name: "audit:metrics"
+        consumer_group: "monitoring"
+        max_pending: 200
+        claim_timeout: 60
+
+  # Policy Enforcement
+  policies:
+    enabled: false  # 🚦 Disabled during freeze
+    
+    # Cost controls
+    cost:
+      daily_limit_usd: 3.33
+      per_audit_limit_usd: 0.10
+      breach_action: "fallback"
+      alert_threshold: 0.80
+      
+    # Performance requirements
+    performance:
+      max_latency_seconds: 120
+      max_queue_depth: 50
+      min_success_rate: 0.95
+      breach_action: "fallback"
+      
+    # Quality gates
+    quality:
+      min_confidence: 0.85
+      max_disagreement: 0.33
+      require_unanimous: false
+      breach_action: "retry"
+
+  # Monitoring & Alerting
+  monitoring:
+    enabled: false  # 🚦 Disabled during freeze
+    
+    prometheus:
+      metrics_endpoint: "/metrics"
+      push_gateway: "http://prometheus-pushgateway:9091"
+      job_name: "o3_audit"
+      instance: "patchctl"
+      
+    alerts:
+      slack:
+        webhook_url: "${SLACK_AUDIT_WEBHOOK}"
+        channels:
+          - "#audit-alerts"
+          - "#council-ops"
+        
+      email:
+        smtp_server: "${SMTP_SERVER}"
+        recipients:
+          - "audit-team@autogencouncil.dev"
+          - "ops-team@autogencouncil.dev"
+
+  # Security Configuration
+  security:
+    api_key_required: true
+    api_key_header: "X-Audit-API-Key"
+    rate_limiting:
+      enabled: true
+      requests_per_minute: 60
+      burst_limit: 10
+      
+    audit_logging:
+      enabled: true
+      log_level: "INFO"
+      include_request_body: true
+      include_response_body: false
+      retention_days: 90
+
+# Environment-specific overrides
+environments:
+  development:
+    audit:
+      enabled: true
+      mode: "debug"
+      quorum:
+        consensus:
+          pass_threshold: 0.51  # Lower threshold for dev
+      monitoring:
+        enabled: true
+        
+  staging:
+    audit:
+      enabled: true
+      mode: "testing"
+      policies:
+        cost:
+          daily_limit_usd: 1.00  # Lower cost limit for staging
+      monitoring:
+        enabled: true
+        
+  production:
+    audit:
+      enabled: false  # 🚦 Will be true post-freeze
+      mode: "active"
+      policies:
+        cost:
+          daily_limit_usd: 3.33
+      monitoring:
+        enabled: true
+      security:
+        rate_limiting:
+          requests_per_minute: 30  # Stricter in production
+
+# Freeze-safe activation checklist
+activation_checklist:
+  pre_activation:
+    - "Verify Phase-5 soak completion"
+    - "Confirm all monitoring dashboards staged"
+    - "Validate Redis streams are healthy"
+    - "Check cost guards are functional"
+    - "Verify emergency rollback procedures"
+    
+  activation_steps:
+    - "Set AUDIT_O3_ENABLED=true in environment"
+    - "Wire config.audit.yml into docker-compose.yml"
+    - "Start audit profile services"
+    - "Run health check validation"
+    - "Enable monitoring and alerting"
+    - "Begin 24h observation period"
+    
+  rollback_triggers:
+    - "Cost overrun detected"
+    - "Performance degradation"
+    - "Consensus failure rate >10%"
+    - "Agent availability <90%"
+    - "Critical security event"
+
+# 🚦 FREEZE-SAFE NOTES:
+# - All services disabled by default
+# - Configuration staged but not active
+# - No webhooks or streams enabled
+# - Monitoring in preparation mode only
+# - Full activation requires explicit flag changes 

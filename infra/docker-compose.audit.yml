@@ -1,0 +1,129 @@
+# O3 Audit Extension - Docker Compose Configuration
+# 🚦 FREEZE-SAFE: All services disabled until AUDIT_O3_ENABLED=true
+version: '3.8'
+
+services:
+  # O3 Audit Proxy - Main audit coordination service
+  o3_audit_proxy:
+    build:
+      context: ./audit_proxy
+      dockerfile: Dockerfile
+    container_name: o3_audit_proxy
+    environment:
+      - AUDIT_O3_ENABLED=${AUDIT_O3_ENABLED:-false}
+      - REDIS_URL=redis://redis:6379
+      - PROMETHEUS_GATEWAY=http://prometheus-pushgateway:9091
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    depends_on:
+      - redis
+      - prometheus-pushgateway
+    networks:
+      - autogen_council
+    ports:
+      - "8300:8300"  # Audit API endpoint
+    volumes:
+      - ./audit_proxy/logs:/app/logs
+      - ./patchctl/config.audit.yml:/app/config/audit.yml:ro
+    # 🚦 CRITICAL: Service disabled during freeze
+    deploy:
+      replicas: 0  # Ensures no containers start during freeze
+    profiles:
+      - audit    # Only starts when audit profile is explicitly enabled
+    restart: "no"  # Prevents automatic restart during freeze
+    command: >
+      sh -c '
+        if [ "$AUDIT_O3_ENABLED" = "true" ]; then
+          echo "🚀 Starting O3 Audit Proxy..."
+          python main.py
+        else
+          echo "🚦 O3 Audit Proxy disabled (AUDIT_O3_ENABLED=false)"
+          echo "ℹ️  This is expected during code freeze"
+          exit 0
+        fi
+      '
+
+  # Audit Queue Manager - Redis stream coordination
+  audit_queue_manager:
+    image: redis:7-alpine
+    container_name: audit_queue_manager
+    environment:
+      - REDIS_PASSWORD=${AUDIT_REDIS_PASSWORD:-}
+    volumes:
+      - audit_queue_data:/data
+      - ./infra/redis/audit.conf:/usr/local/etc/redis/redis.conf:ro
+    networks:
+      - autogen_council
+    ports:
+      - "6380:6379"  # Dedicated audit Redis instance
+    # 🚦 FREEZE-SAFE: Also disabled
+    deploy:
+      replicas: 0
+    profiles:
+      - audit
+    restart: "no"
+    command: >
+      sh -c '
+        if [ "$AUDIT_O3_ENABLED" = "true" ]; then
+          redis-server /usr/local/etc/redis/redis.conf
+        else
+          echo "🚦 Audit Queue Manager disabled during freeze"
+          exit 0
+        fi
+      '
+
+  # Audit Metrics Collector - Prometheus integration
+  audit_metrics:
+    build:
+      context: ./audit_proxy
+      dockerfile: Dockerfile.metrics
+    container_name: audit_metrics
+    environment:
+      - AUDIT_O3_ENABLED=${AUDIT_O3_ENABLED:-false}
+      - PROMETHEUS_GATEWAY=http://prometheus-pushgateway:9091
+      - METRICS_INTERVAL=${AUDIT_METRICS_INTERVAL:-30}
+    depends_on:
+      - o3_audit_proxy
+      - prometheus-pushgateway
+    networks:
+      - autogen_council
+    # 🚦 FREEZE-SAFE: Disabled
+    deploy:
+      replicas: 0
+    profiles:
+      - audit
+    restart: "no"
+    command: >
+      sh -c '
+        if [ "$AUDIT_O3_ENABLED" = "true" ]; then
+          echo "📊 Starting Audit Metrics Collector..."
+          python metrics_collector.py
+        else
+          echo "🚦 Audit Metrics Collector disabled during freeze"
+          exit 0
+        fi
+      '
+
+networks:
+  autogen_council:
+    external: true
+
+volumes:
+  audit_queue_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/audit_queue
+
+# 🚦 FREEZE-SAFE VALIDATION:
+# - All services have replicas: 0
+# - All services require audit profile
+# - All services check AUDIT_O3_ENABLED
+# - No auto-restart during freeze
+# - Graceful exit when disabled
+
+# POST-FREEZE ACTIVATION:
+# 1. Set AUDIT_O3_ENABLED=true in .env
+# 2. Run: docker-compose --profile audit up -d
+# 3. Verify: curl http://localhost:8300/health
+# 4. Monitor: docker-compose logs -f o3_audit_proxy 
