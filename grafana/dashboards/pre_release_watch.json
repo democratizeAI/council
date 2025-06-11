@@ -107,7 +107,7 @@
             "type": "prometheus",
             "uid": "Prometheus"
           },
-          "expr": "lb_failover_success_total",
+          "expr": "increase(lb_failover_success_total[5m]) or vector(0)",
           "interval": "",
           "legendFormat": "LB Failover Success",
           "refId": "A"
@@ -195,7 +195,7 @@
             "type": "prometheus",
             "uid": "Prometheus"
           },
-          "expr": "CouncilLatencyAnomaly_fired_total",
+          "expr": "CouncilLatencyAnomaly_fired_total or vector(0)",
           "interval": "",
           "legendFormat": "Council Latency Anomaly Alerts",
           "refId": "A"
@@ -257,7 +257,7 @@
             "type": "prometheus",
             "uid": "Prometheus"
           },
-          "expr": "autoscaler_nodes",
+          "expr": "autoscaler_nodes or vector(0)",
           "interval": "",
           "legendFormat": "Autoscaler Nodes",
           "refId": "A"
@@ -346,13 +346,13 @@
             "type": "prometheus",
             "uid": "Prometheus"
           },
-          "expr": "gpu_vram_max_bytes",
+          "expr": "phi3_vram_usage_bytes",
           "interval": "",
-          "legendFormat": "GPU VRAM Max",
+          "legendFormat": "GPU VRAM Usage",
           "refId": "A"
         }
       ],
-      "title": "GPU VRAM Maximum",
+      "title": "GPU VRAM Usage",
       "type": "timeseries"
     }
   ],

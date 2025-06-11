@@ -1,0 +1,111 @@
+# Council-API Press Release Mode Configuration
+# Enables interactive Q&A with real-time metrics integration
+
+mode: "press_release"
+version: "v0.1"
+
+# Response Configuration
+response_config:
+  style: "technical_precise"
+  max_response_length: 150  # Concise press responses
+  include_metrics: true
+  real_time_logging: true
+  
+# Metrics Integration
+metrics_config:
+  prometheus_endpoint: "http://localhost:9090"
+  guardian_integration: true
+  live_metric_references:
+    - "cloud_spend_daily_usd"
+    - "gpu_utilization_percent" 
+    - "p95_latency_ms"
+    - "fragment_events_total"
+    - "rollback_success_total"
+    - "cost_cap_breach_total"
+    - "accuracy_delta_current"
+    - "vram_usage_gb"
+    - "emergency_shutdown_total"
+  
+# Interviewer Profiles
+interviewer_profiles:
+  tech_journalist:
+    focus: ["performance", "architecture", "roadmap"]
+    technical_level: "intermediate"
+    typical_concerns: ["scalability", "reliability", "innovation"]
+    
+  enterprise_cto:
+    focus: ["reliability", "disaster_recovery", "compliance"]
+    technical_level: "expert" 
+    typical_concerns: ["downtime", "security", "integration"]
+    
+  privacy_advocate:
+    focus: ["data_privacy", "security", "compliance"] 
+    technical_level: "expert"
+    typical_concerns: ["data_exfiltration", "audit_trails", "compliance"]
+    
+  indie_dev:
+    focus: ["ease_of_use", "customization", "documentation"]
+    technical_level: "intermediate"
+    typical_concerns: ["learning_curve", "extensibility", "support"]
+    
+  gamer:
+    focus: ["performance", "latency", "hardware_requirements"]
+    technical_level: "advanced"
+    typical_concerns: ["fps", "lag", "hardware_compatibility"]
+    
+  cost_ops:
+    focus: ["cost_optimization", "resource_utilization", "budgets"]
+    technical_level: "business_technical"
+    typical_concerns: ["budget_overruns", "cost_efficiency", "scaling_costs"]
+
+# Chaos Demo Configuration  
+chaos_demo:
+  enabled: true
+  safe_scripts:
+    - "kill_grafana.sh"
+    - "network_latency_burst.sh"
+    - "memory_pressure_test.sh"
+  guardian_integration: true
+  recovery_monitoring: true
+  max_demo_duration_seconds: 60
+  
+# Response Templates
+response_templates:
+  metric_reference: "Current {metric_name}: {metric_value} ({threshold_info})"
+  chaos_demo_intro: "Executing {script_name} (CHAOS_DISABLED={chaos_enabled})..."
+  recovery_status: "{component} down → Guardian alert → auto-restart → {component} green in {recovery_time}s"
+  
+# Security & Compliance
+security_config:
+  public_metrics_only: true
+  no_sensitive_data: true
+  audit_log_all_responses: true
+  compliance_mode: "soc2_ready"
+  
+# Real-time Integrations
+integrations:
+  prometheus_live_query: true
+  guardian_event_stream: true
+  builder_status_feed: true
+  slack_notification: true
+  
+# Demo Flow Control
+demo_flow:
+  question_processing_delay_ms: 500
+  metrics_snapshot_timing: "per_question"
+  chaos_demo_trigger: "question_7"
+  transcript_generation: "post_session"
+  
+# Output Configuration
+output_config:
+  console_formatting: true
+  color_coded_responses: true
+  real_time_metrics_display: true
+  session_transcript_markdown: true
+  
+# Emergency Controls
+emergency_controls:
+  max_session_duration_minutes: 45
+  emergency_stop_keyword: "EMERGENCY_HALT"
+  guardian_oversight: true
+  auto_fallback_responses: true 

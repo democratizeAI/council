@@ -1,0 +1,40 @@
+version: '3.8'
+
+# CI Override - Remove GPU requirements and make services CPU-only
+services:
+  swarm-api:
+    environment:
+      - PYTORCH_CUDA_ALLOC_CONF=  # Remove CUDA config
+      - PROMETHEUS_ENABLED=true
+      - REDIS_URL=redis://redis:6379
+      - LOG_LEVEL=INFO
+      - ENVIRONMENT=ci
+      - GPU_DISABLED=true  # Explicit CPU mode
+      - DEVICE=cpu         # Force CPU inference
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1.0"
+        # Explicitly override to remove GPU reservations
+        reservations:
+          devices: []
+  
+  swarm-api-canary:
+    environment:
+      - PYTORCH_CUDA_ALLOC_CONF=  # Remove CUDA config
+      - PROMETHEUS_ENABLED=true
+      - REDIS_URL=redis://redis:6379
+      - CANARY_MODE=true
+      - TRAFFIC_PERCENT=5
+      - LOG_LEVEL=INFO
+      - ENVIRONMENT=ci-canary
+      - GPU_DISABLED=true  # Explicit CPU mode
+      - DEVICE=cpu         # Force CPU inference
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
+        # No GPU reservations for canary in CI
+        reservations: {}

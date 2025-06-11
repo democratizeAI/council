@@ -1,0 +1,6 @@
+{
+  "intent": "Add dark-mode toggle to settings",
+  "owner": "FE", 
+  "wave": "Ease-of-Use",
+  "kpi": "toggle renders, stored in user prefs"
+} 

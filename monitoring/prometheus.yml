@@ -26,14 +26,14 @@ scrape_configs:
   # Main Council API metrics - VRAM, latency, request counts
   - job_name: 'council-api'
     static_configs:
-      - targets: ['council-api:9000']
+      - targets: ['council-api:8000']
     scrape_interval: 5s
     metrics_path: '/metrics'
 
   # Canary Council API metrics - for A/B testing  
   - job_name: 'api-canary'
     static_configs:
-      - targets: ['api-canary:8000']
+      - targets: ['council-api-canary:9000']
     scrape_interval: 5s
     metrics_path: '/metrics'
     relabel_configs:
@@ -51,14 +51,14 @@ scrape_configs:
   # Traefik Load Balancer metrics - traffic distribution
   - job_name: 'traefik'
     static_configs:
-      - targets: ['lb-traefik:8080']
+      - targets: ['traefik-lb:8080']
     scrape_interval: 15s
     metrics_path: '/metrics'
 
   # Redis metrics for caching performance
   - job_name: 'redis'
     static_configs:
-      - targets: ['redis:6379']
+      - targets: ['council-redis:6379']
     scrape_interval: 30s
 
   # Prometheus self-monitoring
@@ -66,15 +66,22 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
-      # NVML VRAM metrics exporter
-    - job_name: 'gpu-vram-exporter'
-      static_configs:
-        - targets: ['localhost:9108']
-      scrape_interval: 5s
-      metrics_path: '/metrics'
+  # Agent-0 API metrics - main API server for IDR-01
+  - job_name: 'agent-0-api'
+    static_configs:
+      - targets: ['host.docker.internal:8000']
+    scrape_interval: 5s
+    metrics_path: '/metrics'
 
-    # AlertManager metrics
-    - job_name: 'alertmanager'
+  # NVML VRAM metrics exporter
+  - job_name: 'gpu-vram-exporter'
+    static_configs:
+      - targets: ['localhost:9108']
+    scrape_interval: 5s
+    metrics_path: '/metrics'
+
+  # AlertManager metrics
+  - job_name: 'alertmanager'
     static_configs:
       - targets: ['alertmanager:9093']
 

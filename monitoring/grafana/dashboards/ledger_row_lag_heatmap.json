@@ -1,0 +1,110 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Ledger Row Lag Heat-Map",
+    "tags": ["ledger", "ticket-bus", "a2a"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Agent × Row Lag Heat-Map",
+        "type": "heatmap",
+        "targets": [
+          {
+            "expr": "ledger_row_lag_by_agent",
+            "refId": "A",
+            "legendFormat": "{{agent_id}} - {{row_id}}"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "P95 Lag by Agent",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "ledger_row_lag_p95_by_agent",
+            "refId": "B",
+            "legendFormat": "{{agent_id}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 5
+                },
+                {
+                  "color": "red",
+                  "value": 15
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "title": "Ledger Row Lag Over Time",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "ledger_row_seen_lag_seconds",
+            "refId": "C",
+            "legendFormat": "{{row_id}}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Lag (seconds)",
+            "min": 0
+          }
+        ],
+        "thresholds": [
+          {
+            "value": 15,
+            "colorMode": "critical",
+            "op": "gt"
+          },
+          {
+            "value": 5,
+            "colorMode": "warning",
+            "op": "gt"
+          }
+        ],
+        "gridPos": {
+          "h": 6,
+          "w": 24,
+          "x": 0,
+          "y": 8
+        }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "5s",
+    "schemaVersion": 26,
+    "version": 1
+  }
+} 

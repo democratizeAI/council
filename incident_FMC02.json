@@ -1,0 +1,17 @@
+{
+  "incident_title": "P95 Latency SLA Breach on Core Router",
+  "priority": "CRITICAL",
+  "fingerprint": "3c9f-router-p95-900ms",
+  "immediate_actions": [
+    "rollback_lora.sh --last-good",
+    "tools/live_benchmark.py --router --duration 120",
+    "notify_channel.sh #ops-alerts \"Rollback executed for LoRA adapter\"",
+    "kubectl logs -l app=router --tail=100 | grep ERROR",
+    "prometheus_query.sh \"rate(router_requests_total[5m])\" --last 10m"
+  ],
+  "post_mortem_tasks": [
+    "ticket:create analyze_faulty_lora_adapter",
+    "ticket:create collect_logs_and_metrics 2025-06-10T14:00Z 2025-06-10T14:30Z",
+    "ticket:create review_deployment_gates_for_lora_adapters"
+  ]
+} 

@@ -59,7 +59,17 @@ fi
 
 # Step 3: Restart Guardian and Guide Loader (if they exist)
 echo "🔄 Step 3: Restarting Guardian services..."
-if command -v docker-compose &> /dev/null; then
+if command -v docker &> /dev/null && docker compose version &> /dev/null; then
+    if docker compose ps | grep -q guardian; then
+        docker compose restart guardian
+        echo "✅ Guardian restarted"
+    fi
+    
+    if docker compose ps | grep -q guide-loader; then
+        docker compose restart guide-loader
+        echo "✅ Guide loader restarted"
+    fi
+elif command -v docker-compose &> /dev/null; then
     if docker-compose ps | grep -q guardian; then
         docker-compose restart guardian
         echo "✅ Guardian restarted"

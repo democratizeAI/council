@@ -97,8 +97,11 @@ jobs:
           echo "Debug: Checking compose file..."
           ls -la docker-compose.fastapi.yml
           
-          echo "Debug: Starting containers..."
-          docker-compose -f docker-compose.fastapi.yml up -d --build
+          echo "Debug: Checking CI override file..."
+          ls -la docker-compose.ci.yml
+          
+          echo "Debug: Starting containers with CI override..."
+          docker-compose -f docker-compose.fastapi.yml -f docker-compose.ci.yml up -d --build
           
           echo "⏳ Waiting for services to become healthy..."
           sleep 30

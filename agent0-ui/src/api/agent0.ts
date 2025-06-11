@@ -36,11 +36,49 @@ export interface MetricsResponse {
   status: string;
 }
 
+export interface DistillRequest {
+  prompt: string;
+  session_id: string;
+}
+
+export interface DistillResponse {
+  intent: string;
+  confidence: number;
+  structured_data: {
+    action: string;
+    parameters: Record<string, any>;
+    priority: 'low' | 'medium' | 'high';
+  };
+  preview_text: string;
+  estimated_tokens: number;
+  session_id: string;
+}
+
 export class Agent0Client {
   private baseUrl: string;
 
   constructor(baseUrl: string = API_BASE) {
     this.baseUrl = baseUrl;
+  }
+
+  // IDR-01 Intent Distillation endpoint
+  async distillIntent(prompt: string, sessionId: string = 'ui_session'): Promise<DistillResponse> {
+    const response = await fetch(`${this.baseUrl}/distill`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        prompt,
+        session_id: sessionId,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Distillation request failed: ${response.status}`);
+    }
+
+    return response.json();
   }
 
   async sendMessage(prompt: string, sessionId: string = 'ui_session'): Promise<ChatResponse> {
@@ -60,6 +98,42 @@ export class Agent0Client {
     }
 
     return response.json();
+  }
+
+  // Enhanced send message with IDR-01 integration
+  async sendMessageWithDistillation(prompt: string, sessionId: string = 'ui_session'): Promise<{
+    distillation: DistillResponse;
+    response: ChatResponse;
+  }> {
+    try {
+      // Step 1: Distill intent first
+      const distillation = await this.distillIntent(prompt, sessionId);
+      
+      // Step 2: Send to chat with distilled context
+      const response = await this.sendMessage(prompt, sessionId);
+      
+      return { distillation, response };
+    } catch (error) {
+      // Fallback to direct chat if distillation fails
+      console.warn('Distillation failed, falling back to direct chat:', error);
+      const response = await this.sendMessage(prompt, sessionId);
+      
+      // Create mock distillation response
+      const distillation: DistillResponse = {
+        intent: 'Direct chat (distillation unavailable)',
+        confidence: 0.5,
+        structured_data: {
+          action: 'chat',
+          parameters: { prompt },
+          priority: 'medium',
+        },
+        preview_text: response.text.slice(0, 100) + '...',
+        estimated_tokens: response.text.length / 4,
+        session_id: sessionId,
+      };
+      
+      return { distillation, response };
+    }
   }
 
   async getHealth(): Promise<MetricsResponse> {

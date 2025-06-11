@@ -39,3 +39,36 @@
 - Gemini audit reports
 - Optional transformers import fix
 - Execute STR-001 through STR-005 for accuracy baseline 
+
+# Agent-0 Development Ledger - Latest
+
+## Current Status: T-15h until GA Release Drill
+
+### Active Burn-Down Items
+
+| **IDR-01** | Baseline-Cert | Builder | Intent Distillation Agent (IDA) micro-service | `idr_json_total ≥ 1` per input source; corr-ID echoes end-to-end | 0.5 d | 🟡 WAITING | Merge PR **builder/IDR-01-intent-agent** as soon as OPS board ≥ 20/39 UP |
+
+**Merge gate**: `idr_json_total{source="slack"} ≥ 1` within 60s after deploy
+
+**Current blocker**: OPS board still yellow (19/39 targets UP) — Agent-0 API must return to UP first.
+
+### Technical Details
+
+**IDR-01 Implementation Status**:
+- ✅ **Service Created**: `services/intent_distillation/main.py` with Slack `/intent` command processor
+- ✅ **Metrics Available**: `idr_json_total` metric implemented for tracking distillation events  
+- ✅ **Agent-0 API**: Running healthy on `localhost:8000` (`{"status":"healthy","canary":false}`)
+- ❌ **Prometheus Scraping**: Missing Agent-0 API in monitoring targets (needs scrape config fix)
+
+**Critical Action Required**: 
+1. Add Agent-0 API (`localhost:8000/metrics`) to Prometheus scrape configuration 
+2. Restart Prometheus to discover new target
+3. Verify OPS board reaches 20/39 UP targets
+4. Execute IDR-01 merge automatically
+
+**Soak Test Status**: 8.7h elapsed, 15.3h remaining (63.6% complete) — On track for T-24h completion
+
+### Next Critical Checkpoints
+- **T-28h**: EXT-24A HA Load-Balancer drill (LB overlay + primary GPU node kill)
+- **T-26h**: EXT-24B + M-310 anomaly injection + latency burst testing  
+- **T-24h**: EXT-24C autoscaler ramp + 600 QPS stress test 

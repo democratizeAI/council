@@ -1,0 +1,104 @@
+name: Spec CI Guard (STR-003)
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  accuracy-guard:
+    name: 🛡️ Accuracy Delta Guard
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt || echo "No requirements.txt found"
+        
+    - name: Run accuracy benchmark
+      id: benchmark
+      run: |
+        echo "🧪 Running accuracy benchmark harness..."
+        python bench_accuracy.py > benchmark_results.json
+        
+        # Extract overall delta from JSON output
+        ACCURACY_DELTA=$(python -c "import json; print(json.load(open('benchmark_results.json'))['overall_delta'])")
+        echo "accuracy_delta=$ACCURACY_DELTA" >> $GITHUB_OUTPUT
+        
+        echo "📊 Accuracy Delta vs Baseline: $ACCURACY_DELTA"
+        
+    - name: 🛡️ Accuracy Guard Check
+      run: |
+        THRESHOLD=-0.01  # -1% threshold
+        DELTA="${{ steps.benchmark.outputs.accuracy_delta }}"
+        
+        echo "🔍 Checking accuracy delta: $DELTA vs threshold: $THRESHOLD"
+        
+        # Use Python for float comparison
+        python -c "
+import sys
+delta = float('$DELTA')
+threshold = float('$THRESHOLD')
+
+if delta < threshold:
+    print(f'❌ ACCURACY GUARD FAILED: {delta:+.3f} < {threshold:+.3f}')
+    print(f'Model accuracy has degraded by more than 1% vs baseline')
+    print(f'This indicates potential quality regression - blocking merge')
+    sys.exit(1)
+else:
+    print(f'✅ ACCURACY GUARD PASSED: {delta:+.3f} >= {threshold:+.3f}')
+    print(f'Model accuracy within acceptable bounds')
+    sys.exit(0)
+        "
+        
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: accuracy-benchmark-results
+        path: benchmark_results.json
+        
+    - name: Comment PR with results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const results = JSON.parse(fs.readFileSync('benchmark_results.json', 'utf8'));
+          
+          const delta = results.overall_delta;
+          const status = delta >= -0.01 ? '✅ PASSED' : '❌ FAILED';
+          const icon = delta >= -0.01 ? '🛡️' : '⚠️';
+          
+          const comment = `## ${icon} Accuracy Guard Report
+          
+**Status**: ${status}
+**Overall Accuracy Delta**: ${delta >= 0 ? '+' : ''}${delta.toFixed(3)} vs baseline
+**Threshold**: -1.0% (-0.010)
+
+### Benchmark Results
+| Dataset | Accuracy | Delta vs Baseline | Sample Count |
+|---------|----------|-------------------|--------------|
+| MMLU-lite | ${results.results.mmlu_lite.accuracy.toFixed(3)} | ${results.results.mmlu_lite.delta_vs_baseline >= 0 ? '+' : ''}${results.results.mmlu_lite.delta_vs_baseline.toFixed(3)} | ${results.results.mmlu_lite.sample_count} |
+| GSM8K-core | ${results.results.gsm8k_core.accuracy.toFixed(3)} | ${results.results.gsm8k_core.delta_vs_baseline >= 0 ? '+' : ''}${results.results.gsm8k_core.delta_vs_baseline.toFixed(3)} | ${results.results.gsm8k_core.sample_count} |
+
+${delta < -0.01 ? 
+'⚠️ **ACCURACY REGRESSION DETECTED** - Model performance has degraded beyond acceptable threshold. Please review changes that may impact model quality.' :
+'✅ **ACCURACY MAINTAINED** - Model performance within acceptable bounds.'}
+          `;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          }); 

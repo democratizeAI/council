@@ -1,0 +1,97 @@
+version: '3.8'
+
+# EXT-24A Load-Balancer Overlay
+# Ready for DevOps deployment at T-28h without container churn
+# Extends existing infrastructure with enhanced load balancing
+
+services:
+  # Enhanced Traefik with EXT-24A Configuration
+  lb-traefik-ext24a:
+    image: traefik:v3.0
+    container_name: traefik-ext24a
+    ports:
+      - "8081:80"      # Secondary load balancer port
+      - "8082:8080"    # Secondary dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/ext24a:/etc/traefik
+    command:
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --metrics.prometheus=true
+      - --metrics.prometheus.addEntryPointsLabels=true
+      - --metrics.prometheus.addServicesLabels=true
+      - --log.level=INFO
+      - --accesslog=true
+      - --certificatesresolvers.letsencrypt.acme.email=devops@company.com
+      - --certificatesresolvers.letsencrypt.acme.storage=/acme.json
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+    environment:
+      - TRAEFIK_EXT24A_ENABLED=true
+      - LOAD_BALANCER_MODE=enhanced
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`traefik-ext24a.local`)"
+      - "traefik.http.routers.api.service=api@internal"
+    restart: unless-stopped
+    networks:
+      - council-network
+      - ext24a-overlay
+
+  # Circuit Breaker Service for Enhanced Reliability
+  circuit-breaker:
+    image: nginx:alpine
+    container_name: circuit-breaker-ext24a
+    ports:
+      - "8083:80"
+    volumes:
+      - ./ext24a/circuit-breaker.conf:/etc/nginx/nginx.conf:ro
+    environment:
+      - CIRCUIT_BREAKER_ENABLED=true
+      - FAILURE_THRESHOLD=5
+      - TIMEOUT_DURATION=30s
+      - RECOVERY_TIMEOUT=60s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.circuit-breaker.rule=PathPrefix(`/circuit`)"
+      - "traefik.http.services.circuit-breaker.loadbalancer.server.port=80"
+    restart: unless-stopped
+    networks:
+      - ext24a-overlay
+
+  # Health Check Aggregator
+  health-aggregator:
+    image: prom/prometheus:latest
+    container_name: health-aggregator-ext24a
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./monitoring/ext24a-prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.external-url=http://localhost:9091'
+    environment:
+      - EXT24A_HEALTH_MODE=active
+    restart: unless-stopped
+    networks:
+      - ext24a-overlay
+      - council-network
+
+networks:
+  ext24a-overlay:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.24.0.0/16
+          gateway: 172.24.0.1
+
+volumes:
+  ext24a-data:
+    driver: local 

@@ -1,0 +1,142 @@
+# Green-Flip Sequence Alert Configuration
+# Monitors critical gates and triggers for v0.1 pre-release
+
+alerts:
+  # Immediate Green-Flip Targets
+  bc_130_smoke_cycle:
+    metric: council_smoke_pass_total
+    threshold: ">= 1"
+    alert_channel: "#builder-alerts"
+    message: "✅ BC-130 SMOKE CYCLE COMPLETE - Council-Infra ready for next phase"
+    deadline: "06/11 13:00 ET"
+    
+  idr_01_merge:
+    metric: idr_json_total  
+    threshold: ">= 1"
+    alert_channel: "#builder-alerts"
+    message: "✅ IDR-01 MERGED - Intent-Distillation Agent deployed"
+    trigger: "OPS board green"
+    
+  lg_210_gauntlet:
+    metric: gauntlet_hook_pass_total
+    threshold: "> 0"
+    alert_channel: "#builder-alerts" 
+    message: "✅ LG-210 COMPLETE - GAUNTLET_ENABLED=true, LoRA canary validated"
+    trigger: "24h soak pass"
+    fallback: "ENABLE_LORA=false on failure"
+    
+  bc_200_fast_gauntlet:
+    metric: gauntlet_verdict_pass
+    threshold: "== true"
+    alert_channel: "#builder-alerts"
+    message: "✅ BC-200 COMPLETE - 6h fast-Gauntlet PASSED"
+    timeline: "T-22h"
+
+# Infrastructure Drill Alerts  
+infrastructure_drills:
+  ext_24a_lb_failover:
+    timeline: "T-28h"
+    metric: lb_failover_success_total
+    threshold: ">= 1"
+    secondary_metric: p95_latency_spike_ms
+    secondary_threshold: "< 20"
+    alert_channel: "#ops-alerts"
+    message: "🔧 EXT-24A DRILL COMPLETE - HA LB failover successful"
+    
+  ext_24b_anomaly_detection:
+    timeline: "T-26h" 
+    metric: council_latency_anomaly_fired
+    threshold: "<= 30"
+    alert_channel: "#ops-alerts"
+    message: "🔧 EXT-24B DRILL COMPLETE - Anomaly detection wired and tested"
+    
+  ext_24c_autoscaler:
+    timeline: "T-24h"
+    metric: gpu_utilization_percent
+    threshold: "65-80"
+    secondary_metric: vram_usage_gb
+    secondary_threshold: "< 10.5"
+    alert_channel: "#ops-alerts"
+    message: "🔧 EXT-24C DRILL COMPLETE - Autoscaler enabled, 600 QPS stable"
+
+# Board Health Monitoring
+board_health:
+  phase5_soak_latency:
+    metric: phase5_soak_p95_ms
+    threshold: "<= 160"
+    alert_channel: "#ops-alerts"
+    severity: "critical"
+    message: "⚠️ PHASE-5 SOAK P95 BREACH - Current: {value}ms, Threshold: 160ms"
+    
+  fragment_events:
+    metric: container_restart_total
+    threshold: "== 0" 
+    alert_channel: "#ops-alerts"
+    severity: "critical"
+    message: "⚠️ FRAGMENT EVENT DETECTED - Container restart count: {value}"
+    
+  cloud_cost_drift:
+    metric: cloud_est_usd_per_day
+    threshold: "<= 0.50"
+    alert_channel: "#ops-alerts"
+    severity: "warning"
+    message: "💰 CLOUD COST DRIFT - Current: ${value}/day, Threshold: $0.50/day"
+    
+  ledger_lag:
+    metric: ledger_row_seen_lag_seconds
+    threshold: "< 15"
+    alert_channel: "#ops-alerts"
+    severity: "warning" 
+    message: "🐌 LEDGER LAG DETECTED - Current: {value}s, Threshold: 15s"
+
+# Risk Mitigation Triggers
+risk_mitigation:
+  lora_gauntlet_failure:
+    metric: gauntlet_hook_pass_total
+    threshold: "== 0"
+    action: "export ENABLE_LORA=false"
+    alert_channel: "#builder-alerts"
+    message: "🚨 LORA GAUNTLET FAILED - Automatically disabled ENABLE_LORA"
+    
+  autoscaler_overshoot:
+    metric: gpu_utilization_percent
+    threshold: "> 90"
+    action: "reduce QPS step to 2"
+    alert_channel: "#ops-alerts"
+    message: "🚨 AUTOSCALER OVERSHOOT - Reducing step to 2 QPS, reverting to 10-worker static"
+    
+  new_cve_detected:
+    metric: critical_cve_total
+    threshold: "> 0"
+    action: "auto-revert last merge"
+    alert_channel: "#ops-alerts"
+    message: "🚨 NEW CVE DETECTED - Auto-reverting last merge, scheduling 3h Gauntlet re-run"
+
+# Slack Integration
+slack_config:
+  channels:
+    builder_alerts: "#builder-alerts"
+    ops_alerts: "#ops-alerts"
+    sprint_demo: "#sprint-demo"
+  webhook_url: "${SLACK_WEBHOOK_URL}"
+  mention_groups:
+    critical: "<!channel>"
+    warning: "@here"
+    info: ""
+
+# Dashboard Integration  
+dashboard_config:
+  pre_release_watch:
+    enabled: true
+    include_panels:
+      - "HA LB metrics"
+      - "Autoscaler gauges" 
+      - "Phase-5 soak status"
+      - "Green-flip progress"
+    refresh_interval: "30s"
+    
+  freeze_status:
+    locked_until: "06/11 18:30 ET"
+    allowed_branches: ["hotfix/*", "ops-green"]
+    prohibited_actions: ["new rows"]
+    allowed_actions: ["status flips (🟡→🟢)"] 

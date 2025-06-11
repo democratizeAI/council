@@ -248,6 +248,21 @@ groups:
           description: "Cloud costs are ${{ $value | printf \"%.2f\" }}/day (150% over budget). Potential runaway scaling or cost bomb."
           runbook_url: "https://docs.swarm.ai/runbook/budget-emergency"
 
+      # FMC-05 Cost Guard Alert for autonomous escalation
+      - alert: CloudCostHigh
+        expr: cloud_est_usd_total{provider!="phi-3-mini"} > 10
+        for: 1m
+        labels:
+          severity: page
+          environment: "{{ $labels.environment | default \"production\" }}"
+          team: "swarm-ops"
+          component: "cost-control"
+          runbook: "fmc_cost_guard"
+        annotations:
+          summary: "💰 Cloud cost > $10 today"
+          description: "Provider {{ $labels.provider }} costs ${{ $value | printf \"%.2f\" }} exceeding $10 threshold. Autonomous cost-guard activation required."
+          runbook_url: "https://docs.swarm.ai/runbook/fmc-cost-guard"
+
       # Training Pipeline Health
       - alert: LoRATrainingFailures
         expr: increase(swarm_lora_training_failures_total[6h]) > 2

@@ -1,0 +1,1 @@
+cloud_est_usd_total{provider="openai",day="today"} 12.5 

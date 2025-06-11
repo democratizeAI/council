@@ -1,0 +1,49 @@
+{
+  "title": "Cloud-Cost Escalation — vendor openai",
+  "wave": "Cost-Control",
+  "priority": "P1",
+  "owner": "FinOps",
+  "subtasks": [
+    {
+      "id": "COST-001",
+      "task": "investigate_spike",
+      "description": "Root cause analysis of OpenAI cost spike from $10 to $12.50",
+      "owner": "FinOps",
+      "kpi": "Identify cause within 4 hours"
+    },
+    {
+      "id": "COST-002", 
+      "task": "re_enable_cloud_heads",
+      "description": "Re-enable cloud heads after audit and safety measures",
+      "owner": "DevOps",
+      "kpi": "Resume cloud operations with enhanced monitoring"
+    },
+    {
+      "id": "COST-003",
+      "task": "add_cost_test_to_ci",
+      "description": "Implement automated cost spike detection in CI/CD pipeline", 
+      "owner": "Platform",
+      "kpi": "Deploy cost-guard tests covering 95% of cloud scenarios"
+    },
+    {
+      "id": "COST-004",
+      "task": "establish_rollback_procedures",
+      "description": "Document autonomous cost-guard rollback and recovery procedures",
+      "owner": "SRE", 
+      "kpi": "Complete runbook with <30s recovery time"
+    }
+  ],
+  "incident_reference": "FMC-05-c18f41de-81dc-4824-a3ba-a49296aec061",
+  "cost_analysis": {
+    "breach_amount": 12.50,
+    "threshold": 10.00,
+    "provider": "openai",
+    "autonomous_action": "cloud_heads_paused"
+  },
+  "sla_requirements": [
+    "Cost investigation: 4 hours",
+    "Cloud heads re-enabled: 24 hours", 
+    "CI tests deployed: 72 hours",
+    "Runbook complete: 1 week"
+  ]
+} 

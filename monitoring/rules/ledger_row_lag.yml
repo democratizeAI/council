@@ -1,0 +1,42 @@
+groups:
+  - name: ledger_row_lag
+    rules:
+      # Ticket-bus integrity: Guarantee every new row is ACK'd < 5s
+      - alert: LedgerRowSeenLagHigh
+        expr: ledger_row_seen_lag_seconds > 15
+        for: 30s
+        labels:
+          severity: warning
+          component: ticket-bus
+          rule_id: ledger-integrity-001
+        annotations:
+          summary: "Ledger row acknowledgment lag exceeding threshold"
+          description: "Row {{ $labels.row_id }} has been unseen for {{ $value }}s (threshold: 15s). Ticket-bus integrity compromised."
+          
+      - alert: LedgerRowSeenLagCritical
+        expr: ledger_row_seen_lag_seconds > 60
+        for: 10s
+        labels:
+          severity: critical
+          component: ticket-bus
+          rule_id: ledger-integrity-002
+        annotations:
+          summary: "Critical ledger row acknowledgment lag"
+          description: "Row {{ $labels.row_id }} has been unseen for {{ $value }}s (critical threshold: 60s). Immediate investigation required."
+
+      # Recording rule for dashboard heat-map: agent × row lag
+      - record: ledger_row_lag_by_agent
+        expr: ledger_row_seen_lag_seconds
+        
+      - record: ledger_row_lag_p95_by_agent
+        expr: histogram_quantile(0.95, rate(ledger_row_seen_lag_seconds_bucket[5m]))
+
+      # Recording rule for agent-wide lag distribution
+      - record: ledger_agent_row_lag_distribution
+        expr: |
+          sum by (agent_id) (
+            rate(ledger_row_seen_lag_seconds_bucket[5m])
+          )
+        labels:
+          rule_type: "recording"
+          metric_type: "distribution" 

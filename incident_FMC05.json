@@ -1,0 +1,30 @@
+{
+  "incident_title": "CRITICAL: Cloud Cost Threshold Breach - Autonomous Escalation",
+  "priority": "CRITICAL",
+  "fingerprint": "CloudCostHigh-openai-12.50",
+  "immediate_actions": [
+    "router/pause_cloud → DISABLE ALL CLOUD HEADS",
+    "kubectl patch env ROUTER_DISABLE_CLOUD=true", 
+    "alert_channel.sh #cost-alerts 'AUTONOMOUS COST-GUARD ACTIVATED'",
+    "prometheus_query.sh 'cloud_est_usd_total{provider=\"openai\"}' --last 1h",
+    "router_health_check.py --latency-fallback-only"
+  ],
+  "post_mortem_tasks": [
+    "ticket:create investigate_openai_cost_spike_12.50_usd",
+    "ticket:create audit_cloud_head_usage_patterns", 
+    "ticket:create add_cost_spike_tests_to_ci",
+    "ticket:create establish_cost_rollback_procedures"
+  ],
+  "cost_details": {
+    "provider": "openai",
+    "breach_amount": 12.50,
+    "threshold": 10.00,
+    "breach_percentage": 125.0,
+    "estimated_monthly": 375.00
+  },
+  "autonomous_actions_taken": [
+    "Cloud heads paused automatically",
+    "Router fallback to local-only mode",
+    "Cost monitoring alerts escalated"
+  ]
+} 
