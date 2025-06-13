@@ -1,1 +1,0 @@
-Memory fragmentation at ~65 QPS on the RTX-4070 build 

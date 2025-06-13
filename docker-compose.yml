@@ -1,382 +1,129 @@
 version: '3.8'
 
 services:
-  # Redis for LLM call caching and Agent-0 state
-  redis:
-    image: redis:7-alpine
-    container_name: council-redis
+  # Trinity Core Platform
+  trinity-core:
+    image: trinity/core:latest
+    container_name: trinity-core
     ports:
-      - "6379:6379"
-    restart: on-failure:3
-    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
-    deploy:
-      resources:
-        limits:
-          memory: 512m
-          cpus: "1.0"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "50m"
-        max-file: "3"
-
-  # Redis Exporter for Prometheus metrics
-  redis_exporter:
-    image: oliver006/redis_exporter:latest
-    container_name: redis-exporter
-    ports:
-      - "9121:9121"
+      - "8001:8001"  # Main API
     environment:
-      - REDIS_ADDR=redis://redis:6379
-    depends_on:
-      - redis
-    restart: on-failure:3
-    deploy:
-      resources:
-        limits:
-          memory: 64m
-          cpus: "0.1"
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "2"
-
-  # Main Council API - Stable traffic
-  council-api:
-    build: 
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "9000:9000"
-    environment:
-      - SWARM_COUNCIL_ENABLED=true
-      - COUNCIL_POCKET_MODE=true
-      - GPU_MEMORY_FRACTION=0.8
-      - CUDA_VISIBLE_DEVICES=0
-    volumes:
-      - ./memory:/app/memory
-      - ./logs:/app/logs
-    
-    # 🚀 HARDENING: Restart & Health Check
-    restart: on-failure:5  # Restart on failure, max 5 attempts
+      - NODE_ENV=production
+      - TRINITY_MODE=production
+    networks:
+      - trinity-network
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
-      interval: 30s        # Check every 30 seconds
-      timeout: 5s          # 5 second timeout
-      retries: 3           # Fail after 3 consecutive failures
-      start_period: 60s    # Wait 60s for initial startup
-    
-    # 🚀 HARDENING: GPU Resource Management
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-        limits:
-          memory: 10g      # Prevent OOM that kills nvidia-driver
-          cpus: '4.0'      # Reasonable CPU limit
-    
-    # 🚀 HARDENING: Security & Stability
-    security_opt:
-      - no-new-privileges:true
-    read_only: false  # Allow writes to /tmp and /app/logs
-    tmpfs:
-      - /tmp:size=1g
-    
-    # 🚀 HARDENING: Logging
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "100m"
-        max-file: "3"
-
-  # Canary Council API - New LoRA testing
-  council-api-canary:
-    build: .
-    container_name: council-api-canary
-    ports:
-      - "8001:8000"
-    volumes:
-      - models:/app/models
-      - memory:/app/memory
-      - loras:/app/loras
-      - ./logs:/app/logs
-    environment:
-      - PYTHONUNBUFFERED=1
-      - AZ_MEMORY_ENABLED=yes
-      - AZ_MEMORY_PATH=/app/memory
-      - AZ_SHELL_TRUSTED=yes
-      - ENABLE_SANDBOX=true
-      - CLOUD_ENABLED=true
-      - PROVIDER_PRIORITY=mistral,openai
-      - SWARM_PROFILE=canary
-      - SWARM_CLOUD_BUDGET_USD=1.5
-      - MEM_EMB_MODEL=all-MiniLM-L6-v2
-      - EXEC_TIMEOUT_SEC=5
-      - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
-      - COUNCIL_TRAFFIC_PERCENT=5
-      - REDIS_URL=redis://redis:6379
-      - LORA_PATH=/app/loras/latest
-      - MISTRAL_API_KEY=${MISTRAL_API_KEY:-}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-    runtime: nvidia
-    deploy:
-      resources:
-        limits:
-          memory: 3g     # Smaller allocation for canary
-          cpus: "4.0"
-        reservations:
-          devices:
-            - capabilities: ["gpu"]
-    depends_on:
-      - redis
-      - council-api
-    restart: on-failure:3
-    healthcheck:
-      test: ["CMD", "curl", "-fs", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "50m"
-        max-file: "3"
 
-  # Agent Zero Runner for failure rewriting
-  agent0-runner:
-    build:
-      context: .
-      dockerfile: Dockerfile.agent0
-    container_name: agent0-runner
-    volumes:
-      - memory:/app/memory
-      - workspace:/app/workspace
-    environment:
-      - PYTHONUNBUFFERED=1
-      - COUNCIL_API_URL=http://council-api:8000
-    depends_on:
-      - council-api
-    restart: unless-stopped
-
-  # Harvest Job - Nightly failure collection and rewriting
-  harvest-job:
-    image: python:3.11-slim
-    container_name: harvest-job
-    volumes:
-      - memory:/app/memory
-      - data-lora:/app/data/lora
-      - ./tools:/app/tools
-      - ./scripts:/app/scripts
-      - ./deploy/cron/snapshot_prune:/etc/cron.d/lumina-snapshot-prune:ro
-      - /var/lib/node_exporter/textfile_collector:/var/lib/node_exporter/textfile_collector
-    environment:
-      - PYTHONUNBUFFERED=1
-      - AGENT0_URL=http://agent0-runner:8080
-      - REDIS_URL=redis://redis:6379
-    command: >
-      sh -c "
-        apt-get update && apt-get install -y cron curl python3-pip &&
-        pip install requests redis faiss-cpu &&
-        echo '0 2 * * * cd /app && python /app/tools/harvest_failures.py' | crontab - &&
-        chmod 644 /etc/cron.d/lumina-snapshot-prune &&
-        mkdir -p /snapshots &&
-        cron -f
-      "
-    depends_on:
-      - agent0-runner
-      - redis
-    restart: unless-stopped
-
-  # LoRA Trainer - Nightly fine-tuning
-  lora-trainer:
-    build:
-      context: .
-      dockerfile: Dockerfile.trainer
-    container_name: lora-trainer
-    volumes:
-      - loras:/app/loras
-      - data-lora:/app/data/lora
-      - models:/app/models
-    environment:
-      - PYTHONUNBUFFERED=1
-      - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
-      - TRAINING_BUDGET_USD=0.20
-    runtime: nvidia
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - capabilities: ["gpu"]
-    command: >
-      sh -c "
-        echo '0 3 * * * cd /app && python train_lora.py --data /app/data/lora/latest.jsonl --output /app/loras/latest' | crontab - &&
-        cron -f
-      "
-    depends_on:
-      - harvest-job
-    restart: unless-stopped
-
-  # Traefik Load Balancer with Canary Routing
-  lb-traefik:
-    image: traefik:v3.0
-    container_name: traefik-lb
+  # Agent A - Ledger Control
+  agent-a:
+    image: ghcr.io/trinity/agent-a:1.0.0
+    container_name: trinity-agent-a
     ports:
-      - "80:80"
-      - "8080:8080"  # Traefik dashboard
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./traefik:/etc/traefik
-    command:
-      - --api.insecure=true
-      - --providers.docker=true
-      - --providers.docker.exposedbydefault=false
-      - --entrypoints.web.address=:80
-      - --metrics.prometheus=true
-    depends_on:
-      - council-api
-      - council-api-canary
+      - "9104:9104"  # Prometheus metrics
+    environment:
+      - AGENT_ID=agent-a
+      - NATS_URL=nats://nats:4222
+    networks:
+      - trinity-network
     restart: unless-stopped
-    labels:
-      - "traefik.enable=true"
+    depends_on:
+      - nats
+      - trinity-core
 
-  # Static Web Interface
-  static-web:
-    image: nginx:alpine
-    container_name: static-web
+  # Agent B - ML Infrastructure  
+  agent-b:
+    image: ghcr.io/trinity/agent-b:1.0.0
+    container_name: trinity-agent-b
     ports:
-      - "9000:80"
-    volumes:
-      - ./webchat:/usr/share/nginx/html/chat
-      - ./admin.html:/usr/share/nginx/html/admin.html
-      - ./index.html:/usr/share/nginx/html/index.html
+      - "9105:9105"  # Prometheus metrics
+    environment:
+      - AGENT_ID=agent-b
+      - NATS_URL=nats://nats:4222
+    networks:
+      - trinity-network
+    restart: unless-stopped
     depends_on:
-      - council-api
+      - nats
+      - trinity-core
+
+  # Agent C - Compliance Insight
+  agent-c:
+    image: ghcr.io/trinity/agent-c:1.0.0
+    container_name: trinity-agent-c
+    ports:
+      - "9106:9106"  # Prometheus metrics
+    environment:
+      - AGENT_ID=agent-c
+      - NATS_URL=nats://nats:4222
+    networks:
+      - trinity-network
+    restart: unless-stopped
+    depends_on:
+      - nats
+      - trinity-core
+
+  # NATS Message Broker
+  nats:
+    image: nats:2.10-alpine
+    container_name: trinity-nats
+    ports:
+      - "4222:4222"  # Client connections
+      - "8222:8222"  # Management interface
+    command: ["--jetstream", "--http_port", "8222"]
+    networks:
+      - trinity-network
     restart: unless-stopped
 
-  # Prometheus monitoring with enhanced config
+  # Prometheus Monitoring
   prometheus:
     image: prom/prometheus:latest
+    container_name: trinity-prometheus
     ports:
       - "9090:9090"
     volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--web.console.libraries=/etc/prometheus/console_libraries'
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--web.enable-lifecycle'
+    networks:
+      - trinity-network
     restart: unless-stopped
 
-  # Grafana dashboard
+  # Grafana Dashboards
   grafana:
     image: grafana/grafana:latest
+    container_name: trinity-grafana
     ports:
       - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
-    volumes:
-      - grafana-storage:/var/lib/grafana
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - trinity-network
     restart: unless-stopped
-
-  # AlertManager for handling alerts
-  alertmanager:
-    image: prom/alertmanager:latest
-    container_name: alertmanager
-    ports:
-      - "9093:9093"
-    volumes:
-      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
-      - alertmanager-data:/alertmanager
-    command:
-      - '--config.file=/etc/alertmanager/alertmanager.yml'
-      - '--storage.path=/alertmanager'
-      - '--web.external-url=http://localhost:9093'
-      - '--web.listen-address=0.0.0.0:9093'
-    deploy:
-      resources:
-        limits:
-          memory: 512m
-          cpus: "0.5"
-    restart: on-failure:3
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9093/-/healthy"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "50m"
-        max-file: "3"
-
-  # VRAM metrics exporter (hybrid implementation - metrics only)
-  scheduler:
-    build: ./scheduler
-    ports:
-      - "9108:8000"
-    restart: unless-stopped
-    environment:
-      - PROMETHEUS_PORT=8000
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/metrics"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # Trainer container (managed by host systemd timer)
-  trainer:
-    image: trainer:latest
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-    restart: unless-stopped
-    volumes:
-      - ./models:/models
-      - ./data:/data
-
-  # Node exporter for textfile collector
-  node_exporter:
-    image: prom/node-exporter:latest
-    ports:
-      - "9100:9100"
-    volumes:
-      - /var/lib/node_exporter/textfile_collector:/var/lib/node_exporter/textfile_collector:ro
-    restart: unless-stopped
-
-  # Patchctl microservice for automated patching
-  patchctl:
-    build: ./patchctl
-    ports:
-      - "9001:9000"
-    volumes:
-      - ./:/app
-      - ./config:/config
-    restart: unless-stopped
-
-volumes:
-  models:        # Static GGUF/Q4_K_M files
-  loras:         # Nightly adapter outputs  
-  memory:        # FAISS index & meta.jsonl
-  workspace:     # Agent-0 file sandbox
-  data-lora:     # Training data JSONLs
-  prometheus-data:  # TSDB
-  grafana-storage:
-  alertmanager-data:
+    depends_on:
+      - prometheus
 
 networks:
-  default:
-    name: council-network 
+  trinity-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  prometheus_data:
+  grafana_data: 
