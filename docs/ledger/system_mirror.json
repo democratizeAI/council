@@ -1,0 +1,25 @@
+{
+  "entries": [
+    {
+      "id": "XCM-630",
+      "wave": "wave7_cross_check_mirror",
+      "owner": "Delta (Seed Carrier / Ledger Scribe)",
+      "description": "System Mirror - Cross-Check & Audit Consolidation",
+      "status": "committed",
+      "timestamp": 1749927290.8184595,
+      "datetime": "2025-06-14T14:54:50.818459",
+      "agent": "delta",
+      "file_path": "cursorsync/system_mirror.md",
+      "mirror_hash": "9f36dd521e0f4879",
+      "content_size": 8736,
+      "tickets": [
+        "XCM-630"
+      ],
+      "audit_consolidated": true,
+      "signature": "8fe8c25381a1bd2a98a04fe46338231fb87231d9fc867006d0c781baa6cc2088"
+    }
+  ],
+  "last_updated": "2025-06-14T14:54:50.818959",
+  "total_entries": 1,
+  "latest_mirror_hash": "9f36dd521e0f4879"
+}

@@ -1,0 +1,114 @@
+# Trinity Guard-Wave Alert Rules
+# SYS-605: Prometheus alerts for Council Ticket Processor
+
+groups:
+  - name: ticket_processor_alerts
+    rules:
+      # SYS-606: High error rate alert
+      - alert: TicketProcessorHighError
+        expr: rate(ticket_processor_errors_total[2m]) > 0.1
+        for: 2m
+        labels:
+          severity: critical
+          service: ticket-processor
+          guard_wave: SYS-606
+        annotations:
+          summary: "Ticket Processor high error rate"
+          description: "Ticket processor error rate is {{ $value }} errors/sec for more than 2 minutes"
+          runbook_url: "https://trinity.docs/runbooks/ticket-processor-errors"
+      
+      # SYS-601: Budget warning
+      - alert: TicketBudget90
+        expr: ticket_tokens_today / 50000 > 0.9
+        for: 1m
+        labels:
+          severity: warning
+          service: ticket-processor
+          guard_wave: SYS-601
+        annotations:
+          summary: "Ticket Processor budget 90% utilized"
+          description: "Daily token budget is {{ $value | humanizePercentage }} utilized"
+          runbook_url: "https://trinity.docs/runbooks/budget-management"
+      
+      # SYS-601: Budget critical
+      - alert: TicketBudgetExceeded
+        expr: ticket_tokens_today / 50000 > 0.95
+        for: 30s
+        labels:
+          severity: critical
+          service: ticket-processor
+          guard_wave: SYS-601
+        annotations:
+          summary: "Ticket Processor budget exceeded"
+          description: "Daily token budget exceeded at {{ $value | humanizePercentage }}"
+          runbook_url: "https://trinity.docs/runbooks/budget-exceeded"
+      
+      # SYS-605: High latency
+      - alert: TicketProcessorHighLatency
+        expr: histogram_quantile(0.95, rate(ticket_processor_latency_seconds_bucket[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          service: ticket-processor
+          guard_wave: SYS-605
+        annotations:
+          summary: "Ticket Processor high latency"
+          description: "95th percentile latency is {{ $value }}s for more than 5 minutes"
+          runbook_url: "https://trinity.docs/runbooks/high-latency"
+      
+      # SYS-606: Service down
+      - alert: TicketProcessorDown
+        expr: up{job="ticket-processor"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          service: ticket-processor
+          guard_wave: SYS-606
+        annotations:
+          summary: "Ticket Processor is down"
+          description: "Ticket Processor has been down for more than 30 seconds"
+          runbook_url: "https://trinity.docs/runbooks/service-down"
+      
+      # SYS-603: Prompt hash mismatch
+      - alert: PromptHashMismatch
+        expr: increase(ticket_processor_errors_total{error_type="prompt_hash_mismatch"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: ticket-processor
+          guard_wave: SYS-603
+        annotations:
+          summary: "Prompt hash validation failed"
+          description: "Prompt tampering detected - {{ $value }} mismatches in 5 minutes"
+          runbook_url: "https://trinity.docs/runbooks/security-incident"
+      
+      # SYS-602: Rate limit breaches
+      - alert: RateLimitBreached
+        expr: increase(ticket_processor_requests_total{status="rate_limited"}[1m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          service: ticket-processor
+          guard_wave: SYS-602
+        annotations:
+          summary: "High rate limit breaches"
+          description: "{{ $value }} rate limit breaches in 1 minute"
+          runbook_url: "https://trinity.docs/runbooks/rate-limiting"
+
+  - name: ticket_processor_performance
+    rules:
+      # Performance recording rules
+      - record: ticket_processor:request_rate
+        expr: rate(ticket_processor_requests_total[5m])
+      
+      - record: ticket_processor:error_rate
+        expr: rate(ticket_processor_errors_total[5m])
+      
+      - record: ticket_processor:latency_p95
+        expr: histogram_quantile(0.95, rate(ticket_processor_latency_seconds_bucket[5m]))
+      
+      - record: ticket_processor:latency_p99
+        expr: histogram_quantile(0.99, rate(ticket_processor_latency_seconds_bucket[5m]))
+      
+      - record: ticket_processor:budget_utilization
+        expr: ticket_budget_utilization / 100 

@@ -1,0 +1,35 @@
+groups:
+  - name: cloud_cost_monitoring
+    rules:
+      # Daily budget enforcement
+      - alert: DailyBudgetExceeded
+        expr: cloud_cost_usd_day > on() group_left() DAILY_BUDGET_USD
+        for: 1m
+        labels:
+          severity: critical
+          cost_category: budget
+        annotations:
+          summary: "Daily cloud budget exceeded"
+          description: "Cloud costs have exceeded the daily budget limit"
+
+      # Cost trend monitoring
+      - alert: CostTrendAnomalous
+        expr: increase(cloud_cost_usd_day[1d]) > 1.5 * increase(cloud_cost_usd_day[1d] offset 1d)
+        for: 5m
+        labels:
+          severity: warning
+          cost_category: trend
+        annotations:
+          summary: "Anomalous cost increase detected"
+          description: "Daily cost increase is 50% higher than previous day"
+
+      # GPU cost optimization
+      - alert: GPUCostInefficient
+        expr: (gpu_cost_usd_hour / gpu_utilization_percent) > 0.02
+        for: 10m
+        labels:
+          severity: warning
+          cost_category: gpu
+        annotations:
+          summary: "GPU cost efficiency is poor"
+          description: "GPU cost per utilization percent exceeds optimal threshold" 

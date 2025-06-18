@@ -1,0 +1,48 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "/etc/prometheus/rules/*.yml"
+
+scrape_configs:
+  # SYS-500: Host-Agent metrics
+  - job_name: 'trinity-host-agent'
+    static_configs:
+      - targets: ['trinity-host-agent:8080']
+    metrics_path: /metrics
+    scrape_interval: 10s
+    
+  # SYS-510: Dock-ctl metrics  
+  - job_name: 'trinity-dock-ctl'
+    static_configs:
+      - targets: ['trinity-dock-ctl:8081']
+    metrics_path: /metrics
+    scrape_interval: 10s
+
+  # Guardian health checks
+  - job_name: 'trinity-guardian'
+    static_configs:
+      - targets: ['trinity-guardian:9004']
+    metrics_path: /metrics
+    scrape_interval: 30s
+
+  # GPU metrics from existing tuner
+  - job_name: 'trinity-gpu'
+    static_configs:
+      - targets: ['localhost:9091']  # Pushgateway
+    metrics_path: /metrics
+    scrape_interval: 15s
+
+  # Service mesh metrics
+  - job_name: 'trinity-mesh'
+    static_configs:
+      - targets: ['trinity-mesh-metrics:9090']
+    metrics_path: /metrics
+    scrape_interval: 15s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - trinity-guardian:9004 

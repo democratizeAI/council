@@ -1,0 +1,767 @@
+version: '3.8'
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  # --- CORE INFRASTRUCTURE ---
+  nats:
+    image: nats:2.10.29-alpine
+    command: -js -m 8222 -D -V
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    networks:
+      - trinity-grid
+    restart: always
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD", "nats-server", "-hc"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  vault:
+    image: hashicorp/vault:1.16
+    command: ["vault", "server", "-dev", "-dev-root-token-id=root"]
+    ports:
+      - "8200:8200"
+    volumes:
+      - vault-data:/data
+    networks:
+      - trinity-grid
+    restart: always
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8200/v1/sys/health"]
+      interval: 10s
+      retries: 5
+
+  # --- OBSERVABILITY STACK ---
+  loki:
+    image: grafana/loki:2.9.3
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+    volumes:
+      - loki_data:/loki
+    networks:
+      - trinity-grid
+    restart: always
+    logging: *default-logging
+
+  grafana:
+    image: grafana/grafana-oss:10.1.5
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+    networks:
+      - trinity-grid
+    restart: always
+    logging: *default-logging
+
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus/rules:/etc/prometheus/rules
+    networks:
+      - trinity-grid
+    restart: always
+    logging: *default-logging
+
+  # --- SOUL ENGINE ---
+  ollama:
+    image: ollama/ollama
+    ports:
+      - "11434:11434"
+    networks:
+      - trinity-grid
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: always
+    logging: *default-logging
+
+  # --- AI SERVICES ---
+  neural-swarm:
+    build:
+      context: ./neural-swarm
+      dockerfile: Dockerfile
+    volumes:
+      - ./generated_diagrams/consciousness_tree.mmd:/app/trees/consciousness.mmd:ro
+      - ./generated_diagrams/filesystem_tree.mmd:/app/trees/filesystem.mmd:ro
+      - ./generated_diagrams/service_mesh_tree.mmd:/app/trees/service_mesh.mmd:ro
+      - ./generated_diagrams/tree_summary.json:/app/trees/tree_summary.json:ro
+    depends_on:
+      - ollama
+      - nats
+      - ledger
+    ports:
+      - "9004:9001"
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - TRINITY_NATS_URL=nats://nats:4222
+      - TRANSLATOR_URL=http://translator:9002
+      - LEDGER_URL=http://ledger:8000
+      - MODEL_NAME=phi3
+    networks:
+      - trinity-grid
+    restart: always
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  translator:
+    build:
+      context: ./services/translator
+      dockerfile: Dockerfile
+    command: ["uvicorn", "translator_svc:app", "--host", "0.0.0.0", "--port", "9002"]
+    depends_on:
+      nats:
+        condition: service_started
+    environment:
+      - NATS_URL=nats://nats:4222
+    networks:
+      - trinity-grid
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9002/health || exit 1"]
+      interval: 30s
+      retries: 3
+      start_period: 15s
+    ports:
+      - "9002:9002"
+
+  agent-explorer:
+    build:
+      context: ./neural-swarm
+      dockerfile: Dockerfile.desire
+    ports:
+      - "9003:9003"
+    networks:
+      - trinity-grid
+    restart: always
+    environment:
+      - TRINITY_NATS_URL=nats://nats:4222
+      - COUNCIL_URL=http://neural-swarm:9001/v1/completions
+      - DESIRE_INTERVAL_SECONDS=300
+    depends_on:
+      - nats
+      - neural-swarm
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9003/health"]
+      interval: 30s
+      retries: 3
+    logging: *default-logging
+
+  a2a-hub:
+    build:
+      context: ./services/a2a-hub
+      dockerfile: Dockerfile
+    depends_on:
+      - nats
+      # - redis # Uncomment when redis service is added
+      # - postgres # Uncomment when postgres service is added
+    environment:
+      - NATS_URL=nats://nats:4222
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/trinity
+      - A2A_HUB_PORT=9002
+    ports:
+      - "9012:9002"
+      - "19012:10002"
+    networks:
+      - trinity-grid
+    restart: always
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  ledger:
+    build:
+      context: ./services/ledger
+      dockerfile: Dockerfile
+    volumes:
+      - ledger-data:/app/data
+    ports:
+      - "8003:8000"
+    networks:
+      - trinity-grid
+    restart: always
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
+  # --- CONTROL PLANE & BUILDERS ---
+  guardian:
+    build:
+      context: ./services/guardian
+      dockerfile: Dockerfile
+    depends_on:
+      - nats
+    environment:
+      - NATS_URL=nats://nats:4222
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9300/health"]
+      interval: 30s
+    logging: *default-logging
+    ports:
+      - "9300:9300"
+    networks:
+      - trinity-grid
+    restart: always
+
+  game-monitor:
+    build:
+      context: ./services/game-monitor
+      dockerfile: Dockerfile
+    depends_on:
+      - nats
+    environment:
+      - NATS_URL=nats://nats:4222
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9301/health"]
+      interval: 30s
+    logging: *default-logging
+    ports:
+      - "9301:9301"
+    networks:
+      - trinity-grid
+    restart: always
+
+  game-space-mapper:
+    build:
+      context: ./services/game-space-mapper
+      dockerfile: Dockerfile
+    depends_on:
+      - nats
+    environment:
+      - NATS_URL=nats://nats:4222
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9302/health"]
+      interval: 10s
+      retries: 5
+    logging: *default-logging
+    ports:
+      - "9302:9302"
+    networks:
+      - trinity-grid
+    restart: always
+
+  builder-autogen:
+    build:
+      context: ./services/builder-autogen
+      dockerfile: Dockerfile
+    depends_on:
+      ollama:
+        condition: service_started
+      nats:
+        condition: service_started
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - NATS_URL=nats://nats:4222
+      - AZ_SHELL_TRUSTED=yes
+    networks:
+      - trinity-grid
+    restart: always
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    ports:
+      - "8001:8000"
+
+  trinity-ops:
+    build:
+      context: ./services/trinity-ops
+      dockerfile: Dockerfile
+    depends_on:
+      - nats
+      - vault
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./:/app/trinity
+    environment:
+      - DOCKER_HOST=unix://var/run/docker.sock
+      - NATS_URL=nats://nats:4222
+      - VAULT_ADDR=http://vault:8200
+      - VAULT_TOKEN=root
+    networks:
+      - trinity-grid
+    restart: always
+    logging: *default-logging
+
+  triage-engine:
+    image: trinity/triage-engine:latest
+    container_name: trinity-triage-engine
+    depends_on:
+      - nats
+    environment:
+      - NON_INTERACTIVE=1
+    command: ["sh","-c","while true; do python trinity-container-triage-engine.py; sleep 300; done"]
+    volumes:
+      - ./scripts:/app/scripts:ro
+    networks:
+      - trinity-grid
+    restart: always
+    logging: *default-logging
+
+  revival-engine:
+    image: trinity/revival-engine:latest
+    container_name: trinity-revival-engine
+    depends_on:
+      - nats
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - NATS_URL=nats://nats:4222
+      - EXECUTE_ACTIONS=false
+    networks:
+      - trinity-grid
+    restart: always
+    logging: *default-logging
+
+  evolution-engine:
+    build:
+      context: ./services/evolution-engine
+      dockerfile: Dockerfile
+    container_name: trinity-evolution-engine
+    depends_on:
+      - nats
+    environment:
+      - NATS_URL=nats://nats:4222
+      - EXECUTE_ACTIONS=false
+    ports:
+      - "8007:8007"
+    networks:
+      - trinity-grid
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8007"]
+      interval: 30s
+      retries: 3
+    restart: always
+    logging: *default-logging
+
+  loop-closer:
+    build:
+      context: ./services/loop-closer
+      dockerfile: Dockerfile
+    container_name: trinity-loop-closer
+    depends_on:
+      - nats
+      - triage-engine
+      - revival-engine
+      - evolution-engine
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - NATS_URL=nats://nats:4222
+      - EXECUTE_ACTIONS=false
+    networks:
+      - trinity-grid
+    restart: always
+    logging: *default-logging
+
+  ingester:
+    image: python:3.11-slim
+    command: ["python", "-m", "ingester.cli", "--nats", "nats://nats:4222"]
+    depends_on:
+      nats:
+        condition: service_started
+    volumes:
+      - ./services/ingester:/app
+    networks:
+      - trinity-grid
+
+  ingestion-bus:
+    build:
+      context: /home/brand/trinity/services/ingestion-bus
+      dockerfile: Dockerfile
+    depends_on:
+      nats:
+        condition: service_started
+        required: true
+    environment:
+      NATS_URL: nats://nats:4222
+      PROMETHEUS_URL: http://prometheus:9090
+    networks:
+      trinity-grid: null
+    ports:
+      - "8540:8540"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8540/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: always
+
+  council-router-enhanced:
+    build:
+      context: /home/brand/trinity/services/council-router-enhanced
+      dockerfile: Dockerfile
+    depends_on:
+      nats:
+        condition: service_started
+        required: true
+    environment:
+      NATS_URL: nats://nats:4222
+    networks:
+      trinity-grid: null
+    ports:
+      - "8541:8541"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8541/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: always
+
+  phoenix-builder-connector:
+    build:
+      context: /home/brand/trinity/services/phoenix-builder-connector
+      dockerfile: Dockerfile
+    depends_on:
+      nats:
+        condition: service_started
+        required: true
+    environment:
+      NATS_URL: nats://nats:4222
+    networks:
+      trinity-grid: null
+    ports:
+      - "8542:8542"
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "8542"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: always
+
+  phoenix-dispatcher:
+    build:
+      context: /home/brand/trinity/services/phoenix-dispatcher
+      dockerfile: Dockerfile
+    depends_on:
+      nats:
+        condition: service_started
+        required: true
+    environment:
+      NATS_URL: nats://nats:4222
+    healthcheck:
+      test: ["CMD","curl","-f","http://localhost:8000/metrics"]
+      interval: 30s
+      retries: 3
+    networks:
+      trinity-grid: null
+    restart: always
+
+  strategist:
+    build:
+      context: ./services/strategist
+      dockerfile: Dockerfile
+    depends_on:
+      nats:
+        condition: service_started
+    command: ["uvicorn","strategist_service:app","--host","0.0.0.0","--port","8006"]
+    ports:
+      - "8006:8006"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8006/health"]
+      interval: 30s
+      retries: 3
+    environment:
+      - NATS_URL=nats://nats:4222
+    networks:
+      trinity-grid: null
+    restart: always
+
+  builder:
+    build:
+      context: /home/brand/trinity/services/builder
+      dockerfile: Dockerfile
+    depends_on:
+      nats:
+        condition: service_started
+        required: true
+    environment:
+      NATS_URL: nats://nats:4222
+    healthcheck:
+      test: ["CMD","curl","-f","http://localhost:8005/health"]
+      interval: 30s
+      retries: 3
+    networks:
+      trinity-grid: null
+    ports:
+      - "8005:8005"
+    restart: always
+
+  auditor:
+    build:
+      context: ./services/auditor
+      dockerfile: Dockerfile
+    environment:
+      NATS_URL: nats://nats:4222
+      RISK_THRESHOLD: "0.6"
+    depends_on:
+      nats:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9005/health"]
+      interval: 30s
+      retries: 3
+    networks:
+      trinity-grid: null
+    ports:
+      - "9005:9005"
+    restart: always
+
+  intent-capture:
+    build:
+      context: ./services/intent-capture
+      dockerfile: Dockerfile
+    depends_on:
+      nats:
+        condition: service_started
+    environment:
+      NATS_URL: nats://nats:4222
+    networks:
+      trinity-grid: null
+    ports:
+      - "8600:8600"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8600/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: always
+
+  pipeline-connector:
+    build:
+      context: ./services/pipeline-connector
+      dockerfile: Dockerfile
+    depends_on:
+      nats:
+        condition: service_started
+    environment:
+      NATS_URL: nats://nats:4222
+      MULTI_MODEL_URL: http://multi-model-translator:8091
+    networks:
+      trinity-grid: null
+    ports:
+      - "8650:8650"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8650/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: always
+
+  auto-welder:
+    build:
+      context: .
+      dockerfile: services/auto-welder/Dockerfile
+    depends_on:
+      - nats
+    environment:
+      - NATS_URL=nats://nats:4222
+    networks:
+      - trinity-grid
+    restart: always
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import os,sys; sys.exit(0)'"]
+      interval: 30s
+      retries: 3
+
+  transcript-storage:
+    build:
+      context: .
+      dockerfile: services/transcript-storage/Dockerfile
+    depends_on:
+      - nats
+    environment:
+      - NATS_URL=nats://nats:4222
+    networks:
+      - trinity-grid
+    restart: always
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9100/health || exit 1"]
+      interval: 30s
+      retries: 3
+    ports:
+      - "9100:9100"
+
+  builder-quorum:
+    build:
+      context: .
+      dockerfile: services/builder-quorum/Dockerfile
+    depends_on:
+      - nats
+    environment:
+      - NATS_URL=nats://nats:4222
+    networks:
+      - trinity-grid
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9251/health || exit 1"]
+      interval: 30s
+      retries: 3
+    ports:
+      - "9251:9251"
+
+  cloud-auditor:
+    build:
+      context: .
+      dockerfile: services/cloud-auditor/Dockerfile
+    depends_on:
+      - nats
+    environment:
+      - NATS_URL=nats://nats:4222
+    networks:
+      - trinity-grid
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9250/health || exit 1"]
+      interval: 30s
+      retries: 3
+    ports:
+      - "9250:9250"
+
+  smart-router:
+    build:
+      context: .
+      dockerfile: services/smart-router/Dockerfile
+    depends_on:
+      - nats
+    environment:
+      - NATS_URL=nats://nats:4222
+    networks:
+      - trinity-grid
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9252/health || exit 1"]
+      interval: 30s
+      retries: 3
+    ports:
+      - "9252:9252"
+
+  audit-monitor:
+    build:
+      context: .
+      dockerfile: services/audit-monitor/Dockerfile
+    depends_on:
+      - nats
+    environment:
+      - NATS_URL=nats://nats:4222
+    networks:
+      - trinity-grid
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9400/health || exit 1"]
+      interval: 30s
+      retries: 3
+    ports:
+      - "9400:9400"
+
+  roadmap-watcher:
+    build:
+      context: .
+      dockerfile: services/roadmap-watcher/Dockerfile
+    depends_on:
+      - nats
+    environment:
+      - NATS_URL=nats://nats:4222
+    volumes:
+      - ./OPTIMISED-ROADMAP.md:/workspace/TRINITY_ROADMAP.md:ro
+    networks:
+      - trinity-grid
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9101/health || exit 1"]
+      interval: 30s
+      retries: 3
+    ports:
+      - "9101:9101"
+
+  roadmap-parser:
+    build:
+      context: .
+      dockerfile: services/roadmap-parser/Dockerfile
+    depends_on:
+      - nats
+      - roadmap-watcher
+    environment:
+      - NATS_URL=nats://nats:4222
+    networks:
+      - trinity-grid
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL","curl -sf http://localhost:9102/health || exit 1"]
+      interval: 30s
+      retries: 3
+    ports:
+      - "9102:9102"
+
+  roadmap-reflector:
+    build:
+      context: .
+      dockerfile: services/roadmap-reflector/Dockerfile
+    depends_on:
+      - nats
+      - roadmap-parser
+    environment:
+      - NATS_URL=nats://nats:4222
+    networks:
+      - trinity-grid
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL","curl -sf http://localhost:9103/health || exit 1"]
+      interval: 30s
+      retries: 3
+    ports:
+      - "9103:9103"
+      - "9902:9902"
+
+volumes:
+  vault-data:
+  loki_data:
+  grafana_data:
+  prometheus_data:
+  ollama_data:
+  ledger-data:
+
+networks:
+  trinity-grid:
+    external: true
+    name: trinity_trinity-grid

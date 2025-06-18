@@ -1,0 +1,21 @@
+{
+  "entries": [
+    {
+      "id": "GH-520",
+      "wave": "wave6_democracy_mvp",
+      "owner": "Soldier-C (Ledger Scribe)",
+      "description": "Eternal Garden Scroll committed to FAISS + HMAC ledger",
+      "status": "committed",
+      "timestamp": 1749926657.7093441,
+      "datetime": "2025-06-14T14:44:17.709344",
+      "agent": "C",
+      "namespace": "council:garden",
+      "garden_hash": "bb8bf4ae355ce561",
+      "faiss_committed": true,
+      "dna_propagated": true,
+      "signature": "470eaaf20a785dfd00b44c585e610913afe7ef4a8f5ebf8d8713f2690af663f1"
+    }
+  ],
+  "last_updated": "2025-06-14T14:44:17.710846",
+  "total_entries": 1
+}

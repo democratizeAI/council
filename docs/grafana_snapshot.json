@@ -1,0 +1,43 @@
+{
+  "dashboard": {
+    "title": "AutoGen Council Production Metrics",
+    "tags": [
+      "autogen",
+      "production"
+    ],
+    "timezone": "UTC",
+    "panels": [
+      {
+        "title": "Request Rate",
+        "type": "graph",
+        "metrics": [
+          "requests_per_second",
+          "errors_per_second"
+        ]
+      },
+      {
+        "title": "Response Time",
+        "type": "graph",
+        "metrics": [
+          "p50_latency",
+          "p95_latency",
+          "p99_latency"
+        ]
+      },
+      {
+        "title": "Model Performance",
+        "type": "table",
+        "metrics": [
+          "tokens_per_second",
+          "model_utilization"
+        ]
+      }
+    ]
+  },
+  "meta": {
+    "type": "snapshot",
+    "canSave": false,
+    "slug": "autogen-council-graduation",
+    "expires": "2025-12-31T23:59:59Z"
+  }
+}

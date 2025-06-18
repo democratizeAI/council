@@ -1,0 +1,9 @@
+{
+  "id": "WAVE7-XCM-630",
+  "timestamp": "2025-06-14T15:02:16.797188",
+  "file": "cursorsync/system_mirror.md",
+  "tickets": "XCM-630",
+  "content_hash": "c5ccccdc9d0d35c1",
+  "hmac_signature": "80e8dbe4f8c0d362",
+  "entry_type": "system_mirror"
+}

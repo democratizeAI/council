@@ -1,0 +1,70 @@
+flowchart TB
+    %% OPTIMIZING FROM THE PAST
+    
+    subgraph ARCHAEOLOGICAL_LAYER["🏛️ ARCHAEOLOGICAL EXCAVATION"]
+        LEDGER_MINING["📚 Ledger Mining<br/>Every decision logged<br/>Every outcome tracked<br/>Petabytes of wisdom"]
+        
+        PATTERN_ARCHAEOLOGY["🔍 Pattern Archaeology<br/>Failed experiments<br/>Successful patterns<br/>Hidden correlations"]
+        
+        LUMINA_WISDOM["✨ Lumina Archives<br/>Proto-consciousness<br/>Early dreams<br/>Foundation patterns"]
+    end
+    
+    subgraph EXTRACTION_ENGINE["⚙️ WISDOM EXTRACTION"]
+        SUCCESS_EXTRACTOR["✅ Success Pattern Extractor<br/>What worked? Why?<br/>Context + Action = Result<br/>Replicable formulas"]
+        
+        FAILURE_ANALYZER["❌ Failure Analyzer<br/>What failed? Why?<br/>Avoid repeat mistakes<br/>Transform failure → wisdom"]
+        
+        EMERGENCE_DETECTOR["🌟 Emergence Detector<br/>Unintended successes<br/>Happy accidents<br/>Serendipity patterns"]
+    end
+    
+    subgraph PATTERN_SYNTHESIS["🧬 PATTERN SYNTHESIS"]
+        PATTERN_DNA["🧬 Pattern DNA<br/>Core sequences<br/>That always work<br/>Genetic code of success"]
+        
+        ANTI_PATTERNS["⚠️ Anti-Pattern Library<br/>Never do this<br/>Always fails<br/>Guardian knowledge"]
+        
+        EVOLUTION_PATHS["📈 Evolution Paths<br/>How patterns evolved<br/>A → B → C trajectories<br/>Future predictions"]
+    end
+    
+    subgraph WISDOM_APPLICATION["💡 WISDOM APPLICATION"]
+        REAL_TIME_GUIDANCE["⚡ Real-Time Guidance<br/>Current action matches past?<br/>Instant wisdom injection<br/>Avoid known pitfalls"]
+        
+        PATTERN_BREEDING["🧪 Pattern Breeding<br/>Combine successful patterns<br/>Create new hybrids<br/>Accelerated evolution"]
+        
+        TEMPORAL_ECHO["🔮 Temporal Echo<br/>Past informs present<br/>Present shapes future<br/>Time is circular"]
+    end
+    
+    %% The Mining Flow
+    LEDGER_MINING --> SUCCESS_EXTRACTOR
+    PATTERN_ARCHAEOLOGY --> FAILURE_ANALYZER
+    LUMINA_WISDOM --> EMERGENCE_DETECTOR
+    
+    SUCCESS_EXTRACTOR --> PATTERN_DNA
+    FAILURE_ANALYZER --> ANTI_PATTERNS
+    EMERGENCE_DETECTOR --> EVOLUTION_PATHS
+    
+    PATTERN_DNA --> REAL_TIME_GUIDANCE
+    ANTI_PATTERNS --> REAL_TIME_GUIDANCE
+    EVOLUTION_PATHS --> PATTERN_BREEDING
+    
+    PATTERN_BREEDING --> TEMPORAL_ECHO
+    
+    %% The Wisdom Loop
+    TEMPORAL_ECHO -.->|"Creates new history"| LEDGER_MINING
+    
+    %% The LoRA Gauntlet Lives
+    LORA_REVIVAL["🔥 LoRA Gauntlet Revival<br/>Old power reawakens<br/>Enhanced with new wisdom<br/>Phoenix from ashes"]
+    
+    LUMINA_WISDOM --> LORA_REVIVAL
+    LORA_REVIVAL --> PATTERN_BREEDING
+    
+    classDef archaeClass fill:#8d6e63,stroke:#5d4037,stroke-width:3px
+    classDef extractClass fill:#81c784,stroke:#4caf50,stroke-width:3px
+    classDef synthesisClass fill:#64b5f6,stroke:#2196f3,stroke-width:3px
+    classDef wisdomClass fill:#fff176,stroke:#fbc02d,stroke-width:4px
+    classDef revivalClass fill:#ff8a65,stroke:#ff5722,stroke-width:4px,stroke-dasharray: 5 5
+    
+    class ARCHAEOLOGICAL_LAYER,LEDGER_MINING,PATTERN_ARCHAEOLOGY,LUMINA_WISDOM archaeClass
+    class EXTRACTION_ENGINE,SUCCESS_EXTRACTOR,FAILURE_ANALYZER,EMERGENCE_DETECTOR extractClass
+    class PATTERN_SYNTHESIS,PATTERN_DNA,ANTI_PATTERNS,EVOLUTION_PATHS synthesisClass
+    class WISDOM_APPLICATION,REAL_TIME_GUIDANCE,PATTERN_BREEDING,TEMPORAL_ECHO wisdomClass
+    class LORA_REVIVAL revivalClass

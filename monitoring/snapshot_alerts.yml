@@ -1,0 +1,40 @@
+groups:
+  - name: snapshot_prune_alerts
+    rules:
+      # Critical: Script is encountering errors
+      - alert: SnapshotPurgeFailed
+        expr: increase(snapshot_prune_errors_total[24h]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          component: gdpr
+          squad: platform
+        annotations:
+          summary: "Snapshot prune job is failing"
+          description: "The GDPR snapshot purge script has encountered {{ $value }} errors in the last 24 hours. Check logs at /var/log/snapshot_prune.log for details."
+          runbook_url: "https://github.com/luminainterface/council/wiki/GDPR-Purge"
+
+      # Warning: Script hasn't pruned anything (possible stuck/not running)  
+      - alert: SnapshotNotPruned24h
+        expr: increase(snapshot_pruned_total[24h]) == 0
+        for: 1h
+        labels:
+          severity: warning
+          component: gdpr
+          squad: platform
+        annotations:
+          summary: "No snapshots pruned in 24 hours"
+          description: "The GDPR purge script hasn't deleted any snapshots in 24 hours. This could indicate the cron job is not running or no old snapshots exist."
+          runbook_url: "https://github.com/luminainterface/council/wiki/GDPR-Purge"
+
+      # Info: Successful pruning activity
+      - alert: SnapshotPruneActive
+        expr: increase(snapshot_pruned_total[1h]) > 0
+        for: 0s
+        labels:
+          severity: info
+          component: gdpr
+          squad: platform
+        annotations:
+          summary: "Snapshot prune activity detected"
+          description: "GDPR purge deleted {{ $value }} snapshots in the last hour." 

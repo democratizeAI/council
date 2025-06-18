@@ -1,0 +1,103 @@
+groups:
+  - name: trinity_v_infinity_compliance
+    rules:
+      # Critical infrastructure alerts for v∞
+      - alert: GuardianUnhealthy
+        expr: up{job="trinity-guardian"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          component: guardian
+        annotations:
+          summary: "Guardian service is down"
+          description: "Trinity Guardian has been down for more than 30 seconds"
+
+      - alert: NATSClusterDegraded
+        expr: up{job="trinity-nats"} < 3
+        for: 1m
+        labels:
+          severity: warning
+          component: nats
+        annotations:
+          summary: "NATS cluster is degraded"
+          description: "Less than 3 NATS nodes are available"
+
+      - alert: GPUUtilizationHigh
+        expr: gpu_utilization_percent > 90
+        for: 2m
+        labels:
+          severity: warning
+          component: gpu
+        annotations:
+          summary: "GPU utilization is very high"
+          description: "GPU utilization has been above 90% for 2 minutes"
+
+      - alert: LedgerHashMismatch
+        expr: increase(ledger_hash_mismatch_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          component: ledger
+        annotations:
+          summary: "Ledger hash mismatch detected"
+          description: "Agent ledger hashes are not synchronized"
+
+      - alert: VaultUnavailable
+        expr: up{job="trinity-vault"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          component: vault
+        annotations:
+          summary: "Vault service is unavailable"
+          description: "Trinity Vault secrets management is down"
+
+      - alert: DailyCostExceeded
+        expr: trinity_daily_cost_usd > 0.50
+        for: 5m
+        labels:
+          severity: warning
+          component: cost
+        annotations:
+          summary: "Daily cost budget exceeded"
+          description: "Trinity daily cost has exceeded $0.50 budget"
+
+      - alert: ModelDriftHigh
+        expr: model_drift_score > 0.05
+        for: 10m
+        labels:
+          severity: warning
+          component: ml
+        annotations:
+          summary: "ML model drift is high"
+          description: "Model drift score exceeds v∞ threshold of 0.05"
+
+      - alert: ContainerRestartHigh
+        expr: increase(docker_container_restarts_total[1h]) > 3
+        for: 5m
+        labels:
+          severity: warning
+          component: containers
+        annotations:
+          summary: "High container restart rate"
+          description: "More than 3 container restarts in the last hour"
+
+      - alert: InfraLatencyHigh
+        expr: trinity_infra_latency_p95_ms > 150
+        for: 3m
+        labels:
+          severity: warning
+          component: infrastructure
+        annotations:
+          summary: "Infrastructure latency is high"
+          description: "P95 latency exceeds v∞ threshold of 150ms"
+
+      - alert: CursorAgentsSyncFailed
+        expr: cursor_sync_aligned != 1
+        for: 2m
+        labels:
+          severity: critical
+          component: agents
+        annotations:
+          summary: "Cursor agents are not synchronized"
+          description: "Three cursor agents are not in sync, blocking autonomous operations" 

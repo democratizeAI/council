@@ -1,0 +1,63 @@
+groups:
+  # Day-2 Operations VRAM Alerts - Real Metrics for Testing
+  - name: vram_monitoring_real
+    rules:
+      - alert: VRAMWarning
+        expr: swarm_gpu_memory_used_percent > 75
+        for: 3m
+        labels:
+          severity: warning
+          environment: production
+          component: gpu-memory
+        annotations:
+          summary: "⚠️ VRAM Warning: {{ $value }}% usage"
+          description: "GPU memory usage is {{ $value | printf \"%.1f\" }}% (>75%). Monitor for potential allocation issues."
+
+      - alert: VRAMCritical
+        expr: swarm_gpu_memory_used_percent > 85
+        for: 2m
+        labels:
+          severity: critical
+          environment: production
+          component: gpu-memory
+        annotations:
+          summary: "🚨 VRAM Critical: {{ $value }}% usage"
+          description: "GPU memory usage is {{ $value | printf \"%.1f\" }}% (>85%). Immediate attention required to prevent OOM failures."
+
+      - alert: VRAMEmergency
+        expr: swarm_gpu_memory_used_percent > 95
+        for: 30s
+        labels:
+          severity: page
+          environment: production
+          component: gpu-memory
+        annotations:
+          summary: "🔥 VRAM EMERGENCY: {{ $value }}% usage"
+          description: "GPU memory usage is {{ $value | printf \"%.1f\" }}% (>95%). OOM failure imminent. Immediate intervention required."
+
+  # Demo Alerts - Always firing for baseline testing
+  - name: demo_alerts
+    rules:
+      - alert: AlertPipelineTest
+        expr: vector(1) > 0  # Always fires for demo
+        for: 0s
+        labels:
+          severity: test
+          environment: production
+          component: alert-pipeline
+        annotations:
+          summary: "✅ Alert Pipeline Test - All Systems Working"
+          description: "This alert demonstrates that Prometheus→AlertManager→Webhooks pipeline is operational."
+
+  # Test Alerts for Pipeline Verification
+  - name: test_alerts
+    rules:
+      - alert: TestAlert
+        expr: vector(1) > 0  # Always fires
+        for: 0s
+        labels:
+          severity: test
+          environment: production
+        annotations:
+          summary: "Test alert for pipeline verification"
+          description: "This alert always fires to test the alert pipeline." 

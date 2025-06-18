@@ -1,0 +1,77 @@
+groups:
+- name: lineage-tracking
+  rules:
+  - alert: LineageStale
+    expr: |
+      (
+        time() - max(lineage_last_push_timestamp) > 86400
+      ) or (
+        absent(lineage_last_push_timestamp) and time() > 1640995200
+      )
+    for: 30m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Artifact lineage is stale"
+      description: |
+        Lineage has not been pushed for {{ $value | humanizeDuration }}.
+        Last push: {{ with query "lineage_last_push_timestamp" }}{{ . | first | value | humanizeTimestamp }}{{ else }}unknown{{ end }}
+        Check CI deployment pipeline and IPFS connectivity.
+
+  - alert: LineageVeryStale
+    expr: |
+      (
+        time() - max(lineage_last_push_timestamp) > 172800
+      ) or (
+        absent(lineage_last_push_timestamp) and time() > 1640995200
+      )
+    for: 15m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Artifact lineage critically stale"
+      description: |
+        Lineage has not been pushed for {{ $value | humanizeDuration }}.
+        Artifact provenance is compromised. Investigate CI pipeline immediately.
+
+  - alert: LineagePushFailed
+    expr: |
+      increase(prometheus_pushgateway_push_time_seconds_count{job="lineage"}[5m]) == 0
+      and 
+      time() - max(lineage_last_push_timestamp) > 7200
+    for: 15m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Lineage push failures detected"
+      description: |
+        No successful lineage pushes detected in the last 2 hours.
+        Check pushgateway connectivity and IPFS daemon status.
+
+  - alert: LineageMetricMissing
+    expr: absent(lineage_last_push_timestamp)
+    for: 1h
+    labels:
+      severity: info
+    annotations:
+      summary: "Lineage tracking metric not available"
+      description: |
+        The lineage_last_push_timestamp metric is not being reported.
+        This could indicate:
+        - First deployment (no lineage pushed yet)
+        - Pushgateway connectivity issues
+        - Metric collection problems
+
+  # Advanced: Check IPFS gateway accessibility
+  - alert: LineageIPFSGatewayDown
+    expr: |
+      probe_success{job="ipfs-gateway"} == 0
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: "IPFS gateway unreachable"
+      description: |
+        IPFS gateway is not responding to health checks.
+        Lineage artifacts may not be publicly accessible.
+        Gateway: {{ $labels.instance }} 

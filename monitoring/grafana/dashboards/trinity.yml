@@ -1,0 +1,9 @@
+apiVersion: 1
+providers:
+  - name: "Trinity Dashboards"
+    folder: "Trinity"
+    type: file
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards
+      recursive: true 

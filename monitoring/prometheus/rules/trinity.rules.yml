@@ -1,0 +1,16 @@
+groups:
+- name: trinity_rules
+  rules:
+  - alert: PrescriptionFailed
+    expr: rate(prescription_failed_total[5m]) > 0
+    for: 2m
+    labels:
+      severity: "critical"
+    annotations:
+      summary: "Builder prescription failed"
+  - alert: HighBuildCost
+    expr: build_cost_usd_total{job="builder-autogen"} > 3.33
+    labels:
+      severity: "warning"
+    annotations:
+      summary: "High build cost detected, approaching daily cap."
